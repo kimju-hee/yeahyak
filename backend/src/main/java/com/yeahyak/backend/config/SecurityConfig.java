@@ -12,6 +12,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.http.HttpMethod;
 
 @Configuration
 @EnableWebSecurity
@@ -35,6 +36,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/announcements/**").permitAll() // 조회 모두 허용 - 추가자 최진호
+                        .requestMatchers(HttpMethod.POST, "/api/announcements").hasRole("ADMIN")  // 등록 관리자만 - 추가자 최진호
+                        .requestMatchers(HttpMethod.DELETE, "/api/announcements/**").hasRole("ADMIN")  // 삭제 관리자만 - 추가자 최진호
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
