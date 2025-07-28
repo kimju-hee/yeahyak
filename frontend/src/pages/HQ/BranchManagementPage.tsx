@@ -12,6 +12,7 @@ import {
   Row,
   Col,
   Statistic,
+  message,
 } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 
@@ -25,7 +26,6 @@ const dummyData = [
     pharmacist: "김약사",
     contact: "010-1111-2222",
     balance: 150000,
-    cumulativeAmount: 3000000,
     address: "대전 유성구 대학로 99",
     openedAt: "2023-01-15",
     lastCharged: "2025-07-20",
@@ -42,7 +42,6 @@ const dummyData = [
     pharmacist: "최진호",
     contact: "010-2222-3333",
     balance: 200000,
-    cumulativeAmount: 5200000,
     address: "서울 강남구 테헤란로 123",
     openedAt: "2022-09-10",
     lastCharged: "2025-07-10",
@@ -52,28 +51,97 @@ const dummyData = [
     bank: "신한 110-5555-1234",
     note: "리뉴얼 예정",
   },
+  {
+    key: "3",
+    branchCode: "BR003",
+    branchName: "신규점",
+    pharmacist: "이약사",
+    contact: "010-3333-4444",
+    balance: 0,
+    address: "부산 해운대구 센텀로 55",
+    openedAt: "",
+    lastCharged: "",
+    status: "요청됨",
+    manager: "",
+    businessHours: "",
+    bank: "",
+    note: "",
+  },
 ];
 
 export default function BranchManagementPage() {
+  const [data, setData] = useState(dummyData);
   const [searchText, setSearchText] = useState("");
   const [selectedBranch, setSelectedBranch] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [selectedRejectBranch, setSelectedRejectBranch] = useState<any>(null);
 
-  // 검색 필터링
-  const filteredData = dummyData.filter(
+  // 상태별 통계
+  const totalCount = data.length;
+  const activeCount = data.filter((b) => b.status === "운영 중").length;
+  const pausedCount = data.filter((b) => b.status === "휴점").length;
+  const requestedCount = data.filter((b) => b.status === "요청됨").length;
+
+  const filteredData = data.filter(
     (item) =>
       item.branchName.includes(searchText) ||
       item.pharmacist.includes(searchText) ||
       item.branchCode.includes(searchText)
   );
 
-  // 통계 계산
-  const totalCount = dummyData.length;
-  const activeCount = dummyData.filter((b) => b.status === "운영 중").length;
-  const pausedCount = dummyData.filter((b) => b.status === "휴점").length;
-  const closedCount = dummyData.filter((b) => b.status === "계약 해지").length;
+  const getStatusTag = (status: string) => {
+    const color = status === "운영 중"
+      ? "green"
+      : status === "휴점"
+      ? "orange"
+      : status === "요청됨"
+      ? "blue"
+      : "default";
+    return <Tag color={color}>{status}</Tag>;
+  };
 
-  // 테이블 컬럼 정의
+  const openDetailModal = (record: any) => {
+    setSelectedBranch(record);
+    setModalVisible(true);
+  };
+
+  const handleApprove = (branch: any) => {
+    const updated = data.map((b) =>
+      b.key === branch.key ? { ...b, status: "운영 중" } : b
+    );
+    setData(updated);
+    message.success("가맹점 승인 완료");
+  };
+
+  const showRejectModal = (branch: any) => {
+    setSelectedRejectBranch(branch);
+    setRejectReason("");
+    setIsRejectModalVisible(true);
+  };
+
+  const handleRejectConfirm = () => {
+    if (!rejectReason.trim()) {
+      message.error("거절 사유를 입력해주세요.");
+      return;
+    }
+
+    const updated = data.map((b) =>
+      b.key === selectedRejectBranch.key
+        ? { ...b, status: "거절됨", note: rejectReason }
+        : b
+    );
+    setData(updated);
+    setIsRejectModalVisible(false);
+    message.success("거절 처리 완료");
+  };
+
+  const handleRejectCancel = () => {
+    setIsRejectModalVisible(false);
+    setRejectReason("");
+  };
+
   const columns = [
     {
       title: "지점코드",
@@ -96,15 +164,8 @@ export default function BranchManagementPage() {
       title: "보유금액",
       dataIndex: "balance",
       key: "balance",
-      render: (val: number) => val.toLocaleString() + "원",
+      render: (val: number) => `${val.toLocaleString()}원`,
       sorter: (a: any, b: any) => a.balance - b.balance,
-    },
-    {
-      title: "누적 거래금액",
-      dataIndex: "cumulativeAmount",
-      key: "cumulativeAmount",
-      render: (val: number) => val.toLocaleString() + "원",
-      sorter: (a: any, b: any) => a.cumulativeAmount - b.cumulativeAmount,
     },
     {
       title: "상태",
@@ -113,10 +174,11 @@ export default function BranchManagementPage() {
       filters: [
         { text: "운영 중", value: "운영 중" },
         { text: "휴점", value: "휴점" },
-        { text: "계약 해지", value: "계약 해지" },
+        { text: "요청됨", value: "요청됨" },
+        { text: "거절됨", value: "거절됨" },
       ],
       onFilter: (value: any, record: any) => record.status === value,
-      render: (status: string) => getStatusTag(status),
+      render: getStatusTag,
     },
     {
       title: "최근 충전일",
@@ -128,34 +190,31 @@ export default function BranchManagementPage() {
     {
       title: "충전",
       key: "charge",
-      render: () => <Button type="primary">충전</Button>,
+      render: (_: any, record: any) =>
+        record.status === "운영 중" || record.status === "휴점" ? (
+          <Button type="primary">충전</Button>
+        ) : null,
+    },
+    {
+      title: "관리",
+      key: "actions",
+      render: (_: any, record: any) =>
+        record.status === "요청됨" ? (
+          <Space>
+            <Button onClick={() => handleApprove(record)}>승인</Button>
+            <Button danger onClick={() => showRejectModal(record)}>
+              거절
+            </Button>
+          </Space>
+        ) : null,
     },
   ];
-
-  // 상태 표시용 태그 렌더링
-  const getStatusTag = (status: string) => {
-    switch (status) {
-      case "운영 중":
-        return <Tag color="green">{status}</Tag>;
-      case "휴점":
-        return <Tag color="orange">{status}</Tag>;
-      case "계약 해지":
-        return <Tag color="red">{status}</Tag>;
-      default:
-        return <Tag>{status}</Tag>;
-    }
-  };
-
-  const openDetailModal = (record: any) => {
-    setSelectedBranch(record);
-    setModalVisible(true);
-  };
 
   return (
     <div style={{ padding: "24px" }}>
       <Title level={2}>가맹점 관리</Title>
 
-      {/* ✅ 요약 카드 4종 */}
+      {/* 카드 대시보드 */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
           <Card><Statistic title="총 가맹점 수" value={totalCount} /></Card>
@@ -167,11 +226,11 @@ export default function BranchManagementPage() {
           <Card><Statistic title="휴점" value={pausedCount} valueStyle={{ color: "orange" }} /></Card>
         </Col>
         <Col span={6}>
-          <Card><Statistic title="계약 해지" value={closedCount} valueStyle={{ color: "red" }} /></Card>
+          <Card><Statistic title="요청됨" value={requestedCount} valueStyle={{ color: "blue" }} /></Card>
         </Col>
       </Row>
 
-      {/* 검색 */}
+      {/* 검색창 */}
       <Input.Search
         placeholder="지점명, 약사명, 지점코드로 검색"
         value={searchText}
@@ -204,13 +263,29 @@ export default function BranchManagementPage() {
             <Descriptions.Item label="운영시간">{selectedBranch.businessHours}</Descriptions.Item>
             <Descriptions.Item label="계좌정보">{selectedBranch.bank}</Descriptions.Item>
             <Descriptions.Item label="보유금액">{selectedBranch.balance.toLocaleString()}원</Descriptions.Item>
-            <Descriptions.Item label="누적 거래금액">{selectedBranch.cumulativeAmount.toLocaleString()}원</Descriptions.Item>
             <Descriptions.Item label="최근 충전일">{selectedBranch.lastCharged}</Descriptions.Item>
             <Descriptions.Item label="상태">{getStatusTag(selectedBranch.status)}</Descriptions.Item>
             <Descriptions.Item label="비고">{selectedBranch.note}</Descriptions.Item>
             <Descriptions.Item label="본사 담당자">{selectedBranch.manager}</Descriptions.Item>
           </Descriptions>
         )}
+      </Modal>
+
+      {/* 거절 사유 입력 모달 */}
+      <Modal
+        title="거절 사유 입력"
+        open={isRejectModalVisible}
+        onOk={handleRejectConfirm}
+        onCancel={handleRejectCancel}
+        okText="확인"
+        cancelText="취소"
+      >
+        <Input.TextArea
+          value={rejectReason}
+          onChange={(e) => setRejectReason(e.target.value)}
+          placeholder="거절 사유를 입력해주세요"
+          rows={4}
+        />
       </Modal>
     </div>
   );
