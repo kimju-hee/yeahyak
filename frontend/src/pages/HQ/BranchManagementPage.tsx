@@ -26,6 +26,7 @@ const dummyData = [
     pharmacist: "김약사",
     contact: "010-1111-2222",
     balance: 150000,
+    cumulativeAmount: 1000000,
     address: "대전 유성구 대학로 99",
     openedAt: "2023-01-15",
     lastCharged: "2025-07-20",
@@ -42,6 +43,7 @@ const dummyData = [
     pharmacist: "최진호",
     contact: "010-2222-3333",
     balance: 200000,
+    cumulativeAmount: 500000,
     address: "서울 강남구 테헤란로 123",
     openedAt: "2022-09-10",
     lastCharged: "2025-07-10",
@@ -58,6 +60,7 @@ const dummyData = [
     pharmacist: "이약사",
     contact: "010-3333-4444",
     balance: 0,
+    cumulativeAmount: 0,
     address: "부산 해운대구 센텀로 55",
     openedAt: "",
     lastCharged: "",
@@ -81,6 +84,7 @@ export default function BranchManagementPage() {
   const totalCount = data.length;
   const activeCount = data.filter((b) => b.status === "운영 중").length;
   const pausedCount = data.filter((b) => b.status === "휴점").length;
+  const closedCount = data.filter((b) => b.status === "계약 해지").length;
   const requestedCount = data.filter((b) => b.status === "요청됨").length;
 
   const filteredData = data.filter(
@@ -91,14 +95,20 @@ export default function BranchManagementPage() {
   );
 
   const getStatusTag = (status: string) => {
-    const color = status === "운영 중"
-      ? "green"
-      : status === "휴점"
-      ? "orange"
-      : status === "요청됨"
-      ? "blue"
-      : "default";
-    return <Tag color={color}>{status}</Tag>;
+    switch (status) {
+      case "운영 중":
+        return <Tag color="green">{status}</Tag>;
+      case "휴점":
+        return <Tag color="orange">{status}</Tag>;
+      case "계약 해지":
+        return <Tag color="red">{status}</Tag>;
+      case "요청됨":
+        return <Tag color="blue">{status}</Tag>;
+      case "거절됨":
+        return <Tag color="default">{status}</Tag>;
+      default:
+        return <Tag>{status}</Tag>;
+    }
   };
 
   const openDetailModal = (record: any) => {
@@ -125,7 +135,6 @@ export default function BranchManagementPage() {
       message.error("거절 사유를 입력해주세요.");
       return;
     }
-
     const updated = data.map((b) =>
       b.key === selectedRejectBranch.key
         ? { ...b, status: "거절됨", note: rejectReason }
@@ -142,7 +151,11 @@ export default function BranchManagementPage() {
   };
 
   const columns = [
-    { title: "지점코드", dataIndex: "branchCode", key: "branchCode" },
+    {
+      title: "지점코드",
+      dataIndex: "branchCode",
+      key: "branchCode",
+    },
     {
       title: "지점명",
       dataIndex: "branchName",
@@ -171,6 +184,7 @@ export default function BranchManagementPage() {
         { text: "휴점", value: "휴점" },
         { text: "요청됨", value: "요청됨" },
         { text: "거절됨", value: "거절됨" },
+        { text: "계약 해지", value: "계약 해지" },
       ],
       onFilter: (value: any, record: any) => record.status === value,
       render: getStatusTag,
@@ -208,6 +222,7 @@ export default function BranchManagementPage() {
     <div style={{ padding: "24px" }}>
       <Title level={2}>가맹점 관리</Title>
 
+      {/* 통계 카드 */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}><Card><Statistic title="총 가맹점 수" value={totalCount} /></Card></Col>
         <Col span={6}><Card><Statistic title="운영 중" value={activeCount} valueStyle={{ color: "green" }} /></Card></Col>
@@ -215,6 +230,7 @@ export default function BranchManagementPage() {
         <Col span={6}><Card><Statistic title="요청됨" value={requestedCount} valueStyle={{ color: "blue" }} /></Card></Col>
       </Row>
 
+      {/* 검색 */}
       <Input.Search
         placeholder="지점명, 약사명, 지점코드로 검색"
         value={searchText}
@@ -223,6 +239,7 @@ export default function BranchManagementPage() {
         allowClear
       />
 
+      {/* 테이블 */}
       <Table
         columns={columns}
         dataSource={filteredData}
@@ -230,6 +247,7 @@ export default function BranchManagementPage() {
         rowKey="branchCode"
       />
 
+      {/* 상세 모달 */}
       <Modal
         title={`${selectedBranch?.branchName} 상세 정보`}
         open={modalVisible}
@@ -245,6 +263,7 @@ export default function BranchManagementPage() {
             <Descriptions.Item label="운영시간">{selectedBranch.businessHours}</Descriptions.Item>
             <Descriptions.Item label="계좌정보">{selectedBranch.bank}</Descriptions.Item>
             <Descriptions.Item label="보유금액">{selectedBranch.balance.toLocaleString()}원</Descriptions.Item>
+            <Descriptions.Item label="누적 거래금액">{selectedBranch.cumulativeAmount.toLocaleString()}원</Descriptions.Item>
             <Descriptions.Item label="최근 충전일">{selectedBranch.lastCharged}</Descriptions.Item>
             <Descriptions.Item label="상태">{getStatusTag(selectedBranch.status)}</Descriptions.Item>
             <Descriptions.Item label="비고">{selectedBranch.note}</Descriptions.Item>
@@ -253,6 +272,7 @@ export default function BranchManagementPage() {
         )}
       </Modal>
 
+      {/* 거절 모달 */}
       <Modal
         title="거절 사유 입력"
         open={isRejectModalVisible}
