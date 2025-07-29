@@ -6,7 +6,7 @@ from sklearn.model_selection import TimeSeriesSplit
 app = Flask(__name__)
 
 @app.route('/predict', methods=['POST'])
-def predict_order():
+def predict_order(file):
     if 'file' not in request.files:
         return jsonify({'error': 'CSV file is missing'}), 400
 

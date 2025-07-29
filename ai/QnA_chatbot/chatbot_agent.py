@@ -4,7 +4,7 @@ import operator
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import AnyMessage, ToolMessage
-from tools import get_drug_general_info, get_ingredient_contraindication_info, get_ingredient_general_info
+from QnA_chatbot.tools import get_drug_general_info, get_ingredient_contraindication_info, get_ingredient_general_info
 
 def create_chatbot_agent():
     """LangGraph를 사용하여 챗봇 에이전트를 생성하고 컴파일합니다."""

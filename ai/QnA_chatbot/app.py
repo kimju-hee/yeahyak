@@ -2,15 +2,15 @@
 from flask import Flask, request, jsonify
 #from dotenv import load_dotenv
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-from chatbot_agent import create_chatbot_agent
+# from chatbot_agent import create_chatbot_agent
+from QnA_chatbot.chatbot_agent import create_chatbot_agent
+
 
 #load_dotenv()
 
 app = Flask(__name__)
 
-print("🤖 챗봇 에이전트를 생성 중입니다...")
 chatbot = create_chatbot_agent()
-print("✅ 챗봇 에이전트가 준비되었습니다.")
 
 SYSTEM_PROMPT = """
 당신은 대한민국 약사들을 위한 매우 유능하고 협력적인 전문 의약품 정보 AI 어시스턴트입니다.
@@ -61,4 +61,6 @@ def handle_chat():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
+    print("🤖 챗봇 에이전트를 생성 중입니다...")
     app.run(debug=True, port=5000)
+    print("✅ 챗봇 에이전트가 준비되었습니다.")
