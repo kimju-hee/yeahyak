@@ -4,8 +4,6 @@ import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../stores/authStore';
 
-const { Title } = Typography;
-
 export default function LoginPage() {
   const navigate = useNavigate();
   const [messageApi, contextHolder] = message.useMessage();
@@ -41,9 +39,9 @@ export default function LoginPage() {
   return (
     <>
       {contextHolder}
-      <Title level={1} style={{ marginBottom: 24 }}>
+      <Typography.Title level={1} style={{ marginBottom: 24 }}>
         예약 로그인
-      </Title>
+      </Typography.Title>
       <Card>
         <Form name="login" onFinish={onFinish}>
           <Form.Item
