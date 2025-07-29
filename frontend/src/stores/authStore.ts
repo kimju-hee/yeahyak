@@ -11,6 +11,8 @@ interface AuthState {
 
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateUser: (updatedFields: Partial<User>) => void;
+  updateProfile: (updatedFields: Partial<Admin> | Partial<Pharmacy>) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -50,6 +52,18 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           profile: null,
         });
+      },
+
+      updateUser: (updatedFields) => {
+        set((state) => ({
+          user: state.user ? { ...state.user, ...updatedFields } : state.user,
+        }));
+      },
+
+      updateProfile: (updatedFields) => {
+        set((state) => ({
+          profile: state.profile ? { ...state.profile, ...updatedFields } : state.profile,
+        }));
       },
     }),
     {
