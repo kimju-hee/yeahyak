@@ -1,0 +1,42 @@
+.ProseMirror {
+  outline: none;
+  border: none;
+  box-shadow: none;
+  background: white;
+  padding: 12px;
+  min-height: 200px;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.ProseMirror p {
+  margin: 0;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+button:hover {
+  color: #1677ff;
+  background-color: #f0f5ff;
+}
+
+button.active {
+  background-color: #e6f4ff;
+  border: 1px solid #1677ff;
+  color: #1677ff;
+}
+
+.editor-content {
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: white;
+}
