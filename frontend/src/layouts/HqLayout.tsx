@@ -4,6 +4,8 @@ import {
   BellOutlined,
   BulbFilled,
   ContainerFilled,
+  EditOutlined,
+  KeyOutlined,
   LogoutOutlined,
   MinusSquareFilled,
   NotificationFilled,
@@ -88,6 +90,16 @@ export default function HqLayout() {
 
   const avatarMenuItems = {
     items: [
+      {
+        key: 'profile-edit',
+        label: <Link to="/hq/profile-edit">내 정보 수정</Link>,
+        icon: <EditOutlined />,
+      },
+      {
+        key: 'password-change',
+        label: <Link to="/hq/password-change">비밀번호 변경</Link>,
+        icon: <KeyOutlined />,
+      },
       {
         key: 'logout',
         label: '로그아웃',

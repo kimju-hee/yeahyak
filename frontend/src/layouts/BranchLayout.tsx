@@ -1,10 +1,11 @@
 import {
   BellOutlined,
   ContainerFilled,
-  EditOutlined,
   FrownFilled,
+  KeyOutlined,
   LogoutOutlined,
   NotificationFilled,
+  ShopOutlined,
   ShoppingFilled,
   UserOutlined,
 } from '@ant-design/icons';
@@ -72,9 +73,14 @@ export default function BranchLayout() {
   const avatarMenuItems = {
     items: [
       {
-        key: 'profile-edit',
-        label: <Link to="/branch/profile-edit">내 정보 수정</Link>,
-        icon: <EditOutlined />,
+        key: 'pharmacy-edit',
+        label: <Link to="/branch/pharmacy-edit">약국 정보 수정</Link>,
+        icon: <ShopOutlined />,
+      },
+      {
+        key: 'password-change',
+        label: <Link to="/branch/password-change">비밀번호 변경</Link>,
+        icon: <KeyOutlined />,
       },
       {
         key: 'logout',
