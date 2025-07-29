@@ -10,8 +10,10 @@ import {
   PlusSquareFilled,
   UserOutlined,
 } from '@ant-design/icons';
-import { ConfigProvider, Dropdown, Layout, Menu, Row, Typography } from 'antd';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { ConfigProvider, Dropdown, Layout, Menu, message, Row, Typography } from 'antd';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import type { Admin } from '../mocks/types';
+import { useAuthStore } from '../stores/authStore';
 
 const { Sider, Header, Content, Footer } = Layout;
 const { Text } = Typography;
@@ -71,19 +73,30 @@ const siderMenuItems = [
   },
 ];
 
-const avatarMenuItems = {
-  items: [
-    {
-      key: 'logout',
-      label: <Link to="/logout">로그아웃</Link>,
-      icon: <LogoutOutlined />,
-      danger: true,
-    },
-  ],
-};
-
 export default function HqLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const profile = useAuthStore((state) => state.profile);
+  const admin = profile as Admin;
+  const logout = useAuthStore((state) => state.logout);
+
+  const handleLogout = () => {
+    logout();
+    message.success('로그아웃 되었습니다.');
+    navigate('/login', { replace: true });
+  };
+
+  const avatarMenuItems = {
+    items: [
+      {
+        key: 'logout',
+        label: '로그아웃',
+        icon: <LogoutOutlined />,
+        danger: true,
+        onClick: handleLogout,
+      },
+    ],
+  };
 
   const getSelectedKeys = () => {
     const path = location.pathname;
@@ -113,7 +126,7 @@ export default function HqLayout() {
         >
           <Link to="/hq">예약</Link>
           <Row>
-            <Text style={{ color: '#ffffff' }}>송쫑이 직원</Text>
+            <Text style={{ color: '#ffffff' }}>{admin?.adminName}</Text>
             <BellOutlined style={{ fontSize: '24px', margin: '0 24px', color: '#ffffff' }} />
             <Dropdown
               trigger={['click']}
@@ -126,7 +139,13 @@ export default function HqLayout() {
           </Row>
         </Header>
         <Layout>
-          <Sider style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Sider
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
+          >
             <Menu
               theme="dark"
               style={{ width: '100%' }}
