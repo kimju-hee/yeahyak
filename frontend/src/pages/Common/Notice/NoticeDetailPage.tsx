@@ -1,11 +1,14 @@
 import React from 'react';
 import { Typography, Button, Card, Descriptions } from 'antd';
 import type { DescriptionsProps } from 'antd';
+import { useNavigate } from 'react-router-dom';
 
 const { Title } = Typography;
 
 export default function NoticeDetailPage() {
-  // 예시 데이터 (props나 API 연동으로 받을 수 있음)
+  const navigate = useNavigate();
+
+  // 예시 데이터
   const items: DescriptionsProps['items'] = [
     {
       key: '1',
@@ -23,6 +26,9 @@ export default function NoticeDetailPage() {
       children: '2025-07-25',
     },
   ];
+
+  // 예시 ID
+  const noticeId = 1;
 
   return (
     <div>
@@ -42,10 +48,11 @@ export default function NoticeDetailPage() {
         </p>
       </Card>
 
-      {/* 버튼 */}
       <div style={{ display: 'flex', gap: 8 }}>
-        <Button>수정</Button>
-        <Button type="primary" onClick={() => window.history.back()}>
+        <Button type="primary" onClick={() => navigate(`/hq/notices/${noticeId}/edit`)}>
+          수정
+        </Button>
+        <Button type="default" onClick={() => navigate('/hq/notices')}>
           목록
         </Button>
       </div>
