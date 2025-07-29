@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
 import {
-  Typography,Input,Button,Form,Row,Col,Upload,message,Select,} from 'antd';
+  Typography,
+  Input,
+  Button,
+  Form,
+  Row,
+  Col,
+  Upload,
+  message,
+  Select,
+} from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
+import { useNavigate } from 'react-router-dom';
+
+import TiptapEditor from '../../components/TiptapEditor';
 
 const { Title } = Typography;
-const { TextArea } = Input;
 
 const uploadProps: UploadProps = {
   name: 'file',
@@ -33,12 +44,18 @@ const categoryOptions = [
 
 export default function HqDashboardPage() {
   const [form] = Form.useForm();
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(
-    undefined
-  );
+  const navigate = useNavigate();
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
+  const [editorContent, setEditorContent] = useState<string>('');
 
   const handleSubmit = (values: any) => {
-    console.log('제출된 데이터:', values);
+    const finalData = {
+      ...values,
+      content: editorContent,
+    };
+    console.log('제출된 데이터:', finalData);
+
+    navigate('/hq/notices');
   };
 
   const handleSelectChange = (value: string) => {
@@ -62,7 +79,11 @@ export default function HqDashboardPage() {
             </Form.Item>
           </Col>
           <Col span={4}>
-            <Form.Item label="분류" name="category">
+            <Form.Item
+              label="분류"
+              name="category"
+              rules={[{ required: true, message: '분류를 선택해주세요.' }]}
+            >
               <Select
                 placeholder="선택"
                 options={categoryOptions}
@@ -73,11 +94,12 @@ export default function HqDashboardPage() {
         </Row>
 
         <Form.Item
-          name="content"
           label="내용"
-          rules={[{ required: true, message: '내용을 입력해주세요.' }]}
+          required
+          validateStatus={!editorContent ? 'error' : ''}
+          help={!editorContent ? '내용을 입력해주세요.' : ''}
         >
-          <TextArea rows={6} placeholder="공지 내용을 입력하세요" />
+          <TiptapEditor content={editorContent} onChange={setEditorContent} />
         </Form.Item>
 
         <Row gutter={16} style={{ marginTop: 16 }}>
@@ -87,9 +109,11 @@ export default function HqDashboardPage() {
             </Upload>
           </Col>
           <Col>
-            <Button disabled={selectedCategory === '공지사항'}>
+            <Button 
+            type="primary"
+            disabled={selectedCategory === '공지사항'}>
               요약
-            </Button>
+              </Button>
           </Col>
           <Col>
             <Form.Item>
