@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Typography,
   Input,
@@ -12,9 +12,9 @@ import {
 } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
-
+import { useNavigate, useParams } from 'react-router-dom';
+import TiptapEditor from '../../components/TiptapEditor';
 const { Title } = Typography;
-const { TextArea } = Input;
 
 const uploadProps: UploadProps = {
   name: 'file',
@@ -23,9 +23,6 @@ const uploadProps: UploadProps = {
     authorization: 'authorization-text',
   },
   onChange(info) {
-    if (info.file.status !== 'uploading') {
-      console.log(info.file, info.fileList);
-    }
     if (info.file.status === 'done') {
       message.success(`${info.file.name} 파일 업로드 성공`);
     } else if (info.file.status === 'error') {
@@ -40,24 +37,51 @@ const categoryOptions = [
   { value: '법안', label: '법안' },
 ];
 
-export default function HqDashboardPage() {
+export default function EditNoticePage() {
   const [form] = Form.useForm();
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(
-    undefined
-  );
+  const [editorContent, setEditorContent] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
+  const navigate = useNavigate();
+  const { id } = useParams(); // 예: /hq/notices/edit/:id
 
-  const handleSubmit = (values: any) => {
-    console.log('제출된 데이터:', values);
+  // 기존 공지사항 데이터 로딩 (API 대체 필요)
+  useEffect(() => {
+    // 실제 API 호출로 대체
+    fetch(`/api/notices/${id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        form.setFieldsValue({
+          title: data.title,
+          category: data.category,
+        });
+        setSelectedCategory(data.category);
+        setEditorContent(data.content);
+      });
+  }, [id, form]);
+
+  const handleSubmit = async (values: any) => {
+    const payload = {
+      ...values,
+      content: editorContent,
+    };
+
+    // 실제 수정 API 호출로 대체
+    await fetch(`/api/notices/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    navigate('/hq/notices');
   };
 
   const handleSelectChange = (value: string) => {
-    console.log(`selected ${value}`);
     setSelectedCategory(value);
   };
 
   return (
     <div>
-      <Title>Notice</Title>
+      <Title>공지사항 수정</Title>
 
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Row gutter={8}>
@@ -71,7 +95,11 @@ export default function HqDashboardPage() {
             </Form.Item>
           </Col>
           <Col span={4}>
-            <Form.Item label="분류" name="category">
+            <Form.Item
+              name="category"
+              label="분류"
+              rules={[{ required: true, message: '분류를 선택해주세요.' }]}
+            >
               <Select
                 placeholder="선택"
                 options={categoryOptions}
@@ -82,11 +110,12 @@ export default function HqDashboardPage() {
         </Row>
 
         <Form.Item
-          name="content"
           label="내용"
-          rules={[{ required: true, message: '내용을 입력해주세요.' }]}
+          required
+          validateStatus={!editorContent ? 'error' : ''}
+          help={!editorContent ? '내용을 입력해주세요.' : ''}
         >
-          <TextArea rows={6} placeholder="공지 내용을 입력하세요" />
+          <TiptapEditor content={editorContent} onChange={setEditorContent} />
         </Form.Item>
 
         <Row gutter={16} style={{ marginTop: 16 }}>
@@ -96,7 +125,9 @@ export default function HqDashboardPage() {
             </Upload>
           </Col>
           <Col>
-            <Button disabled={selectedCategory === '공지사항'}>
+            <Button 
+            type="primary"
+            disabled={selectedCategory === '공지사항'}>
               요약
             </Button>
           </Col>
@@ -104,6 +135,21 @@ export default function HqDashboardPage() {
             <Form.Item>
               <Button type="primary" htmlType="submit">
                 수정
+              </Button>
+            </Form.Item>
+          </Col>
+          <Col>
+            <Form.Item>
+              <Button
+              danger
+              onClick={async () => {
+                await fetch(`/api/notices/${id}`, {
+                  method: 'DELETE',
+                });
+                navigate('/hq/notices');
+              }}
+            >
+                삭제
               </Button>
             </Form.Item>
           </Col>
