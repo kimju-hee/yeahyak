@@ -3,34 +3,38 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import BranchLayout from './layouts/BranchLayout';
 import HqLayout from './layouts/HqLayout';
 import PublicLayout from './layouts/PublicLayout';
-import BranchDashboardPage from './pages/Branch/BranchDashboardPage';
-import BranchProfileEditPage from './pages/Branch/BranchProfileEditPage';
-import BranchStockPage from './pages/Branch/BranchStockPage';
-import OrderRequestPage from './pages/Branch/OrderRequestPage';
-import ReturnRequestPage from './pages/Branch/ReturnRequestPage';
-import AdminLoginPage from './pages/Common/Auth/AdminLoginPage';
-import AdminRegisterPage from './pages/Common/Auth/AdminRegisterPage';
-import LoginPage from './pages/Common/Auth/LoginPage';
-import LogoutPage from './pages/Common/Auth/LogoutPage';
-import RegisterPage from './pages/Common/Auth/RegisterPage';
-import ForbiddenPage from './pages/Common/Error/ForbiddenPage';
-import NotFoundPage from './pages/Common/Error/NotFoundPage';
-import ServerErrorPage from './pages/Common/Error/ServerErrorPage';
-import NoticeDetailPage from './pages/Common/Notice/NoticeDetailPage';
-import NoticeListPage from './pages/Common/Notice/NoticeListPage';
-import ProductDetailPage from './pages/Common/Product/ProductDetailPage';
-import ProductListPage from './pages/Common/Product/ProductListPage';
-import BranchManagementPage from './pages/HQ/BranchManagementPage';
-import BranchMonitoringPage from './pages/HQ/BranchMonitoringPage';
-import DemandForecastPage from './pages/HQ/DemandForecastPage';
-import HqDashboardPage from './pages/HQ/HqDashboardPage';
-import HqNoticeEditPage from './pages/HQ/HqNoticeEditPage';
-import HqNoticeRegisterPage from './pages/HQ/HqNoticeRegisterPage';
-import HqProductEditPage from './pages/HQ/HqProductEditPage';
-import HqProductRegisterPage from './pages/HQ/HqProductRegisterPage';
-import HqStockPage from './pages/HQ/HqStockPage';
-import OrderManagementPage from './pages/HQ/OrderManagementPage';
-import ReturnManagementPage from './pages/HQ/ReturnManagementPage';
+import BranchDashboardPage from './pages/branch/BranchDashboardPage';
+import BranchStockPage from './pages/branch/BranchStockPage';
+import OrderRequestPage from './pages/branch/OrderRequestPage';
+import PharmacyEditPage from './pages/branch/PharmacyEditPage';
+import ReturnRequestPage from './pages/branch/ReturnRequestPage';
+import AdminLoginPage from './pages/common/auth/AdminLoginPage';
+import AdminRegisterPage from './pages/common/auth/AdminRegisterPage';
+import LoginPage from './pages/common/auth/LoginPage';
+import PasswordChangePage from './pages/common/auth/PasswordChangePage';
+import RegisterPage from './pages/common/auth/RegisterPage';
+import ForbiddenPage from './pages/common/error/ForbiddenPage';
+import NotFoundPage from './pages/common/error/NotFoundPage';
+import ServerErrorPage from './pages/common/error/ServerErrorPage';
+import NoticeDetailPage from './pages/common/notice/NoticeDetailPage';
+import NoticeListPage from './pages/common/notice/NoticeListPage';
+import ProductDetailPage from './pages/common/product/ProductDetailPage';
+import ProductListPage from './pages/common/product/ProductListPage';
+import BranchManagementPage from './pages/hq/BranchManagementPage';
+import BranchMonitoringPage from './pages/hq/BranchMonitoringPage';
+import DemandForecastPage from './pages/hq/DemandForecastPage';
+import HqDashboardPage from './pages/hq/HqDashboardPage';
+import HqNoticeEditPage from './pages/hq/HqNoticeEditPage';
+import HqNoticeRegisterPage from './pages/hq/HqNoticeRegisterPage';
+import HqProductEditPage from './pages/hq/HqProductEditPage';
+import HqProductRegisterPage from './pages/hq/HqProductRegisterPage';
+import HqStockPage from './pages/hq/HqStockPage';
+import OrderManagementPage from './pages/hq/OrderManagementPage';
+import ProfileEditPage from './pages/hq/ProfileEditPage';
+import ReturnManagementPage from './pages/hq/ReturnManagementPage';
+{
+  /*import LogoutPage from './pages/common/auth/LogoutPage';*/
+}
 
 export default function App() {
   return (
@@ -44,7 +48,7 @@ export default function App() {
         <Route path="admin-login" element={<AdminLoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="admin-register" element={<AdminRegisterPage />} />
-        <Route path="logout" element={<LogoutPage />} />
+        {/* 사용하지 않는 페이지 <Route path="logout" element={<LogoutPage />} />*/}
         {/* 에러 */}
         <Route path="403" element={<ForbiddenPage />} />
         <Route path="500" element={<ServerErrorPage />} />
@@ -54,6 +58,8 @@ export default function App() {
       {/* 본사 */}
       <Route path="/hq" element={<HqLayout />}>
         <Route index element={<HqDashboardPage />} />
+        <Route path="profile-edit" element={<ProfileEditPage />} />
+        <Route path="password-change" element={<PasswordChangePage />} />
         <Route path="notices" element={<NoticeListPage />} />
         <Route path="notices/:id" element={<NoticeDetailPage />} />
         <Route path="notices/new" element={<HqNoticeRegisterPage />} />
@@ -73,7 +79,8 @@ export default function App() {
       {/* 가맹점 */}
       <Route path="/branch" element={<BranchLayout />}>
         <Route index element={<BranchDashboardPage />} />
-        <Route path="profile-edit" element={<BranchProfileEditPage />} />
+        <Route path="password-change" element={<PasswordChangePage />} />
+        <Route path="pharmacy-edit" element={<PharmacyEditPage />} />
         <Route path="notices" element={<NoticeListPage />} />
         <Route path="notices/:id" element={<NoticeDetailPage />} />
         <Route path="order-request" element={<OrderRequestPage />} />
