@@ -23,6 +23,7 @@ public class Product {
     private String productCode;
     private String category;
     private String manufacturer;
+    @Lob
     private String details;
     private String unit;
     private BigDecimal unitPrice;
