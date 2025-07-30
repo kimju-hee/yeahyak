@@ -34,6 +34,9 @@ public class User implements UserDetails {
     @Column(length = 20, nullable = false)
     private UserRole userRole;
 
+    @Column(nullable = false)
+    private int point = 0;
+
     @PrePersist
     public void prePersist() {
         if (this.userRole == null) {
