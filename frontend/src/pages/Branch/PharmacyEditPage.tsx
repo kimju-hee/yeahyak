@@ -1,5 +1,6 @@
 import { Button, Card, Form, Input, message, Typography } from 'antd';
 import { useEffect } from 'react';
+import AddressInput from '../../components/AddressInput';
 import type { Pharmacy } from '../../mocks/types';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -15,7 +16,9 @@ export default function PharmacyEditPage() {
       pharmacyName: profile.pharmacyName,
       bizRegNo: profile.bizRegNo,
       representativeName: profile.representativeName,
+      postcode: profile.postcode,
       address: profile.address,
+      detailAddress: profile.detailAddress,
       contact: profile.contact,
     });
   }, [form, profile]);
@@ -56,13 +59,13 @@ export default function PharmacyEditPage() {
           >
             <Input />
           </Form.Item>
-          <Form.Item
-            name="address"
+          <AddressInput
+            postcodeName="postcode"
+            addressName="address"
+            detailAddressName="detailAddress"
             label="주소"
-            rules={[{ required: true, message: '주소를 입력해주세요.', whitespace: true }]}
-          >
-            <Input />
-          </Form.Item>
+            required={true}
+          ></AddressInput>
           <Form.Item name="contact" label="연락처">
             <Input />
           </Form.Item>

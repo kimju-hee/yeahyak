@@ -1,5 +1,6 @@
 import { Button, Card, Checkbox, Form, Input, message, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import AddressInput from '../../../components/AddressInput';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -110,13 +111,13 @@ export default function RegisterPage() {
           >
             <Input />
           </Form.Item>
-          <Form.Item
-            name="address"
+          <AddressInput
+            postcodeName="postcode"
+            addressName="address"
+            detailAddressName="detailAddress"
             label="주소"
-            rules={[{ required: true, message: '주소를 입력해주세요.' }]}
-          >
-            <Input />
-          </Form.Item>
+            required={true}
+          ></AddressInput>
           <Form.Item name="contact" label="연락처">
             <Input />
           </Form.Item>
