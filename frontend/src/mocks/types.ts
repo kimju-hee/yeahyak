@@ -19,7 +19,9 @@ export interface Pharmacy {
   pharmacyName: string;
   bizRegNo: string;
   representativeName: string;
+  postcode: string;
   address: string;
+  detailAddress?: string;
   contact?: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
 }
