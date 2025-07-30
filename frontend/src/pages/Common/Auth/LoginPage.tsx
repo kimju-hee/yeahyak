@@ -20,7 +20,7 @@ export default function LoginPage() {
   const onFinish = async (values: any) => {
     console.log('로그인 시도:', values);
 
-    // TODO: 여기에 로그인 API 호출 로직을 추가하세요.
+    // TODO: 로그인 API 호출 로직 추가하기
 
     if (!values.email.includes('branch')) {
       messageApi.error('가맹점 계정으로 로그인해주세요.');

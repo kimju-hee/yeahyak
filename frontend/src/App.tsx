@@ -48,7 +48,7 @@ export default function App() {
         <Route path="admin-login" element={<AdminLoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="admin-register" element={<AdminRegisterPage />} />
-        {/* 사용하지 않는 페이지 <Route path="logout" element={<LogoutPage />} />*/}
+        {/* <Route path="logout" element={<LogoutPage />} />*/}
         {/* 에러 */}
         <Route path="403" element={<ForbiddenPage />} />
         <Route path="500" element={<ServerErrorPage />} />
