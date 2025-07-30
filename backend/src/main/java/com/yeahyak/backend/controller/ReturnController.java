@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/returns")
+@RequestMapping("/branch/returns")
 public class ReturnController {
 
     private final ReturnService returnService;
