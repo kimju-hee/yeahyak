@@ -24,12 +24,12 @@ export default function PasswordChangePage() {
     newPassword: string;
     confirmNewPassword: string;
   }) => {
-    console.log('계정 정보 수정 시도:', values);
+    console.log('비밀번호 변경 시도:', values);
 
-    // TODO: 여기에 계정 정보 수정 API 호출 로직을 추가하세요.
+    // TODO: 비밀번호 변경 API 호출 로직 추가하기
 
     updateUser({ password: values.newPassword });
-    messageApi.success('계정 정보가 수정되었습니다!');
+    messageApi.success('비밀번호가 변경되었습니다!');
     form.resetFields();
   };
 
@@ -37,7 +37,7 @@ export default function PasswordChangePage() {
     <>
       {contextHolder}
       <Typography.Title level={3} style={{ marginBottom: '24px' }}>
-        계정 정보 수정
+        비밀번호 변경
       </Typography.Title>
       <Card>
         <Form form={form} name="account-edit" onFinish={onFinish}>
@@ -66,7 +66,32 @@ export default function PasswordChangePage() {
             name="newPassword"
             label="새 비밀번호"
             dependencies={['newPassword']}
-            rules={[{ required: true, message: '새 비밀번호를 입력해주세요.' }]}
+            rules={[
+              { required: true, message: '새 비밀번호를 입력해주세요.' },
+              {
+                validator: (_, value) => {
+                  if (!value) return Promise.resolve();
+
+                  const length = value.length;
+                  const hasUpper = /[A-Z]/.test(value);
+                  const hasLower = /[a-z]/.test(value);
+                  const hasNumber = /[0-9]/.test(value);
+                  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(value);
+
+                  const typeCount = [hasUpper, hasLower, hasNumber, hasSpecial].filter(
+                    Boolean,
+                  ).length;
+
+                  if (typeCount >= 3 && length >= 8) return Promise.resolve();
+
+                  return Promise.reject(
+                    new Error(
+                      '영대문자, 영소문자, 숫자, 특수문자 중 3종류 이상을 조합하여 8자리 이상으로 입력해주세요.',
+                    ),
+                  );
+                },
+              },
+            ]}
             hasFeedback
           >
             <Input.Password />
@@ -74,6 +99,7 @@ export default function PasswordChangePage() {
           <Form.Item
             name="confirmNewPassword"
             label="새 비밀번호 확인"
+            dependencies={['newPassword']}
             rules={[
               { required: true, message: '새 비밀번호 확인을 입력해주세요.' },
               ({ getFieldValue }) => ({
