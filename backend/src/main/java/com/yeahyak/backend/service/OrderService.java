@@ -1,7 +1,9 @@
 package com.yeahyak.backend.service;
 
 import com.yeahyak.backend.dto.OrderItemRequest;
+import com.yeahyak.backend.dto.OrderItemResponse;
 import com.yeahyak.backend.dto.OrderRequest;
+import com.yeahyak.backend.dto.OrderResponse;
 import com.yeahyak.backend.entity.OrderItems;
 import com.yeahyak.backend.entity.Order;
 import com.yeahyak.backend.entity.Pharmacy;
@@ -15,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -60,4 +63,32 @@ public class OrderService {
 
         orders.setTotalPrice(totalPrice);
     }
+
+    @Transactional
+    public List<OrderResponse> getAllOrders() {
+        List<Order> orders = orderRepository.findAll();
+
+        return orders.stream().map(order -> {
+            List<OrderItems> items = orderItemRepository.findByOrders(order);
+
+            List<OrderItemResponse> itemResponses = items.stream().map(item ->
+                    OrderItemResponse.builder()
+                            .productName(item.getProduct().getProductName())
+                            .quantity(item.getQuantity())
+                            .unitPrice(item.getUnitPrice())
+                            .subtotalPrice(item.getSubtotalPrice())
+                            .build()
+            ).toList();
+
+            return OrderResponse.builder()
+                    .orderId(order.getOrderId())
+                    .pharmacyName(order.getPharmacy().getPharmacyName())
+                    .createdAt(order.getCreatedAt())
+                    .totalPrice(order.getTotalPrice())
+                    .status(order.getStatus())
+                    .items(itemResponses)
+                    .build();
+        }).toList();
+    }
+
 }
