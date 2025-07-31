@@ -6,20 +6,17 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-@Table(name = "announcements")
-public class Announcement {
+@Table(name = "notices")
+@Getter @Setter @Builder
+@NoArgsConstructor @AllArgsConstructor
+public class Notice {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long announcementId;
 
     @Column(nullable = false)
-    private String type;  // LAW, EDU, POLICY, EPIDEMIC
+    private String category; // 'NOTICE', 'LAW', 'EPIDEMIC', 'NEW_DRUG'
 
     @Column(nullable = false)
     private String title;
@@ -27,6 +24,13 @@ public class Announcement {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(nullable = false)
+    @Column(name = "attachment_url")
+    private String attachmentUrl;
+
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }
+
