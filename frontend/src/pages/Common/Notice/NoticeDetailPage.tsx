@@ -1,61 +1,80 @@
-import React from 'react';
-import { Typography, Button, Card, Descriptions } from 'antd';
 import type { DescriptionsProps } from 'antd';
-import { useNavigate } from 'react-router-dom';
-
-const { Title } = Typography;
+import { Button, Card, Descriptions, Space, Typography } from 'antd';
+import { useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { mockNotices } from '../../../mocks/notice.mock';
+import type { User } from '../../../mocks/types';
+import { useAuthStore } from '../../../stores/authStore';
 
 export default function NoticeDetailPage() {
   const navigate = useNavigate();
+  const { id } = useParams();
 
-  // 예시 데이터
-  const items: DescriptionsProps['items'] = [
+  const notice = mockNotices.find((notice) => notice.id === Number(id));
+
+  const user = useAuthStore((state) => state.user) as User;
+
+  useEffect(() => {
+    if (!notice) {
+      navigate('/404', { replace: true });
+    }
+  }, [notice, navigate]);
+
+  if (!notice) return null;
+
+  const descriptionsItems: DescriptionsProps['items'] = [
     {
-      key: '1',
+      key: 'title',
       label: '제목',
-      children: '7월 신규 의약품 등록 안내',
+      children: notice.title,
     },
     {
-      key: '2',
-      label: '작성자',
-      children: '관리자 김약사',
-    },
-    {
-      key: '3',
+      key: 'createdAt',
       label: '작성일',
-      children: '2025-07-25',
+      children: new Date(notice.createdAt).toLocaleDateString(),
     },
   ];
 
-  // 예시 ID
-  const noticeId = 1;
+  if (notice.attachmentUrl) {
+    descriptionsItems.push({
+      key: 'attachmentUrl',
+      label: '첨부파일',
+      children: notice.attachmentUrl,
+      span: 2,
+    });
+  }
 
   return (
-    <div>
-      <Title>Notice</Title>
-
+    <>
+      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+        공지사항 상세
+      </Typography.Title>
       <Descriptions
         bordered
-        column={3}
+        column={2}
         size="middle"
-        style={{ marginBottom: 8 }}
-        items={items}
-      />
-
+        style={{ marginBottom: 24 }}
+        items={descriptionsItems}
+      ></Descriptions>
       <Card style={{ marginBottom: 24, padding: 24 }}>
-        <p>
-          본문내용
-        </p>
+        <Typography.Paragraph>{notice.content}</Typography.Paragraph>
       </Card>
-
-      <div style={{ display: 'flex', gap: 8 }}>
-        <Button type="primary" onClick={() => navigate(`/hq/notices/${noticeId}/edit`)}>
-          수정
-        </Button>
-        <Button type="default" onClick={() => navigate('/hq/notices')}>
+      <Space wrap style={{ justifyContent: 'space-between', width: '100%' }}>
+        <Button
+          type="default"
+          onClick={() => {
+            const basePath = user.role === 'ADMIN' ? '/hq' : '/branch';
+            navigate(`${basePath}/notices`);
+          }}
+        >
           목록
         </Button>
-      </div>
-    </div>
+        {user.role === 'ADMIN' && (
+          <Button type="primary" onClick={() => navigate(`/hq/notices/${id}/edit`)}>
+            수정
+          </Button>
+        )}
+      </Space>
+    </>
   );
 }
