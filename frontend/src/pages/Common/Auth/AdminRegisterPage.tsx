@@ -26,7 +26,7 @@ export default function AdminRegisterPage() {
         예약 관리자 회원가입
       </Typography.Title>
       <Card>
-        <Form name="register" onFinish={onFinish} scrollToFirstError autoComplete="off">
+        <Form name="admin-register" onFinish={onFinish} scrollToFirstError autoComplete="off">
           <Form.Item
             name="email"
             label="이메일"

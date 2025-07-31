@@ -3,14 +3,13 @@ import { Link } from 'react-router-dom';
 import { mockNotices } from '../../mocks/notice.mock';
 import { mockOrderItems, mockOrders } from '../../mocks/order.mock';
 import { mockProducts } from '../../mocks/product.mock';
-import type { Pharmacy } from '../../mocks/types';
+import type { Pharmacy, User } from '../../mocks/types';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function BranchDashboardPage() {
-  const user = useAuthStore((state) => state.user);
-  const profile = useAuthStore((state) => state.profile);
-  const pharmacy = profile as Pharmacy;
-  const pharmacyId = pharmacy.id;
+  const user = useAuthStore((state) => state.user) as User;
+  const profile = useAuthStore((state) => state.profile) as Pharmacy;
+  const pharmacyId = profile.id;
 
   const latestNotices = [...mockNotices]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -86,7 +85,7 @@ export default function BranchDashboardPage() {
         </Col>
         <Col span={12}>
           <Card title="잔액 현황" variant="borderless">
-            {user?.balance?.toLocaleString()}원
+            {user.balance?.toLocaleString()}원
           </Card>
         </Col>
       </Row>

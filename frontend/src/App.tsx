@@ -52,7 +52,8 @@ export default function App() {
         {/* 에러 */}
         <Route path="403" element={<ForbiddenPage />} />
         <Route path="500" element={<ServerErrorPage />} />
-        <Route path="*" element={<NotFoundPage />} />
+        <Route path="404" element={<NotFoundPage />} />
+        <Route path="*" element={<Navigate to="/404" replace />} />
       </Route>
 
       {/* 본사 */}
