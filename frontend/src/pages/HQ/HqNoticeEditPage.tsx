@@ -1,20 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import {
-  Typography,
-  Input,
-  Button,
-  Form,
-  Row,
-  Col,
-  Upload,
-  message,
-  Select,
-} from 'antd';
+import TiptapEditor from '@/components/TiptapEditor';
 import { UploadOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
+import { Button, Col, Form, Input, message, Row, Select, Space, Typography, Upload } from 'antd';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import TiptapEditor from '../../components/TiptapEditor';
-const { Title } = Typography;
+import { mockNotices } from '../../mocks/notice.mock';
 
 const uploadProps: UploadProps = {
   name: 'file',
@@ -22,139 +12,139 @@ const uploadProps: UploadProps = {
   headers: {
     authorization: 'authorization-text',
   },
-  onChange(info) {
-    if (info.file.status === 'done') {
-      message.success(`${info.file.name} 파일 업로드 성공`);
-    } else if (info.file.status === 'error') {
-      message.error(`${info.file.name} 파일 업로드 실패`);
-    }
-  },
 };
 
-const categoryOptions = [
-  { value: '공지사항', label: '공지사항' },
-  { value: '유행병', label: '유행병' },
-  { value: '법안', label: '법안' },
-];
-
-export default function EditNoticePage() {
+export default function HqNoticeEditPage() {
   const [form] = Form.useForm();
-  const [editorContent, setEditorContent] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const navigate = useNavigate();
-  const { id } = useParams(); // 예: /hq/notices/edit/:id
+  const { id } = useParams();
 
-  // 기존 공지사항 데이터 로딩 (API 대체 필요)
+  const [fileList, setFileList] = useState<any[]>([]);
+
+  const watchedCategory = Form.useWatch('category', form);
+  const watchedContent = Form.useWatch('content', form);
+
+  const notice = mockNotices.find((notice) => notice.id === Number(id));
+
   useEffect(() => {
-    // 실제 API 호출로 대체
-    fetch(`/api/notices/${id}`)
-      .then((res) => res.json())
-      .then((data) => {
-        form.setFieldsValue({
-          title: data.title,
-          category: data.category,
-        });
-        setSelectedCategory(data.category);
-        setEditorContent(data.content);
-      });
-  }, [id, form]);
+    if (!notice) {
+      navigate('/404', { replace: true });
+      return;
+    }
+    form.setFieldsValue({
+      category: notice.category,
+      title: notice.title,
+      content: notice.content,
+    });
+    if (notice.attachmentUrl) {
+      setFileList([
+        { uid: '-1', name: notice.attachmentUrl, status: 'done', url: notice.attachmentUrl },
+      ]);
+    }
+  }, [form, notice, navigate]);
 
   const handleSubmit = async (values: any) => {
-    const payload = {
-      ...values,
-      content: editorContent,
-    };
-
-    // 실제 수정 API 호출로 대체
-    await fetch(`/api/notices/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    navigate('/hq/notices');
+    // TODO: 공지사항 수정 API 호출 로직 추가하기
+    navigate(`/hq/notices/${id}`);
   };
 
-  const handleSelectChange = (value: string) => {
-    setSelectedCategory(value);
+  const handleDelete = async () => {
+    if (window.confirm('정말 삭제하시겠습니까?')) {
+      // TODO: 공지사항 삭제 API 호출 로직 추가하기
+      message.success('삭제되었습니다.');
+      navigate('/hq/notices');
+    }
   };
 
   return (
-    <div>
-      <Title>공지사항 수정</Title>
-
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+    <>
+      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+        공지사항 수정
+      </Typography.Title>
+      <Form
+        form={form}
+        name="notice-edit"
+        layout="vertical"
+        onFinish={handleSubmit}
+        autoComplete="off"
+      >
         <Row gutter={8}>
+          <Col span={4}>
+            <Form.Item
+              name="category"
+              label="카테고리"
+              rules={[{ required: true, message: '카테고리를 선택해주세요.' }]}
+            >
+              <Select
+                options={[
+                  { value: 'NOTICE', label: '공지' },
+                  { value: 'EPIDEMIC', label: '감염병' },
+                  { value: 'LAW', label: '법령' },
+                  { value: 'NEW_DRUG', label: '신약' },
+                ]}
+              />
+            </Form.Item>
+          </Col>
           <Col span={20}>
             <Form.Item
               name="title"
               label="제목"
               rules={[{ required: true, message: '제목을 입력해주세요.' }]}
             >
-              <Input placeholder="공지 제목을 입력하세요" />
-            </Form.Item>
-          </Col>
-          <Col span={4}>
-            <Form.Item
-              name="category"
-              label="분류"
-              rules={[{ required: true, message: '분류를 선택해주세요.' }]}
-            >
-              <Select
-                placeholder="선택"
-                options={categoryOptions}
-                onChange={handleSelectChange}
-              />
+              <Input />
             </Form.Item>
           </Col>
         </Row>
-
         <Form.Item
+          name="content"
           label="내용"
-          required
-          validateStatus={!editorContent ? 'error' : ''}
-          help={!editorContent ? '내용을 입력해주세요.' : ''}
+          rules={[{ required: true, message: '내용을 입력해주세요.' }]}
         >
-          <TiptapEditor content={editorContent} onChange={setEditorContent} />
+          <TiptapEditor
+            value={watchedContent}
+            onChange={(val: string) => form.setFieldValue('content', val)}
+          />
         </Form.Item>
-
-        <Row gutter={16} style={{ marginTop: 16 }}>
-          <Col>
-            <Upload {...uploadProps}>
-              <Button icon={<UploadOutlined />}>첨부파일</Button>
-            </Upload>
-          </Col>
-          <Col>
-            <Button 
-            type="primary"
-            disabled={selectedCategory === '공지사항'}>
+        <Space wrap align="baseline" style={{ justifyContent: 'space-between', width: '100%' }}>
+          <Space wrap align="baseline">
+            <Form.Item name="attachmentUrl">
+              <Upload
+                {...uploadProps}
+                fileList={fileList}
+                onChange={(info) => {
+                  if (info.file.status === 'done') {
+                    const fileName = info.file.name;
+                    form.setFieldValue('attachmentUrl', fileName);
+                    setFileList(info.fileList);
+                    message.success('파일이 업로드되었습니다.');
+                  } else if (info.file.status === 'error') {
+                    message.error('파일 업로드에 실패했습니다.');
+                  } else {
+                    setFileList(info.fileList);
+                  }
+                }}
+                accept=".pdf, .txt, .jpg, .jpeg, .png"
+                maxCount={1}
+              >
+                <Button type="default" icon={<UploadOutlined />}>
+                  첨부파일
+                </Button>
+              </Upload>
+            </Form.Item>
+            <Button type="primary" disabled={watchedCategory === 'NOTICE'}>
               요약
             </Button>
-          </Col>
-          <Col>
-            <Form.Item>
-              <Button type="primary" htmlType="submit">
-                수정
-              </Button>
-            </Form.Item>
-          </Col>
-          <Col>
-            <Form.Item>
-              <Button
-              danger
-              onClick={async () => {
-                await fetch(`/api/notices/${id}`, {
-                  method: 'DELETE',
-                });
-                navigate('/hq/notices');
-              }}
-            >
-                삭제
-              </Button>
-            </Form.Item>
-          </Col>
-        </Row>
+          </Space>
+          <Space wrap align="baseline">
+            <Button type="text" danger onClick={handleDelete}>
+              삭제
+            </Button>
+            <Button type="primary" htmlType="submit">
+              저장
+            </Button>
+          </Space>
+        </Space>
       </Form>
-    </div>
+    </>
   );
 }

@@ -1,22 +1,9 @@
-import React, { useState } from 'react';
-import {
-  Typography,
-  Input,
-  Button,
-  Form,
-  Row,
-  Col,
-  Upload,
-  message,
-  Select,
-} from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
+import { Button, Col, Form, Input, message, Row, Select, Space, Typography, Upload } from 'antd';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
 import TiptapEditor from '../../components/TiptapEditor';
-
-const { Title } = Typography;
 
 const uploadProps: UploadProps = {
   name: 'file',
@@ -24,106 +11,109 @@ const uploadProps: UploadProps = {
   headers: {
     authorization: 'authorization-text',
   },
-  onChange(info) {
-    if (info.file.status !== 'uploading') {
-      console.log(info.file, info.fileList);
-    }
-    if (info.file.status === 'done') {
-      message.success(`${info.file.name} 파일 업로드 성공`);
-    } else if (info.file.status === 'error') {
-      message.error(`${info.file.name} 파일 업로드 실패`);
-    }
-  },
 };
 
-const categoryOptions = [
-  { value: '공지사항', label: '공지사항' },
-  { value: '유행병', label: '유행병' },
-  { value: '법안', label: '법안' },
-];
-
-export default function HqDashboardPage() {
+export default function HqNoticeRegisterPage() {
   const [form] = Form.useForm();
   const navigate = useNavigate();
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
-  const [editorContent, setEditorContent] = useState<string>('');
+
+  const [fileList, setFileList] = useState<any[]>([]);
+
+  const watchedCategory = Form.useWatch('category', form);
+  const watchedContent = Form.useWatch('content', form);
 
   const handleSubmit = (values: any) => {
-    const finalData = {
-      ...values,
-      content: editorContent,
-    };
-    console.log('제출된 데이터:', finalData);
-
+    // TODO: 공지사항 등록 API 호출 로직 추가하기
     navigate('/hq/notices');
   };
 
-  const handleSelectChange = (value: string) => {
-    console.log(`selected ${value}`);
-    setSelectedCategory(value);
-  };
-
   return (
-    <div>
-      <Title>Notice</Title>
-
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+    <>
+      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+        공지사항 작성
+      </Typography.Title>
+      <Form
+        form={form}
+        name="notice-register"
+        layout="vertical"
+        onFinish={handleSubmit}
+        autoComplete="off"
+      >
         <Row gutter={8}>
+          <Col span={4}>
+            <Form.Item
+              name="category"
+              label="카테고리"
+              rules={[{ required: true, message: '카테고리를 선택해주세요.' }]}
+            >
+              <Select
+                placeholder="카테고리 선택"
+                options={[
+                  { value: 'NOTICE', label: '공지' },
+                  { value: 'EPIDEMIC', label: '감염병' },
+                  { value: 'LAW', label: '법령' },
+                  { value: 'NEW_DRUG', label: '신약' },
+                ]}
+              />
+            </Form.Item>
+          </Col>
           <Col span={20}>
             <Form.Item
               name="title"
               label="제목"
               rules={[{ required: true, message: '제목을 입력해주세요.' }]}
             >
-              <Input placeholder="공지 제목을 입력하세요" />
-            </Form.Item>
-          </Col>
-          <Col span={4}>
-            <Form.Item
-              label="분류"
-              name="category"
-              rules={[{ required: true, message: '분류를 선택해주세요.' }]}
-            >
-              <Select
-                placeholder="선택"
-                options={categoryOptions}
-                onChange={handleSelectChange}
-              />
+              <Input />
             </Form.Item>
           </Col>
         </Row>
-
         <Form.Item
+          name="content"
           label="내용"
-          required
-          validateStatus={!editorContent ? 'error' : ''}
-          help={!editorContent ? '내용을 입력해주세요.' : ''}
+          rules={[{ required: true, message: '내용을 입력해주세요.' }]}
         >
-          <TiptapEditor content={editorContent} onChange={setEditorContent} />
+          <TiptapEditor
+            value={watchedContent}
+            onChange={(val: string) => form.setFieldValue('content', val)}
+          />
         </Form.Item>
-
-        <Row gutter={16} style={{ marginTop: 16 }}>
-          <Col>
-            <Upload {...uploadProps}>
-              <Button icon={<UploadOutlined />}>첨부파일</Button>
-            </Upload>
-          </Col>
-          <Col>
-            <Button 
-            type="primary"
-            disabled={selectedCategory === '공지사항'}>
-              요약
-              </Button>
-          </Col>
-          <Col>
-            <Form.Item>
-              <Button type="primary" htmlType="submit">
-                등록
-              </Button>
+        <Space wrap align="baseline" style={{ justifyContent: 'space-between', width: '100%' }}>
+          <Space wrap align="baseline">
+            <Form.Item name="attachmentUrl">
+              <Upload
+                {...uploadProps}
+                fileList={fileList}
+                onChange={(info) => {
+                  if (info.file.status === 'done') {
+                    const fileName = info.file.name;
+                    form.setFieldValue('attachmentUrl', fileName);
+                    setFileList(info.fileList);
+                    message.success('파일이 업로드되었습니다.');
+                  } else if (info.file.status === 'error') {
+                    message.error('파일 업로드에 실패했습니다.');
+                  } else {
+                    setFileList(info.fileList);
+                  }
+                }}
+                accept=".pdf, .txt, .jpg, .jpeg, .png"
+                maxCount={1}
+              >
+                <Button type="default" icon={<UploadOutlined />}>
+                  첨부파일
+                </Button>
+              </Upload>
             </Form.Item>
-          </Col>
-        </Row>
+            <Button type="primary" disabled={watchedCategory === 'NOTICE'}>
+              요약
+            </Button>
+          </Space>
+          <Space wrap align="baseline">
+            <Button type="primary" htmlType="submit">
+              등록
+            </Button>
+          </Space>
+        </Space>
       </Form>
-    </div>
+    </>
   );
 }
