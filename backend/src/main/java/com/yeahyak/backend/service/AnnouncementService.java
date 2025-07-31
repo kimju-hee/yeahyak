@@ -36,4 +36,18 @@ public class AnnouncementService {
     public void delete(Long id) {
         announcementRepository.deleteById(id);
     }
+    public Announcement save(Announcement announcement) {
+        return announcementRepository.save(announcement);
+    }
+
+    public Announcement update(Long id, Announcement updated) {
+        Announcement original = findById(id);
+        original.setType(updated.getType());
+        original.setTitle(updated.getTitle());
+        original.setContent(updated.getContent());
+        original.setAttachmentUrl(updated.getAttachmentUrl());
+        original.setUpdatedAt(LocalDateTime.now());
+        return announcementRepository.save(original);
+    }
+
 }
