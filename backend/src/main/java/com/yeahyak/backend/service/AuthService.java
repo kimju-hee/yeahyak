@@ -2,6 +2,7 @@ package com.yeahyak.backend.service;
 
 import com.yeahyak.backend.dto.LoginRequest;
 import com.yeahyak.backend.dto.SignupRequest;
+import com.yeahyak.backend.dto.UpdatePharmacyRequest;
 import com.yeahyak.backend.entity.*;
 import org.springframework.security.authentication.AuthenticationManager;
 import com.yeahyak.backend.repository.PharmacyRepository;
@@ -68,5 +69,17 @@ public class AuthService {
         } catch (AuthenticationException e) {
             throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
+    }
+
+    public void updatePharmacy(Long pharmacyId, UpdatePharmacyRequest request) {
+        Pharmacy pharmacy = pharmacyRepository.findById(pharmacyId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 약국이 존재하지 않습니다."));
+
+        pharmacy.setPharmacyName(request.getPharmacyName());
+        pharmacy.setRepresentativeName(request.getRepresentativeName());
+        pharmacy.setAddress(request.getAddress());
+        pharmacy.setPhoneNumber(request.getPhoneNumber());
+
+        pharmacyRepository.save(pharmacy);
     }
 }
