@@ -16,7 +16,6 @@ import React, { useState } from 'react';
 import type { ColumnsType } from 'antd/es/table';
 import type { TableProps } from 'antd';
 
-
 const { Content } = Layout;
 const { Text } = Typography;
 
@@ -42,17 +41,22 @@ interface OrderHistory {
 }
 
 const columns: ColumnsType<OrderTable> = [
-  { title: '이미지', dataIndex: 'image', key: 'image' },
+  {
+    title: '이미지',
+    dataIndex: 'image',
+    key: 'image',
+    render: (src: string) => <img src={src} alt="제품 이미지" width={50} />,
+  },
   { title: '품목코드', dataIndex: 'code', key: 'code', render: (text: string) => <a>{text}</a> },
   { title: '품명', dataIndex: 'name', key: 'name' },
   { title: '등록일', dataIndex: 'date', key: 'date' },
-  { title: '수량', dataIndex: 'quantity', key: 'quantity' },
   {
     title: '단가',
     dataIndex: 'price',
     key: 'price',
     render: (value: number) => `${value.toLocaleString()}원`,
   },
+  { title: '수량', dataIndex: 'quantity', key: 'quantity' },
   {
     title: '합계 금액',
     dataIndex: 'total',
@@ -65,7 +69,7 @@ const rawData: Omit<OrderTable, 'total'>[] = [
   // 약품 구매 더미데이터
   {
     key: '1',
-    image: 'https://via.placeholder.com/50',
+    image: '/images/SoknCool.jpg',
     code: 'TYR-5001',
     name: '타이레놀 정 500mg',
     date: '2025-07-01',
@@ -74,7 +78,7 @@ const rawData: Omit<OrderTable, 'total'>[] = [
   },
   {
     key: '2',
-    image: 'https://via.placeholder.com/50',
+    image: '/images/semiron.jpg',
     code: 'PNZ-1101',
     name: '펜잘큐정',
     date: '2025-07-03',
@@ -83,7 +87,7 @@ const rawData: Omit<OrderTable, 'total'>[] = [
   },
   {
     key: '3',
-    image: 'https://via.placeholder.com/50',
+    image: '/images/S_marin.png',
     code: 'BEZ-2204',
     name: '베아제정',
     date: '2025-07-05',
@@ -92,7 +96,7 @@ const rawData: Omit<OrderTable, 'total'>[] = [
   },
   {
     key: '4',
-    image: 'https://via.placeholder.com/50',
+    image: '/images/Maken_Q.jpg',
     code: 'GLF-3302',
     name: '겔포스엠 현탁액',
     date: '2025-07-07',
@@ -101,7 +105,7 @@ const rawData: Omit<OrderTable, 'total'>[] = [
   },
   {
     key: '5',
-    image: 'https://via.placeholder.com/50',
+    image: '/images/lierstop.jpg',
     code: 'GVC-4403',
     name: '개비스콘 더블액션',
     date: '2025-07-10',
@@ -110,7 +114,7 @@ const rawData: Omit<OrderTable, 'total'>[] = [
   },
   {
     key: '6',
-    image: 'https://via.placeholder.com/50',
+    image: '/images/GelforceAm_Suspension.jpg',
     code: 'GAS-5507',
     name: '까스활명수',
     date: '2025-07-12',
@@ -119,7 +123,7 @@ const rawData: Omit<OrderTable, 'total'>[] = [
   },
   {
     key: '7',
-    image: 'https://via.placeholder.com/50',
+    image: '/images/FestalPlusTablets.jpg',
     code: 'SSP-6609',
     name: '신신파스 아렉스',
     date: '2025-07-15',
@@ -128,7 +132,7 @@ const rawData: Omit<OrderTable, 'total'>[] = [
   },
   {
     key: '8',
-    image: 'https://via.placeholder.com/50',
+    image: '/images/DulcolaxEsjangyongjeong.jpg',
     code: 'HMS-7712',
     name: '활명수 정',
     date: '2025-07-18',
@@ -137,7 +141,7 @@ const rawData: Omit<OrderTable, 'total'>[] = [
   },
   {
     key: '9',
-    image: 'https://via.placeholder.com/50',
+    image: '/images/Cass_active_water.jpg',
     code: 'EZ6-8820',
     name: '이지엔6 이브',
     date: '2025-07-21',
@@ -185,25 +189,26 @@ const orderHistoryColumns: ColumnsType<OrderHistory> = [
     key: 'totalAmount',
     render: (val: number) => `${val.toLocaleString()}원`,
   },
-    {
+  {
     title: '상태',
-    dataIndex:'tags',
-    key:'tags',
-    render: (_,{tags}) => (
+    dataIndex: 'tags',
+    key: 'tags',
+    render: (_, { tags }) => (
       <>
-      {tags.map((tag) => {
-        let color = tag.length > 5 ? 'geekblue':'green';
-        if (tag === 'loser'){
-          color='volcano';
-        }
-        return (
-          <Tag color={color} key={tag}>
-            {tag.toUpperCase()}
-          </Tag>
-        );
-      })}
+        {tags.map((tag) => {
+          let color = tag.length > 5 ? 'geekblue' : 'green';
+          if (tag === 'loser') {
+            color = 'volcano';
+          }
+          return (
+            <Tag color={color} key={tag}>
+              {tag.toUpperCase()}
+            </Tag>
+          );
+        })}
       </>
-    )}
+    ),
+  },
 ];
 
 export default function OrderRequestPage() {
@@ -255,7 +260,7 @@ export default function OrderRequestPage() {
       items: selectedRows,
       totalAmount,
       date: new Date().toLocaleDateString(),
-      tags: ['발주 완료']
+      tags: ['발주 완료'],
     };
     setOrderHistory((prev) => [...prev, newOrder]);
 
@@ -355,7 +360,17 @@ export default function OrderRequestPage() {
                     />
                   </Card>
                 </Col>
-                <Col style={{ marginLeft: 24, display: 'flex', gap: 8 }}>
+              </Row>
+            </Col>
+            {/* 🔸 요청 상세 내역 헤더 + 버튼 */}
+            <Col span={24}>
+              <Row justify="space-between" align="middle" style={{ marginBottom: 12 }}>
+                <Col>
+                  <Text strong style={{ fontSize: 20 }}>
+                    장바구니
+                  </Text>
+                </Col>
+                <Col style={{ marginLeft: 1000, display: 'flex', gap: 8 }}>
                   <Button
                     type="primary"
                     onClick={showModal}
@@ -377,18 +392,8 @@ export default function OrderRequestPage() {
                     전체 품목 리스트
                   </Button>
                 </Col>
-              </Row>
-            </Col>
-            {/* 🔸 요청 상세 내역 헤더 + 버튼 */}
-            <Col span={24}>
-              <Row justify="space-between" align="middle" style={{ marginBottom: 12 }}>
                 <Col>
-                  <Text strong style={{ fontSize: 20 }}>
-                    장바구니
-                  </Text>
-                </Col>
-                <Col>
-                  <Button type="primary" danger onClick={handleOrder}>
+                  <Button type="primary"  size="large" danger onClick={handleOrder}>
                     선택 항목 발주
                   </Button>
                 </Col>
@@ -401,9 +406,7 @@ export default function OrderRequestPage() {
                     rowSelection={rowSelection}
                     columns={columns}
                     dataSource={tableData}
-                    pagination={{ pageSize: 6,
-                      position: ['bottomCenter'],
-                    }}
+                    pagination={{ pageSize: 6, position: ['bottomCenter'] }}
                     style={{ width: '100%' }}
                   />
                 </Col>

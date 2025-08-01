@@ -80,28 +80,6 @@ const options: Option[] = [
       },
     ],
   },
-  {
-    value: '경기',
-    label: '경기',
-    children: [
-      {
-        value: '강남',
-        label: '강남',
-      },
-      {
-        value: '강북',
-        label: '강북',
-      },
-      {
-        value: '강동',
-        label: '강동',
-      },
-      {
-        value: '강서',
-        label: '강서',
-      },
-    ],
-  },
 ];
 
 const filter = (
@@ -215,71 +193,74 @@ const dataSource: DataType[] = [
   },
 ];
 
-const MenuProps = {
-  items,
-};
-
 export default function OrderManagementPage() {
   // 버튼 클릭 시 로딩 표현
   const [loadings, setLoadings] = useState<boolean[]>([]); // 로딩 표시를 위한 상태 저장
   const [sortedInfo, setSortedInfo] = useState<Sorts>({}); // 정렬를 위한 상태 저장
 
-  const [originalData, setOriginalData] = useState<DataType[]>(dataSource); // 🔒 원본 데이터 (수정 안함)
-  const [data, setData] = useState<DataType[]>(dataSource); // 화면에 표시할 데이터
+  const [data, setData] = useState<DataType[]>(dataSource); // 변경 데이터
+  const [original, setOriginal] = useState<DataType[]>(dataSource);
 
   const [Selected, setSelected] = useState<DataType | null>(null); // 모달 창에 표시할 행 하나의 데이터
   const [modalVisible, setModalVisible] = useState(false); // 모달 창의 표시 여부 상태 저장, 디폴트는 false
 
-  const [filterDateRange, setFilterDateRange] = useState<[string, string] | null>(null);
-  const [filterBranch, setFilterBranch] = useState<string | null>(null);
-
   const [form] = Form.useForm();
 
-  const handleChange: OnChange = (Pagination, filters, sorter) => {
+  const handle_Sort: OnChange = (Pagination, filters, sorter) => {
+    // 테이블 내부 정렬을 위한 함수
     // OnChange 함수를 통해 Table에서 조작 발생했을때의 콜백 함수
     console.log('Various parameters', Pagination, sorter);
     setSortedInfo(sorter as Sorts);
   };
 
-  const handleRowclick = (record: DataType) => {
+  const handle_Rowclick = (record: DataType) => {
     //테이블에서 행 클릭 시 호출
     setSelected(record);
     setModalVisible(true); //클릭한 행 데이터를 저장하고 모달 표시
   };
 
-  const handleApprove = (key: React.Key) => {
+  const handle_Status = (key: React.Key) => {
+    //
     // 테이블 버튼 관리
-    const newData = data.map((item) =>
-      item.key === key ? { ...item, status: '승인 완료' } : item,
-    ); //클릭된 행의 상태를 승인 완료로 바꿈
-    setData(newData); // 보여지는 테이블도 갱신
-    setOriginalData(newData); // ✅ 원본도 갱신
+    const update = (item: DataType) => (item.key === key ? { ...item, status: '승인 완료' } : item);
+    //클릭된 행의 상태를 승인 완료로 바꿈
+    const newOriginal = original.map(update);
+    const newData = data.map(update);
+
+    setOriginal(newOriginal); // 원본에도 적용
+    setData(newData); // 현재 보여지는 테이블도 갱신
     if (Selected?.key === key) {
-      setSelected({ ...Selected, status: '승인 완료' });
+      setSelected({ ...Selected, status: '승인 완료' }); // 모달 데이터도 갱신
     } // 테이블과 모달 동기화
   };
 
-  const handleFilterSearch = () => {
-    // 둘 다 비어있으면 전체 출력
-    if (!filterBranch && !filterDateRange) {
-      setData(originalData);
-      return;
-    }
+  const handle_FilterSearch = () => {
+    const branchValue = form.getFieldValue('branch'); // ['충남충북', '대전']
+    const dateRange = form.getFieldValue('date'); // [Moment, Moment]
 
-    const filtered = originalData.filter((item) => {
-      const matchBranch = !filterBranch || item.branch.includes(filterBranch);
+    console.log('선택된 지역:', branchValue);
 
-      const matchDate =
-        !filterDateRange ||
-        (new Date(item.date) >= new Date(filterDateRange[0]) &&
-          new Date(item.date) <= new Date(filterDateRange[1]));
+    const selectedBranch =
+      Array.isArray(branchValue) && branchValue.length > 0
+        ? branchValue[branchValue.length - 1]
+        : null;
+
+    const startDate = dateRange?.[0]?.toDate() ?? null;
+    const endDate = dateRange?.[1]?.toDate() ?? null;
+
+    const filtered = original.filter((item) => {
+      const itemDate = new Date(item.date);
+
+      const matchBranch = selectedBranch === null || item.branch.includes(selectedBranch); // ✅ 포함되는 경우 필터 통과
+
+      const matchDate = startDate && endDate ? itemDate >= startDate && itemDate <= endDate : true;
 
       return matchBranch && matchDate;
     });
 
+    console.log('필터링 결과 개수:', filtered.length);
     setData(filtered);
   };
-
   const enterLoading = (index: number) => {
     console.log('조회 중입니다', index);
 
@@ -297,7 +278,7 @@ export default function OrderManagementPage() {
         newLoadings[index] = false;
         return newLoadings;
       });
-    }, 3000); // 3초 설정
+    }, 1500); // 1.5초 설정
   };
   // 로딩 표현 종료
 
@@ -361,7 +342,7 @@ export default function OrderManagementPage() {
             type="primary"
             onClick={(e) => {
               e.stopPropagation();
-              handleApprove(record.key);
+              handle_Status(record.key);
             }}
           >
             승인
@@ -386,8 +367,8 @@ export default function OrderManagementPage() {
             <Col>
               <Form.Item
                 label="지점명"
-                name="requestDate"
-                rules={[{ required: true, message: '지점을 선택해주세요' }]}
+                name="branch"
+                rules={[{ required: false, message: '지점을 선택해주세요' }]}
               >
                 <Space>
                   <Cascader
@@ -396,12 +377,10 @@ export default function OrderManagementPage() {
                     showSearch={{ filter }}
                     onSearch={(value) => console.log(value)}
                     onChange={(value) => {
-                      if (value && value.length > 0) {
-                        setFilterBranch(value[value.length - 1]);
-                      } else {
-                        setFilterBranch(null);
-                      }
+                      console.log('선택한 지역:', value); // 디버깅용
+                      form.setFieldsValue({ branch: value }); // ✅ form에 명시적으로 값 설정
                     }}
+                    // <- 확인해보기
                   />
                 </Space>
               </Form.Item>
@@ -410,20 +389,13 @@ export default function OrderManagementPage() {
             <Col>
               <Form.Item
                 label="기간"
-                name="requestDate"
-                rules={[{ required: true, message: '기간을 선택해주세요' }]}
+                name="date"
+                rules={[{ required: false, message: '기간을 선택해주세요' }]}
               >
                 <DatePicker.RangePicker
                   placeholder={['Start Date', 'Till Now']}
                   style={{ width: 400 }}
                   allowEmpty={[false, true]}
-                  onChange={(dates, dateStrings) => {
-                    if (dates && dateStrings[0] && dateStrings[1]) {
-                      setFilterDateRange([dateStrings[0], dateStrings[1]]);
-                    } else {
-                      setFilterDateRange(null);
-                    }
-                  }}
                 />
               </Form.Item>
             </Col>
@@ -432,12 +404,9 @@ export default function OrderManagementPage() {
           <Col>
             <Form.Item label=" ">
               <Button
-                style={{ marginRight: '14px' }}
                 onClick={() => {
-                  form.resetFields(); // ✅ UI 필드 초기화
-                  setFilterBranch(null); // 지역 초기화
-                  setFilterDateRange(null); // 날짜 초기화
-                  handleFilterSearch();
+                  form.resetFields();
+                  setData(original); // 전체 다시 보여주기
                 }}
               >
                 옵션 초기화
@@ -447,7 +416,7 @@ export default function OrderManagementPage() {
                 loading={loadings[0]}
                 onClick={() => {
                   enterLoading(0);
-                  handleFilterSearch(); // ✅ 필터 연동
+                  handle_FilterSearch(); // ✅ 필터 연동
                 }}
               >
                 발주 조회
@@ -462,7 +431,7 @@ export default function OrderManagementPage() {
           <Table<DataType>
             columns={columns}
             dataSource={data}
-            onChange={handleChange}
+            onChange={handle_Sort}
             locale={{
               cancelSort: '정렬 취소',
               triggerAsc: '오름차순 정렬',
@@ -473,7 +442,7 @@ export default function OrderManagementPage() {
               pageSize: 6, // 기본 페이지당 항목 수
             }}
             onRow={(record) => ({
-              onClick: () => handleRowclick(record),
+              onClick: () => handle_Rowclick(record),
             })}
           />
 
@@ -486,7 +455,7 @@ export default function OrderManagementPage() {
                 닫기
               </Button>, // 모달 창에 닫기 버튼 표시, 버튼 누를 경우 모달창 사라짐
               Selected?.status !== '승인 완료' && ( // 승인 완료 상태가 아닐 경우
-                <Button key="approve" type="primary" onClick={() => handleApprove(Selected!.key)}>
+                <Button key="approve" type="primary" onClick={() => handle_Status(Selected!.key)}>
                   승인
                 </Button> // 모달 창에 승인 버튼표시, 버튼 누를 경우 모달 창에서도 승인 완료 처리
               ),
