@@ -185,7 +185,7 @@ export const productDetails: Record<string, MedicineDetail> = {
       저장방법: '실온보관',
     },
   },
-  
+
   '9': {
     id: '4',
     name: '세미론정',

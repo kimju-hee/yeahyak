@@ -142,7 +142,9 @@ export default function HqLayout() {
         >
           <Link to="/hq">예약</Link>
           <Row>
-            <Typography.Text style={{ color: '#ffffff' }}>{admin?.adminName}</Typography.Text>
+            <Typography.Text style={{ color: '#ffffff' }}>
+              {admin.adminName.slice(0, -1) + '*'}
+            </Typography.Text>
             <BellOutlined style={{ fontSize: '24px', margin: '0 24px', color: '#ffffff' }} />
             <Dropdown
               trigger={['click']}

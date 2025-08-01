@@ -14,14 +14,14 @@ import {
 } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 
-// ✅ 전역(데모) 스토어에서 현재 값을 읽어옵니다.
+// 전역(데모) 스토어
 import { productDetails, supplyDetails } from "../../../utils/productData";
 
 const { Title } = Typography;
 const { TabPane } = Tabs;
 const { Option } = Select;
 
-/** 상단 데모 섹션(신제품/베스트셀러) 카드 데이터 — 하단 그리드와는 분리 유지 */
+/** 상단 데모 섹션(신제품/베스트셀러) — 하단 그리드와는 분리 */
 const newProducts = [
   { id: 1, name: "속엔쿨정", manufacturer: "GC녹십자", price: 10000, category: "내복제", image: "/images/SoknCool.jpg" },
   { id: 2, name: "에스마린350연질캡슐", manufacturer: "대웅제약", price: 9200, category: "내복제", image: "/images/S_marin.png" },
@@ -36,7 +36,7 @@ const bestSellers = [
   { id: 9, name: "세미론정", manufacturer: "삼진제약", price: 8500, category: "내복제", image: "/images/semiron.jpg" },
 ];
 
-// 카테고리(버튼) 정의
+// 카테고리(버튼)
 const categories = {
   의약품: ["전체보기", "주사제", "백신", "흡입제", "내복제", "외용제", "기타"],
   의약소모품: [
@@ -52,6 +52,12 @@ const categories = {
 } as const;
 type TabKey = keyof typeof categories;
 
+// 안전한 카테고리 정규화(없으면 '기타')
+function normalizeCategory(cat?: string): string {
+  if (!cat || typeof cat !== "string" || cat.trim() === "") return "기타";
+  return cat;
+}
+
 export default function ProductListPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabKey>("의약품");
@@ -63,22 +69,19 @@ export default function ProductListPage() {
 
   const PAGE_SIZE = 8;
 
-  /** ✅ 스토어에서 읽은 목록을 ‘항상 새 배열’로 만들고, id 기준으로 dedupe */
+  /** 의약품 목록(삭제/수정 후 라우팅 재진입 시 최신 전역 데이터를 다시 읽음) */
   const medicinesFromStore = useMemo(() => {
     const list = Object.values(productDetails).map((p: any) => ({
       id: String(p.id),
       name: p.name,
       manufacturer: p.manufacturer,
       price: Number(p.price) || 0,
-      category: p.mfdsClass || p.category || "", // 의약품은 보통 mfdsClass가 분류
+      category: normalizeCategory(p.category || p.mfdsClass),
       image: p.image,
     }));
-    // id 기준 dedupe
     const map = new Map<string, typeof list[number]>();
     list.forEach((item) => map.set(item.id, item));
     return Array.from(map.values());
-    // 의도적으로 dependency 없음: productDetails는 전역 객체이고,
-    // 라우팅/상태 변화로 컴포넌트가 다시 렌더되면 최신 값이 반영됩니다.
   }, []);
 
   const suppliesFromStore = useMemo(() => {
@@ -87,7 +90,7 @@ export default function ProductListPage() {
       name: s.name,
       manufacturer: s.manufacturer,
       price: Number(s.price) || 0,
-      category: s.category || "",
+      category: normalizeCategory(s.category),
       image: s.image,
     }));
     const map = new Map<string, typeof list[number]>();
@@ -95,14 +98,13 @@ export default function ProductListPage() {
     return Array.from(map.values());
   }, []);
 
-  /** 🔎 필터링 */
+  /** 필터링 */
   const filtered = useMemo(() => {
-    // 하단 그리드의 **단일 소스**
     const source = activeTab === "의약품" ? medicinesFromStore : suppliesFromStore;
     let result = [...source];
 
     if (activeCategory !== "전체보기") {
-      result = result.filter((i) => (i.category || "") === activeCategory);
+      result = result.filter((i) => i.category === activeCategory);
     }
     if (searchName.trim()) {
       result = result.filter((i) => i.name.includes(searchName.trim()));
@@ -119,14 +121,13 @@ export default function ProductListPage() {
     [filtered, currentPage]
   );
 
-  /** 탭/필터 바뀌면 페이지 1로 리셋 */
   const resetPage = () => setCurrentPage(1);
 
   return (
     <div style={{ padding: 24, position: "relative" }}>
       <Title level={3}>의약품 목록</Title>
 
-      {/* 상단 데모 섹션 (실제 목록 그리드에 합치지 않습니다) */}
+      {/* 상단 데모 섹션 */}
       <Tabs defaultActiveKey="신제품" style={{ marginBottom: 16 }}>
         <TabPane tab="신제품" key="신제품">
           <Row gutter={[16, 16]}>
@@ -231,7 +232,7 @@ export default function ProductListPage() {
         ))}
       </div>
 
-      {/* 실제 제품 그리드 — key는 반드시 item.id */}
+      {/* 실제 제품 그리드 */}
       <Row gutter={[16, 16]}>
         {paginated.map((item) => (
           <Col key={item.id} xs={24} sm={12} md={6}>
@@ -255,16 +256,23 @@ export default function ProductListPage() {
         />
       </div>
 
+      {/* 등록 버튼 */}
       <Button
         type="primary"
         icon={<PlusOutlined />}
         size="large"
+        shape="round"
+        onClick={() => navigate("/hq/products/new")}
         style={{
           position: "fixed",
-          bottom: 40,
-          right: 40,
-          zIndex: 1000,
-          borderRadius: 24,
+          bottom: 56,
+          right: 48,
+          zIndex: 1100,
+          padding: "0 24px",
+          height: 48,
+          fontWeight: 600,
+          boxShadow: "0 8px 24px rgba(24, 144, 255, 0.35)",
+          borderRadius: 28,
         }}
       >
         의약품 등록

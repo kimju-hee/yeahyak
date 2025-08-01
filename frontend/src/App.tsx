@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
+import ProtectedRoute from './components/ProtectedRoute';
 import BranchLayout from './layouts/BranchLayout';
 import HqLayout from './layouts/HqLayout';
 import PublicLayout from './layouts/PublicLayout';
@@ -52,42 +53,47 @@ export default function App() {
         {/* 에러 */}
         <Route path="403" element={<ForbiddenPage />} />
         <Route path="500" element={<ServerErrorPage />} />
-        <Route path="*" element={<NotFoundPage />} />
+        <Route path="404" element={<NotFoundPage />} />
+        <Route path="*" element={<Navigate to="/404" replace />} />
       </Route>
 
       {/* 본사 */}
-      <Route path="/hq" element={<HqLayout />}>
-        <Route index element={<HqDashboardPage />} />
-        <Route path="profile-edit" element={<ProfileEditPage />} />
-        <Route path="password-change" element={<PasswordChangePage />} />
-        <Route path="notices" element={<NoticeListPage />} />
-        <Route path="notices/:id" element={<NoticeDetailPage />} />
-        <Route path="notices/new" element={<HqNoticeRegisterPage />} />
-        <Route path="notices/:id/edit" element={<HqNoticeEditPage />} />
-        <Route path="branches" element={<BranchManagementPage />} />
-        <Route path="orders" element={<OrderManagementPage />} />
-        <Route path="returns" element={<ReturnManagementPage />} />
-        <Route path="monitoring" element={<BranchMonitoringPage />} />
-        <Route path="forecast" element={<DemandForecastPage />} />
-        <Route path="stock" element={<HqStockPage />} />
-        <Route path="products" element={<ProductListPage />} />
-        <Route path="products/:id" element={<ProductDetailPage />} />
-        <Route path="products/new" element={<HqProductRegisterPage />} />
-        <Route path="products/:id/edit" element={<HqProductEditPage />} />
+      <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+        <Route path="/hq" element={<HqLayout />}>
+          <Route index element={<HqDashboardPage />} />
+          <Route path="profile-edit" element={<ProfileEditPage />} />
+          <Route path="password-change" element={<PasswordChangePage />} />
+          <Route path="notices" element={<NoticeListPage />} />
+          <Route path="notices/:id" element={<NoticeDetailPage />} />
+          <Route path="notices/new" element={<HqNoticeRegisterPage />} />
+          <Route path="notices/:id/edit" element={<HqNoticeEditPage />} />
+          <Route path="branches" element={<BranchManagementPage />} />
+          <Route path="orders" element={<OrderManagementPage />} />
+          <Route path="returns" element={<ReturnManagementPage />} />
+          <Route path="monitoring" element={<BranchMonitoringPage />} />
+          <Route path="forecast" element={<DemandForecastPage />} />
+          <Route path="stock" element={<HqStockPage />} />
+          <Route path="products" element={<ProductListPage />} />
+          <Route path="products/:id" element={<ProductDetailPage />} />
+          <Route path="products/new" element={<HqProductRegisterPage />} />
+          <Route path="products/:id/edit" element={<HqProductEditPage />} />
+        </Route>
       </Route>
 
       {/* 가맹점 */}
-      <Route path="/branch" element={<BranchLayout />}>
-        <Route index element={<BranchDashboardPage />} />
-        <Route path="password-change" element={<PasswordChangePage />} />
-        <Route path="pharmacy-edit" element={<PharmacyEditPage />} />
-        <Route path="notices" element={<NoticeListPage />} />
-        <Route path="notices/:id" element={<NoticeDetailPage />} />
-        <Route path="order-request" element={<OrderRequestPage />} />
-        <Route path="return-request" element={<ReturnRequestPage />} />
-        <Route path="stock" element={<BranchStockPage />} />
-        <Route path="products" element={<ProductListPage />} />
-        <Route path="products/:id" element={<ProductDetailPage />} />
+      <Route element={<ProtectedRoute allowedRoles={['BRANCH']} />}>
+        <Route path="/branch" element={<BranchLayout />}>
+          <Route index element={<BranchDashboardPage />} />
+          <Route path="password-change" element={<PasswordChangePage />} />
+          <Route path="pharmacy-edit" element={<PharmacyEditPage />} />
+          <Route path="notices" element={<NoticeListPage />} />
+          <Route path="notices/:id" element={<NoticeDetailPage />} />
+          <Route path="order-request" element={<OrderRequestPage />} />
+          <Route path="return-request" element={<ReturnRequestPage />} />
+          <Route path="stock" element={<BranchStockPage />} />
+          <Route path="products" element={<ProductListPage />} />
+          <Route path="products/:id" element={<ProductDetailPage />} />
+        </Route>
       </Route>
     </Routes>
   );

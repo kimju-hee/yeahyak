@@ -43,13 +43,18 @@ export default function AdminLoginPage() {
         예약 관리자 로그인
       </Typography.Title>
       <Card>
-        <Form name="login" onFinish={onFinish}>
-          <Form.Item name="email" rules={[{ required: true, message: '이메일을 입력해주세요.' }]}>
+        <Form name="admin-login" onFinish={onFinish}>
+          <Form.Item
+            name="email"
+            rules={[{ required: true, message: '이메일을 입력해주세요.' }]}
+            validateTrigger="onSubmit"
+          >
             <Input prefix={<UserOutlined />} placeholder="이메일" />
           </Form.Item>
           <Form.Item
             name="password"
             rules={[{ required: true, message: '비밀번호를 입력해주세요.' }]}
+            validateTrigger="onSubmit"
           >
             <Input prefix={<LockOutlined />} type="password" placeholder="비밀번호" />
           </Form.Item>

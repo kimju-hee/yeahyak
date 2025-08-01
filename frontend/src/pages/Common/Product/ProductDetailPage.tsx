@@ -1,7 +1,18 @@
 // src/pages/Common/Product/ProductDetailPage.tsx
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button, Card, Typography, Row, Col, Tag, Divider, Descriptions } from "antd";
+import {
+  Button,
+  Card,
+  Typography,
+  Row,
+  Col,
+  Tag,
+  Divider,
+  Descriptions,
+  Popconfirm,
+  message,
+} from "antd";
 import { productDetails, supplyDetails } from "../../../utils/productData";
 
 const { Title, Text, Paragraph } = Typography;
@@ -11,6 +22,7 @@ export default function ProductDetailPage() {
   const id = String(rawId ?? "");
   const navigate = useNavigate();
 
+  // 현재 상세 대상
   const medicine = Object.values(productDetails).find((p: any) => String(p.id) === id);
   const supply = Object.values(supplyDetails).find((s: any) => String(s.id) === id);
 
@@ -39,6 +51,33 @@ export default function ProductDetailPage() {
   const labelStyle: React.CSSProperties = { fontWeight: 600, color: "#555", width: 120 };
   const valueStyle: React.CSSProperties = { fontSize: 16, fontWeight: 600, color: "#1f1f1f" };
   const priceStyle: React.CSSProperties = { ...valueStyle, fontSize: 18 };
+
+  /** 공통: 삭제 핸들러 */
+  const handleDeleteMedicine = (pid: string | number) => {
+    // id 키로 바로 삭제(문자/숫자 모두 시도)
+    // @ts-ignore
+    delete productDetails[pid as any];
+    // 혹시 키가 문자열로만 저장되어 있을 경우 대비
+    const key = Object.keys(productDetails).find((k) => String(k) === String(pid));
+    if (key) {
+      // @ts-ignore
+      delete productDetails[key];
+    }
+    message.success("제품을 삭제했습니다.");
+    navigate("/hq/products");
+  };
+
+  const handleDeleteSupply = (sid: string | number) => {
+    // @ts-ignore
+    delete supplyDetails[sid as any];
+    const key = Object.keys(supplyDetails).find((k) => String(k) === String(sid));
+    if (key) {
+      // @ts-ignore
+      delete supplyDetails[key];
+    }
+    message.success("제품을 삭제했습니다.");
+    navigate("/hq/products");
+  };
 
   // ---------- 의약소모품 ----------
   if (supply) {
@@ -89,7 +128,18 @@ export default function ProductDetailPage() {
             </>
           )}
 
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
+            {/* 🔴 삭제 버튼(확인 팝업) */}
+            <Popconfirm
+              title="제품을 삭제하겠습니까?"
+              okText="예"
+              cancelText="아니오"
+              okButtonProps={{ danger: true }}
+              onConfirm={() => handleDeleteSupply(supply.id)}
+            >
+              <Button danger>제품 삭제</Button>
+            </Popconfirm>
+
             <Button
               type="primary"
               size="large"
@@ -154,7 +204,18 @@ export default function ProductDetailPage() {
           </div>
         ))}
 
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
+          {/* 🔴 삭제 버튼(확인 팝업) */}
+          <Popconfirm
+            title="제품을 삭제하겠습니까?"
+            okText="예"
+            cancelText="아니오"
+            okButtonProps={{ danger: true }}
+            onConfirm={() => handleDeleteMedicine(p.id)}
+          >
+            <Button danger>제품 삭제</Button>
+          </Popconfirm>
+
           <Button
             type="primary"
             size="large"
