@@ -20,21 +20,25 @@ file_path = os.path.join(os.path.dirname(__file__), "faq_service.txt")
 persist_path = os.path.join(os.path.dirname(__file__), "db_service_")
 
 # 텍스트 분할 및 벡터 DB 생성
-def create_vector_store(file_path, persist_directory):  ## 텍스트 파일 불러와서 분할
+def create_vector_store(file_path, persist_directory):
+    # 이미 존재하면 로드
+    if os.path.exists(persist_directory):
+        print(f"[INFO] 기존 벡터 DB 로드 중: {persist_directory}")
+        return Chroma(persist_directory=persist_directory, embedding_function=OpenAIEmbeddings())
+
+    print(f"[INFO] 새로운 벡터 DB 생성 중: {persist_directory}")
     loader = TextLoader(file_path, encoding="utf-8")
     documents = loader.load()
-    
-    # 문서 분할
+
     text_splitter = CharacterTextSplitter(chunk_size=200, chunk_overlap=20)
     docs = text_splitter.split_documents(documents)
 
-    # 벡터 db 생성
     embeddings = OpenAIEmbeddings()
     vectordb = Chroma.from_documents(documents=docs,
-                                     embedding=embeddings, 
-                                     persist_directory=persist_directory
-                                    )
+                                     embedding=embeddings,
+                                     persist_directory=persist_directory)
     return vectordb
+
 
 # 챗봇 체인 생성
 def get_chatbot(vectorstore):
@@ -72,12 +76,6 @@ app = Flask(__name__)
 # vector db 호출 :
 vectordb = create_vector_store(file_path, persist_path)
 
-# 챗봇 실행 시 나오는 문구
-print("안녕하세요! 약사봇입니다. - faq_server.py:76")
-print("[본사 정책 관련] [운영 프로세스 관련] [반복 상담/고객 응대 관련] [복약지도 관련] [반품/교환/클레임 관련]  import os.py:76 - faq_server.py:77")
-print("위의 카테고리 안에서의 질문에 대답해드립니다 \n - faq_server.py:78")
-print("## exit를 입력 시 채팅이 종료됩니다\n - faq_server.py:79")
-
 # 체인 로드
 chatbot = get_chatbot(vectordb)
 
@@ -99,4 +97,9 @@ def chat():
 # 🏁 Flask 실행
 if __name__ == '__main__':
     print("🚀 약사봇 Flask 서버 실행 중... (http://localhost:5000/chat)  import os.py:100 - faq_server.py:101")
+    # 챗봇 실행 시 나오는 문구
+    print("안녕하세요! 약사봇입니다. - faq_server.py:76")
+    print("[본사 정책 관련] [운영 프로세스 관련] [반복 상담/고객 응대 관련] [복약지도 관련] [반품/교환/클레임 관련]  import os.py:76 - faq_server.py:77")
+    print("위의 카테고리 안에서의 질문에 대답해드립니다 \n - faq_server.py:78")
+    print("## exit를 입력 시 채팅이 종료됩니다\n - faq_server.py:79")
     app.run(debug=True)

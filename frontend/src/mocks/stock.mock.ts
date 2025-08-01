@@ -7,7 +7,7 @@ export const mockPharmacyStocks: PharmacyStock[] = [
     productId: 1,
     quantity: 70,
     lastInboundedAt: '2025-01-29T11:30:00Z',
-    lastOutboundeAt: '2025-07-04T15:00:00Z',
+    lastOutboundedAt: '2025-07-04T15:00:00Z',
   },
   {
     id: 2,
@@ -15,7 +15,7 @@ export const mockPharmacyStocks: PharmacyStock[] = [
     productId: 5,
     quantity: 60,
     lastInboundedAt: '2025-01-29T11:30:00Z',
-    lastOutboundeAt: '2025-07-04T15:00:00Z',
+    lastOutboundedAt: '2025-07-04T15:00:00Z',
   },
   {
     id: 3,
@@ -23,7 +23,7 @@ export const mockPharmacyStocks: PharmacyStock[] = [
     productId: 6,
     quantity: 10,
     lastInboundedAt: '2025-01-29T11:30:00Z',
-    lastOutboundeAt: undefined,
+    lastOutboundedAt: undefined,
   },
   {
     id: 4,
@@ -31,7 +31,7 @@ export const mockPharmacyStocks: PharmacyStock[] = [
     productId: 2,
     quantity: 200,
     lastInboundedAt: '2025-02-22T11:45:00Z',
-    lastOutboundeAt: undefined,
+    lastOutboundedAt: undefined,
   },
   {
     id: 5,
@@ -39,7 +39,7 @@ export const mockPharmacyStocks: PharmacyStock[] = [
     productId: 7,
     quantity: 50,
     lastInboundedAt: '2025-02-22T11:45:00Z',
-    lastOutboundeAt: undefined,
+    lastOutboundedAt: undefined,
   },
   {
     id: 6,
@@ -47,7 +47,7 @@ export const mockPharmacyStocks: PharmacyStock[] = [
     productId: 8,
     quantity: 80,
     lastInboundedAt: '2025-02-22T11:45:00Z',
-    lastOutboundeAt: undefined,
+    lastOutboundedAt: undefined,
   },
   {
     id: 7,
@@ -55,7 +55,7 @@ export const mockPharmacyStocks: PharmacyStock[] = [
     productId: 1,
     quantity: 22,
     lastInboundedAt: '2025-02-22T11:45:00Z',
-    lastOutboundeAt: undefined,
+    lastOutboundedAt: undefined,
   },
   {
     id: 8,
@@ -63,7 +63,7 @@ export const mockPharmacyStocks: PharmacyStock[] = [
     productId: 1,
     quantity: 100,
     lastInboundedAt: '2025-03-24T16:00:00Z',
-    lastOutboundeAt: undefined,
+    lastOutboundedAt: undefined,
   },
   {
     id: 9,
@@ -71,7 +71,7 @@ export const mockPharmacyStocks: PharmacyStock[] = [
     productId: 5,
     quantity: 50,
     lastInboundedAt: '2025-03-24T16:00:00Z',
-    lastOutboundeAt: undefined,
+    lastOutboundedAt: undefined,
   },
   {
     id: 10,
@@ -79,7 +79,7 @@ export const mockPharmacyStocks: PharmacyStock[] = [
     productId: 3,
     quantity: 7,
     lastInboundedAt: '2025-03-24T16:00:00Z',
-    lastOutboundeAt: undefined,
+    lastOutboundedAt: undefined,
   },
   {
     id: 11,
@@ -87,7 +87,7 @@ export const mockPharmacyStocks: PharmacyStock[] = [
     productId: 4,
     quantity: 1,
     lastInboundedAt: '2025-03-24T16:00:00Z',
-    lastOutboundeAt: undefined,
+    lastOutboundedAt: undefined,
   },
   {
     id: 12,
@@ -95,7 +95,7 @@ export const mockPharmacyStocks: PharmacyStock[] = [
     productId: 9,
     quantity: 50,
     lastInboundedAt: '2025-03-26T13:30:00Z',
-    lastOutboundeAt: undefined,
+    lastOutboundedAt: undefined,
   },
   {
     id: 13,
@@ -103,7 +103,7 @@ export const mockPharmacyStocks: PharmacyStock[] = [
     productId: 10,
     quantity: 80,
     lastInboundedAt: '2025-03-26T13:30:00Z',
-    lastOutboundeAt: undefined,
+    lastOutboundedAt: undefined,
   },
   {
     id: 14,
@@ -111,7 +111,7 @@ export const mockPharmacyStocks: PharmacyStock[] = [
     productId: 3,
     quantity: 42,
     lastInboundedAt: '2025-03-26T13:30:00Z',
-    lastOutboundeAt: undefined,
+    lastOutboundedAt: undefined,
   },
   {
     id: 15,
@@ -119,7 +119,7 @@ export const mockPharmacyStocks: PharmacyStock[] = [
     productId: 4,
     quantity: 7,
     lastInboundedAt: '2025-03-26T13:30:00Z',
-    lastOutboundeAt: undefined,
+    lastOutboundedAt: undefined,
   },
 ];
 

@@ -15,8 +15,8 @@ import type { Pharmacy } from '../mocks/types';
 import { useAuthStore } from '../stores/authStore';
 
 const { Sider, Header, Content, Footer } = Layout;
-const { Text } = Typography;
 
+// Design Token
 const theme = {
   components: {
     Menu: {
@@ -34,6 +34,7 @@ const theme = {
   },
 };
 
+// 사이드 메뉴 아이템
 const siderMenuItems = [
   {
     key: 'notices',
@@ -70,6 +71,7 @@ export default function BranchLayout() {
     navigate('/login', { replace: true });
   };
 
+  // 아바타 메뉴 아이템
   const avatarMenuItems = {
     items: [
       {
@@ -109,9 +111,11 @@ export default function BranchLayout() {
 
   return (
     <ConfigProvider theme={theme}>
-      <Layout style={{ height: '100vh' }}>
+      <Layout style={{ height: '100vh', overflow: 'hidden' }}>
         <Header
           style={{
+            position: 'sticky',
+            zIndex: 1,
             display: 'flex',
             flexDirection: 'row',
             alignItems: 'center',
@@ -120,7 +124,7 @@ export default function BranchLayout() {
         >
           <Link to="/branch">예약</Link>
           <Row>
-            <Text style={{ color: '#ffffff' }}>{pharmacy?.pharmacyName}</Text>
+            <Typography.Text style={{ color: '#ffffff' }}>{pharmacy?.pharmacyName}</Typography.Text>
             <BellOutlined style={{ fontSize: '24px', margin: '0 24px', color: '#ffffff' }} />
             <Dropdown
               trigger={['click']}
@@ -135,6 +139,10 @@ export default function BranchLayout() {
         <Layout>
           <Sider
             style={{
+              position: 'sticky',
+              overflow: 'auto',
+              scrollbarWidth: 'thin',
+              scrollbarGutter: 'stable',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -148,7 +156,7 @@ export default function BranchLayout() {
             ></Menu>
           </Sider>
           <Layout>
-            <Content style={{ margin: '24px', padding: '24px' }}>
+            <Content style={{ margin: '24px', padding: '24px', overflow: 'auto' }}>
               <Outlet />
             </Content>
             <Footer style={{ textAlign: 'center' }}>© 2025 Team yeahyak</Footer>

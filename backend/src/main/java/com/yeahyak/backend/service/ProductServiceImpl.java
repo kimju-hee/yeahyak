@@ -70,7 +70,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private String callFlaskSummary(String pdfPath) {
-        String url = "http://localhost:5001/summarize-pdf";
+        String url = "http://localhost:5000/summarize/pdf";
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.MULTIPART_FORM_DATA);

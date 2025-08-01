@@ -19,7 +19,9 @@ export interface Pharmacy {
   pharmacyName: string;
   bizRegNo: string;
   representativeName: string;
+  postcode: string;
   address: string;
+  detailAddress?: string;
   contact?: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
 }
@@ -34,7 +36,7 @@ export interface PharmacyRegistraionRequest {
 
 export interface Notice {
   id: number;
-  category: 'NOTICE' | 'LAW' | 'EPIDEMIC';
+  category: 'NOTICE' | 'LAW' | 'EPIDEMIC' | 'NEW_DRUG';
   title: string;
   content: string;
   attachmentUrl?: string;
@@ -51,6 +53,14 @@ export interface LawSummary {
 }
 
 export interface EpidemicSummary {
+  id: number;
+  title: string;
+  content: string;
+  attachmentUrl: string;
+  createdAt: string;
+}
+
+export interface NewDrugSummary {
   id: number;
   title: string;
   content: string;
@@ -114,7 +124,7 @@ export interface PharmacyStock {
   productId: number;
   quantity: number;
   lastInboundedAt?: string;
-  lastOutboundeAt?: string;
+  lastOutboundedAt?: string;
 }
 
 export interface PharmcayStockTransaction {

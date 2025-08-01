@@ -1,0 +1,10 @@
+flask  '웹 서버 구동용 (Flask, request, jsonify)'
+langchain   ' OpenAI Embeddings, LLM 사용 (OpenAIEmbeddings, ChatOpenAI)'
+langchain-openai   '벡터 DB, 로더 등 (Chroma, TextLoader)'
+langchain-community  '공통 체인, 프롬프트, 메모리 등 (ConversationalRetrievalChain, PromptTemplate, 등)'
+tiktoken
+
+'''
+전체 설치
+pip install flask langchain langchain-openai langchain-community 
+'''

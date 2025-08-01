@@ -29,4 +29,11 @@ public class Announcement {
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "attachment_url")
+    private String attachmentUrl;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
 }

@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
+.tiptap.ProseMirror {
+  // outline: none;
+  flex: 1;
+  padding: 1rem;
+}
+
+.tiptap-editor-wrapper {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background-color: white;
+  padding: 1rem;
+  height: 500px;
+}
+
+.tiptap-editor-wrapper:focus-within {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(5, 145, 255, 0.1);
+}
+
+.tiptap-editor-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 1rem;
+  overflow-y: auto;
+}
+
+/* .tiptap-editor {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  min-height: 200px;
+  padding: 12px;
+  background-color: white;
+}
+
+.tiptap-editor .ProseMirror {
+  outline: none;
+  min-height: 200px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.tiptap-editor-box:focus-within {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(5, 145, 255, 0.1);
+}
+
+.ProseMirror {
+  outline: none;
+  border: none;
+  box-shadow: none;
+  background: white;
+  padding: 12px;
+  min-height: 200px;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.ProseMirror p {
+  margin: 0;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+button:hover {
+  color: #1677ff;
+  background-color: #f0f5ff;
+}
+
+button.active {
+  background-color: #e6f4ff;
+  border: 1px solid #1677ff;
+  color: #1677ff;
+}
+
+.editor-content {
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: white;
+} */

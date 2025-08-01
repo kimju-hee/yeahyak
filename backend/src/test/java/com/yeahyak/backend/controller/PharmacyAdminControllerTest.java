@@ -1,6 +1,7 @@
 package com.yeahyak.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yeahyak.backend.dto.UpdatePharmacyRequest;
 import com.yeahyak.backend.entity.*;
 import com.yeahyak.backend.repository.PharmacyRepository;
 import com.yeahyak.backend.repository.UserRepository;
@@ -145,5 +146,56 @@ class PharmacyAdminControllerTest {
         User updatedUser = userRepository.findById(user.getUserId()).orElseThrow();
         assertEquals(UserRole.ADMIN, updatedUser.getUserRole());
     }
+
+    @Test
+    @Transactional
+    @DisplayName("약국 정보 수정 성공 - 로그인 사용자 본인만 가능")
+    void updatePharmacy_success() throws Exception {
+        // 1. 유저 및 약국 생성
+        User user = userRepository.save(User.builder()
+                .email("edit@example.com")
+                .password(passwordEncoder.encode("password"))
+                .userRole(UserRole.NONE)
+                .build());
+
+        Pharmacy pharmacy = pharmacyRepository.save(Pharmacy.builder()
+                .pharmacyName("원래약국")
+                .bizRegNo("7776665555")
+                .representativeName("이전대표")
+                .address("대구광역시 수성구")
+                .phoneNumber("010-0000-1111")
+                .status(Status.PENDING)
+                .user(user)
+                .build());
+
+        // 2. 수정할 데이터 생성
+        UpdatePharmacyRequest updateRequest = new UpdatePharmacyRequest();
+        updateRequest.setPharmacyName("수정된약국명");
+        updateRequest.setRepresentativeName("수정대표");
+        updateRequest.setAddress("대구광역시 북구");
+        updateRequest.setPhoneNumber("010-9999-8888");
+
+        // 3. JSON 변환
+        String json = objectMapper.writeValueAsString(updateRequest);
+
+        // 4. MockMvc로 PUT 요청 수행
+        mockMvc.perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                                .put("/api/auth/update/" + pharmacy.getPharmacyId())
+                                .with(user(user.getEmail()).roles("USER")) // 로그인한 사용자로 설정
+                                .contentType("application/json")
+                                .content(json)
+                )
+                .andExpect(status().isOk())
+                .andExpect(content().string("약국 정보가 성공적으로 수정되었습니다."));
+
+        // 5. DB에서 다시 조회하여 확인
+        Pharmacy updated = pharmacyRepository.findById(pharmacy.getPharmacyId()).orElseThrow();
+        assertEquals("수정된약국명", updated.getPharmacyName());
+        assertEquals("수정대표", updated.getRepresentativeName());
+        assertEquals("대구광역시 북구", updated.getAddress());
+        assertEquals("010-9999-8888", updated.getPhoneNumber());
+    }
+
 
 }

@@ -20,7 +20,7 @@ export default function AdminLoginPage() {
   const onFinish = async (values: any) => {
     console.log('로그인 시도:', values);
 
-    // TODO: 여기에 로그인 API 호출 로직을 추가하세요.
+    // TODO: 로그인 API 호출 로직 추가하기
 
     if (!values.email.includes('admin')) {
       messageApi.error('관리자 계정으로 로그인해주세요.');
@@ -40,16 +40,21 @@ export default function AdminLoginPage() {
     <>
       {contextHolder}
       <Typography.Title level={1} style={{ marginBottom: 24 }}>
-        예약 로그인
+        예약 관리자 로그인
       </Typography.Title>
       <Card>
-        <Form name="login" onFinish={onFinish}>
-          <Form.Item name="email" rules={[{ required: true, message: '이메일을 입력해주세요.' }]}>
+        <Form name="admin-login" onFinish={onFinish}>
+          <Form.Item
+            name="email"
+            rules={[{ required: true, message: '이메일을 입력해주세요.' }]}
+            validateTrigger="onSubmit"
+          >
             <Input prefix={<UserOutlined />} placeholder="이메일" />
           </Form.Item>
           <Form.Item
             name="password"
             rules={[{ required: true, message: '비밀번호를 입력해주세요.' }]}
+            validateTrigger="onSubmit"
           >
             <Input prefix={<LockOutlined />} type="password" placeholder="비밀번호" />
           </Form.Item>

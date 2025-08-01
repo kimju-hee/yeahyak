@@ -2,6 +2,7 @@ package com.yeahyak.backend.controller;
 
 import com.yeahyak.backend.dto.LoginRequest;
 import com.yeahyak.backend.dto.SignupRequest;
+import com.yeahyak.backend.dto.UpdatePharmacyRequest;
 import com.yeahyak.backend.entity.User;
 import com.yeahyak.backend.entity.UserRole;
 import com.yeahyak.backend.repository.UserRepository;
@@ -11,10 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -57,6 +55,14 @@ public class AuthController {
     public ResponseEntity<String> logout(HttpSession session) {
         session.invalidate();
         return ResponseEntity.ok("로그아웃이 완료되었습니다.");
+    }
+
+    @PutMapping("/update/{pharmacyId}")
+    public ResponseEntity<String> updatePharmacy(
+            @PathVariable Long pharmacyId,
+            @Valid @RequestBody UpdatePharmacyRequest request) {
+        authService.updatePharmacy(pharmacyId, request);
+        return ResponseEntity.ok("약국 정보가 성공적으로 수정되었습니다.");
     }
 
 }

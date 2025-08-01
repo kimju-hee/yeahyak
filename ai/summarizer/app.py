@@ -30,7 +30,7 @@ def extract_text_from_pdf(file_storage):
 # 약품 요약 처리
 def summarize_with_gpt(text):
     prompt = f"""
-    다음은 약품 설명서입니다. 아래 항목에 따라 요약해주세요:
+    다음은 약품 설명서입니다. 아래 항목에 따라 500자를 넘지않게 간결하게 요약해주세요:
     - 성분
     - 효능
     - 복용법

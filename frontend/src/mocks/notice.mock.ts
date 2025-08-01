@@ -1,4 +1,4 @@
-import type { EpidemicSummary, LawSummary, Notice } from './types';
+import type { EpidemicSummary, LawSummary, NewDrugSummary, Notice } from './types';
 
 export const mockNotices: Notice[] = [
   {
@@ -55,6 +55,15 @@ export const mockNotices: Notice[] = [
     createdAt: '2025-07-29T11:00:00Z',
     updatedAt: undefined,
   },
+  {
+    id: 7,
+    category: 'NEW_DRUG',
+    title: '신약 안내',
+    content: '신약에 대한 내용입니다.',
+    attachmentUrl: 'new_drug.pdf',
+    createdAt: '2025-07-31T10:40:00Z',
+    updatedAt: undefined,
+  },
 ];
 
 export const mockLawSummaries: LawSummary[] = [
@@ -88,5 +97,15 @@ export const mockEpidemicSummaries: EpidemicSummary[] = [
     content: '질병관리청 발표 최신 독감 유행 정보 및 예방 수칙에 대한 요약본입니다.',
     attachmentUrl: 'epidemic_flu.pdf',
     createdAt: '2025-06-25T10:59:00Z',
+  },
+];
+
+export const mockNewDrugSummaries: NewDrugSummary[] = [
+  {
+    id: 1,
+    title: '신약 정보 요약본',
+    content: '신약에 대한 정보 요약본입니다.',
+    attachmentUrl: 'new_drug.pdf',
+    createdAt: '2025-07-31T10:39:00Z',
   },
 ];
