@@ -4,7 +4,8 @@ import com.yeahyak.backend.entity.*;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.stereotype.Repository;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PharmacyStockRepository extends JpaRepository<PharmacyStock, Long> {
