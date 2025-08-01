@@ -6,8 +6,8 @@ import * as React from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 
 // --- Hooks ---
-import { useIsMobile } from '@/tiptap/hooks/use-mobile';
-import { useTiptapEditor } from '@/tiptap/hooks/use-tiptap-editor';
+import { useIsMobile } from '../../../hooks/use-mobile';
+import { useTiptapEditor } from '../../../hooks/use-tiptap-editor';
 
 // --- Lib ---
 import {
@@ -15,15 +15,15 @@ import {
   isNodeInSchema,
   isNodeTypeSelected,
   isValidPosition,
-} from '@/tiptap/lib/tiptap-utils';
+} from '../../../lib/tiptap-utils';
 
 // --- Icons ---
-import { HeadingFiveIcon } from '@/tiptap/components/tiptap-icons/heading-five-icon';
-import { HeadingFourIcon } from '@/tiptap/components/tiptap-icons/heading-four-icon';
-import { HeadingOneIcon } from '@/tiptap/components/tiptap-icons/heading-one-icon';
-import { HeadingSixIcon } from '@/tiptap/components/tiptap-icons/heading-six-icon';
-import { HeadingThreeIcon } from '@/tiptap/components/tiptap-icons/heading-three-icon';
-import { HeadingTwoIcon } from '@/tiptap/components/tiptap-icons/heading-two-icon';
+import { HeadingFiveIcon } from '../../tiptap-icons/heading-five-icon';
+import { HeadingFourIcon } from '../../tiptap-icons/heading-four-icon';
+import { HeadingOneIcon } from '../../tiptap-icons/heading-one-icon';
+import { HeadingSixIcon } from '../../tiptap-icons/heading-six-icon';
+import { HeadingThreeIcon } from '../../tiptap-icons/heading-three-icon';
+import { HeadingTwoIcon } from '../../tiptap-icons/heading-two-icon';
 
 export type Level = 1 | 2 | 3 | 4 | 5 | 6;
 

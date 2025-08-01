@@ -5,15 +5,15 @@ import * as React from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 
 // --- Hooks ---
-import { useIsMobile } from '@/tiptap/hooks/use-mobile';
-import { useTiptapEditor } from '@/tiptap/hooks/use-tiptap-editor';
+import { useIsMobile } from '../../../hooks/use-mobile';
+import { useTiptapEditor } from '../../../hooks/use-tiptap-editor';
 
 // --- Lib ---
-import { isNodeTypeSelected } from '@/tiptap/lib/tiptap-utils';
+import { isNodeTypeSelected } from '../../../lib/tiptap-utils';
 
 // --- Icons ---
-import { Redo2Icon } from '@/tiptap/components/tiptap-icons/redo2-icon';
-import { Undo2Icon } from '@/tiptap/components/tiptap-icons/undo2-icon';
+import { Redo2Icon } from '../../tiptap-icons/redo2-icon';
+import { Undo2Icon } from '../../tiptap-icons/undo2-icon';
 
 export type UndoRedoAction = 'undo' | 'redo';
 

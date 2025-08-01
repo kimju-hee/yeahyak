@@ -1,17 +1,17 @@
 import * as React from 'react';
 
 // --- Lib ---
-import { parseShortcutKeys } from '@/tiptap/lib/tiptap-utils';
+import { parseShortcutKeys } from '../../../lib/tiptap-utils';
 
 // --- Tiptap UI ---
-import type { Level, UseHeadingConfig } from '@/tiptap/components/tiptap-ui/heading-button';
-import { HEADING_SHORTCUT_KEYS, useHeading } from '@/tiptap/components/tiptap-ui/heading-button';
+import type { Level, UseHeadingConfig } from '../../tiptap-ui/heading-button';
+import { HEADING_SHORTCUT_KEYS, useHeading } from '../../tiptap-ui/heading-button';
 
 // --- UI Primitives ---
-import { Badge } from '@/tiptap/components/tiptap-ui-primitive/badge';
-import type { ButtonProps } from '@/tiptap/components/tiptap-ui-primitive/button';
-import { Button } from '@/tiptap/components/tiptap-ui-primitive/button';
-import { useTiptapEditor } from '@/tiptap/hooks/use-tiptap-editor';
+import { useTiptapEditor } from '../../../hooks/use-tiptap-editor';
+import { Badge } from '../../tiptap-ui-primitive/badge';
+import type { ButtonProps } from '../../tiptap-ui-primitive/button';
+import { Button } from '../../tiptap-ui-primitive/button';
 
 export interface HeadingButtonProps extends Omit<ButtonProps, 'type'>, UseHeadingConfig {
   /**

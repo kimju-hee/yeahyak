@@ -6,13 +6,13 @@ import * as React from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 
 // --- Hooks ---
-import { useIsMobile } from '@/tiptap/hooks/use-mobile';
-import { useTiptapEditor } from '@/tiptap/hooks/use-tiptap-editor';
+import { useIsMobile } from '../../../hooks/use-mobile';
+import { useTiptapEditor } from '../../../hooks/use-tiptap-editor';
 
 // --- Icons ---
-import { ListIcon } from '@/tiptap/components/tiptap-icons/list-icon';
-import { ListOrderedIcon } from '@/tiptap/components/tiptap-icons/list-ordered-icon';
-import { ListTodoIcon } from '@/tiptap/components/tiptap-icons/list-todo-icon';
+import { ListIcon } from '../../tiptap-icons/list-icon';
+import { ListOrderedIcon } from '../../tiptap-icons/list-ordered-icon';
+import { ListTodoIcon } from '../../tiptap-icons/list-todo-icon';
 
 // --- Lib ---
 import {
@@ -20,7 +20,7 @@ import {
   isNodeInSchema,
   isNodeTypeSelected,
   isValidPosition,
-} from '@/tiptap/lib/tiptap-utils';
+} from '../../../lib/tiptap-utils';
 
 export type ListType = 'bulletList' | 'orderedList' | 'taskList';
 

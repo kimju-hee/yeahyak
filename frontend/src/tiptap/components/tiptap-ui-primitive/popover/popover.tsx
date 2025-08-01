@@ -1,7 +1,7 @@
-import '@/tiptap/components/tiptap-ui-primitive/popover/popover.scss';
-import { cn } from '@/tiptap/lib/tiptap-utils';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import * as React from 'react';
+import { cn } from '../../../lib/tiptap-utils';
+import './popover.scss';
 
 function Popover({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
   return <PopoverPrimitive.Root {...props} />;

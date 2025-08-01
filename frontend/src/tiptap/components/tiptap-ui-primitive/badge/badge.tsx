@@ -1,7 +1,7 @@
-import '@/tiptap/components/tiptap-ui-primitive/badge/badge-colors.scss';
-import '@/tiptap/components/tiptap-ui-primitive/badge/badge-group.scss';
-import '@/tiptap/components/tiptap-ui-primitive/badge/badge.scss';
 import * as React from 'react';
+import './badge-colors.scss';
+import './badge-group.scss';
+import './badge.scss';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'ghost' | 'white' | 'gray' | 'green' | 'default';

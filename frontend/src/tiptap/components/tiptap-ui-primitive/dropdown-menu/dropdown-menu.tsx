@@ -1,7 +1,7 @@
-import '@/tiptap/components/tiptap-ui-primitive/dropdown-menu/dropdown-menu.scss';
-import { cn } from '@/tiptap/lib/tiptap-utils';
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import * as React from 'react';
+import { cn } from '../../../lib/tiptap-utils';
+import './dropdown-menu.scss';
 
 function DropdownMenu({ ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
   return <DropdownMenuPrimitive.Root modal={false} {...props} />;

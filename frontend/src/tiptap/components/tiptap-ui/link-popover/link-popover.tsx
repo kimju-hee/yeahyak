@@ -2,30 +2,26 @@ import type { Editor } from '@tiptap/react';
 import * as React from 'react';
 
 // --- Hooks ---
-import { useIsMobile } from '@/tiptap/hooks/use-mobile';
-import { useTiptapEditor } from '@/tiptap/hooks/use-tiptap-editor';
+import { useIsMobile } from '../../../hooks/use-mobile';
+import { useTiptapEditor } from '../../../hooks/use-tiptap-editor';
 
 // --- Icons ---
-import { CornerDownLeftIcon } from '@/tiptap/components/tiptap-icons/corner-down-left-icon';
-import { ExternalLinkIcon } from '@/tiptap/components/tiptap-icons/external-link-icon';
-import { LinkIcon } from '@/tiptap/components/tiptap-icons/link-icon';
-import { TrashIcon } from '@/tiptap/components/tiptap-icons/trash-icon';
+import { CornerDownLeftIcon } from '../../tiptap-icons/corner-down-left-icon';
+import { ExternalLinkIcon } from '../../tiptap-icons/external-link-icon';
+import { LinkIcon } from '../../tiptap-icons/link-icon';
+import { TrashIcon } from '../../tiptap-icons/trash-icon';
 
 // --- Tiptap UI ---
-import type { UseLinkPopoverConfig } from '@/tiptap/components/tiptap-ui/link-popover';
-import { useLinkPopover } from '@/tiptap/components/tiptap-ui/link-popover';
+import type { UseLinkPopoverConfig } from '../../tiptap-ui/link-popover';
+import { useLinkPopover } from '../../tiptap-ui/link-popover';
 
 // --- UI Primitives ---
-import type { ButtonProps } from '@/tiptap/components/tiptap-ui-primitive/button';
-import { Button, ButtonGroup } from '@/tiptap/components/tiptap-ui-primitive/button';
-import { Card, CardBody, CardItemGroup } from '@/tiptap/components/tiptap-ui-primitive/card';
-import { Input, InputGroup } from '@/tiptap/components/tiptap-ui-primitive/input';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/tiptap/components/tiptap-ui-primitive/popover';
-import { Separator } from '@/tiptap/components/tiptap-ui-primitive/separator';
+import type { ButtonProps } from '../../tiptap-ui-primitive/button';
+import { Button, ButtonGroup } from '../../tiptap-ui-primitive/button';
+import { Card, CardBody, CardItemGroup } from '../../tiptap-ui-primitive/card';
+import { Input, InputGroup } from '../../tiptap-ui-primitive/input';
+import { Popover, PopoverContent, PopoverTrigger } from '../../tiptap-ui-primitive/popover';
+import { Separator } from '../../tiptap-ui-primitive/separator';
 
 export interface LinkMainProps {
   /**

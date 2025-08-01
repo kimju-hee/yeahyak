@@ -5,14 +5,14 @@ import * as React from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 
 // --- Hooks ---
-import { useIsMobile } from '@/tiptap/hooks/use-mobile';
-import { useTiptapEditor } from '@/tiptap/hooks/use-tiptap-editor';
+import { useIsMobile } from '../../../hooks/use-mobile';
+import { useTiptapEditor } from '../../../hooks/use-tiptap-editor';
 
 // --- Lib ---
-import { isExtensionAvailable, isNodeTypeSelected } from '@/tiptap/lib/tiptap-utils';
+import { isExtensionAvailable, isNodeTypeSelected } from '../../../lib/tiptap-utils';
 
 // --- Icons ---
-import { ImagePlusIcon } from '@/tiptap/components/tiptap-icons/image-plus-icon';
+import { ImagePlusIcon } from '../../tiptap-icons/image-plus-icon';
 
 export const IMAGE_UPLOAD_SHORTCUT_KEY = 'mod+shift+i';
 

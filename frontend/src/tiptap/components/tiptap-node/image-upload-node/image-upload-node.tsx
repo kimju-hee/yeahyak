@@ -1,12 +1,12 @@
 'use client';
 
-import { CloseIcon } from '@/tiptap/components/tiptap-icons/close-icon';
-import '@/tiptap/components/tiptap-node/image-upload-node/image-upload-node.scss';
-import { Button } from '@/tiptap/components/tiptap-ui-primitive/button';
-import { isValidPosition } from '@/tiptap/lib/tiptap-utils';
 import type { NodeViewProps } from '@tiptap/react';
 import { NodeViewWrapper } from '@tiptap/react';
 import * as React from 'react';
+import { isValidPosition } from '../../../lib/tiptap-utils';
+import { CloseIcon } from '../../tiptap-icons/close-icon';
+import { Button } from '../../tiptap-ui-primitive/button';
+import './image-upload-node.scss';
 
 export interface FileItem {
   /**

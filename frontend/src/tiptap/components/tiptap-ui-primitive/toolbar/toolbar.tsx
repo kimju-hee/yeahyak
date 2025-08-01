@@ -1,9 +1,10 @@
 'use client';
 
-import { Separator } from '@/tiptap/components/tiptap-ui-primitive/separator';
-import '@/tiptap/components/tiptap-ui-primitive/toolbar/toolbar.scss';
-import { cn } from '@/tiptap/lib/tiptap-utils';
 import * as React from 'react';
+
+import { cn } from '../../../lib/tiptap-utils';
+import { Separator } from '../separator';
+import './toolbar.scss';
 
 type BaseProps = React.HTMLAttributes<HTMLDivElement>;
 

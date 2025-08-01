@@ -1,25 +1,19 @@
 import * as React from 'react';
 
 // --- Lib ---
-import { parseShortcutKeys } from '@/tiptap/lib/tiptap-utils';
+import { parseShortcutKeys } from '../../../lib/tiptap-utils';
 
 // --- Hooks ---
-import { useTiptapEditor } from '@/tiptap/hooks/use-tiptap-editor';
+import { useTiptapEditor } from '../../../hooks/use-tiptap-editor';
 
 // --- Tiptap UI ---
-import type {
-  TextAlign,
-  UseTextAlignConfig,
-} from '@/tiptap/components/tiptap-ui/text-align-button';
-import {
-  TEXT_ALIGN_SHORTCUT_KEYS,
-  useTextAlign,
-} from '@/tiptap/components/tiptap-ui/text-align-button';
+import type { TextAlign, UseTextAlignConfig } from '../../tiptap-ui/text-align-button';
+import { TEXT_ALIGN_SHORTCUT_KEYS, useTextAlign } from '../../tiptap-ui/text-align-button';
 
 // --- UI Primitives ---
-import { Badge } from '@/tiptap/components/tiptap-ui-primitive/badge';
-import type { ButtonProps } from '@/tiptap/components/tiptap-ui-primitive/button';
-import { Button } from '@/tiptap/components/tiptap-ui-primitive/button';
+import { Badge } from '../../tiptap-ui-primitive/badge';
+import type { ButtonProps } from '../../tiptap-ui-primitive/button';
+import { Button } from '../../tiptap-ui-primitive/button';
 
 export interface TextAlignButtonProps extends Omit<ButtonProps, 'type'>, UseTextAlignConfig {
   /**

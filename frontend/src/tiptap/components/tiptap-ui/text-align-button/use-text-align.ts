@@ -6,17 +6,17 @@ import * as React from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 
 // --- Hooks ---
-import { useIsMobile } from '@/tiptap/hooks/use-mobile';
-import { useTiptapEditor } from '@/tiptap/hooks/use-tiptap-editor';
+import { useIsMobile } from '../../../hooks/use-mobile';
+import { useTiptapEditor } from '../../../hooks/use-tiptap-editor';
 
 // --- Lib ---
-import { isExtensionAvailable, isNodeTypeSelected } from '@/tiptap/lib/tiptap-utils';
+import { isExtensionAvailable, isNodeTypeSelected } from '../../../lib/tiptap-utils';
 
 // --- Icons ---
-import { AlignCenterIcon } from '@/tiptap/components/tiptap-icons/align-center-icon';
-import { AlignJustifyIcon } from '@/tiptap/components/tiptap-icons/align-justify-icon';
-import { AlignLeftIcon } from '@/tiptap/components/tiptap-icons/align-left-icon';
-import { AlignRightIcon } from '@/tiptap/components/tiptap-icons/align-right-icon';
+import { AlignCenterIcon } from '../../tiptap-icons/align-center-icon';
+import { AlignJustifyIcon } from '../../tiptap-icons/align-justify-icon';
+import { AlignLeftIcon } from '../../tiptap-icons/align-left-icon';
+import { AlignRightIcon } from '../../tiptap-icons/align-right-icon';
 
 export type TextAlign = 'left' | 'center' | 'right' | 'justify';
 

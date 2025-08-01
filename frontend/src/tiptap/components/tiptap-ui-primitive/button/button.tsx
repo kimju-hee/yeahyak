@@ -1,18 +1,14 @@
 import * as React from 'react';
 
 // --- Tiptap UI Primitive ---
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/tiptap/components/tiptap-ui-primitive/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
 
 // --- Lib ---
-import { cn, parseShortcutKeys } from '@/tiptap/lib/tiptap-utils';
+import { cn, parseShortcutKeys } from '../../../lib/tiptap-utils';
 
-import '@/tiptap/components/tiptap-ui-primitive/button/button-colors.scss';
-import '@/tiptap/components/tiptap-ui-primitive/button/button-group.scss';
-import '@/tiptap/components/tiptap-ui-primitive/button/button.scss';
+import './button-colors.scss';
+import './button-group.scss';
+import './button.scss';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   className?: string;

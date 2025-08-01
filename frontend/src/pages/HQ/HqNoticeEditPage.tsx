@@ -1,9 +1,9 @@
-import TiptapEditor from '@/components/TiptapEditor';
 import { UploadOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import { Button, Col, Form, Input, message, Row, Select, Space, Typography, Upload } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import TiptapEditor from '../../components/TiptapEditor';
 import { mockNotices } from '../../mocks/notice.mock';
 
 const uploadProps: UploadProps = {

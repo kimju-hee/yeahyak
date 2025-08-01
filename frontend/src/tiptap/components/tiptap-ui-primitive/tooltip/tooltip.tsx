@@ -1,6 +1,5 @@
 'use client';
 
-import '@/tiptap/components/tiptap-ui-primitive/tooltip/tooltip.scss';
 import {
   autoUpdate,
   flip,
@@ -20,6 +19,7 @@ import {
   type UseFloatingReturn,
 } from '@floating-ui/react';
 import * as React from 'react';
+import './tooltip.scss';
 
 interface TooltipProviderProps {
   children: React.ReactNode;

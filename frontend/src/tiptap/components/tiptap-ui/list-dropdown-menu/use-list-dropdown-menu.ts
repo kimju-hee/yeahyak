@@ -4,23 +4,18 @@ import type { Editor } from '@tiptap/react';
 import * as React from 'react';
 
 // --- Hooks ---
-import { useTiptapEditor } from '@/tiptap/hooks/use-tiptap-editor';
+import { useTiptapEditor } from '../../../hooks/use-tiptap-editor';
 
 // --- Icons ---
-import { ListIcon } from '@/tiptap/components/tiptap-icons/list-icon';
-import { ListOrderedIcon } from '@/tiptap/components/tiptap-icons/list-ordered-icon';
-import { ListTodoIcon } from '@/tiptap/components/tiptap-icons/list-todo-icon';
+import { ListIcon } from '../../tiptap-icons/list-icon';
+import { ListOrderedIcon } from '../../tiptap-icons/list-ordered-icon';
+import { ListTodoIcon } from '../../tiptap-icons/list-todo-icon';
 
 // --- Lib ---
-import { isNodeInSchema } from '@/tiptap/lib/tiptap-utils';
+import { isNodeInSchema } from '../../../lib/tiptap-utils';
 
 // --- Tiptap UI ---
-import {
-  canToggleList,
-  isListActive,
-  listIcons,
-  type ListType,
-} from '@/tiptap/components/tiptap-ui/list-button';
+import { canToggleList, isListActive, listIcons, type ListType } from '../../tiptap-ui/list-button';
 
 /**
  * Configuration for the list dropdown menu functionality
