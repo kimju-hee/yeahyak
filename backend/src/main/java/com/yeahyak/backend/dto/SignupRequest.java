@@ -26,7 +26,13 @@ public class SignupRequest {
     private String representativeName;
 
     @NotBlank
+    private String postcode;
+
+    @NotBlank
     private String address;
 
-    private String phoneNumber;
+    private String detailAddress;
+
+    @NotBlank
+    private String contact;
 }

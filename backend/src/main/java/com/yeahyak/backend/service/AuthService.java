@@ -32,7 +32,7 @@ public class AuthService {
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .userRole(UserRole.NONE)
+                .userRole(UserRole.BRANCH)
                 .build();
         userRepository.save(user);
 
@@ -40,13 +40,16 @@ public class AuthService {
                 .pharmacyName(request.getPharmacyName())
                 .bizRegNo(request.getBizRegNo())
                 .representativeName(request.getRepresentativeName())
+                .postcode(request.getPostcode())
                 .address(request.getAddress())
-                .phoneNumber(request.getPhoneNumber())
+                .detailAddress(request.getDetailAddress())
+                .phoneNumber(request.getContact())
                 .status(Status.PENDING)
                 .user(user)
                 .build();
         pharmacyRepository.save(pharmacy);
     }
+
 
     private void validateDuplication(SignupRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
