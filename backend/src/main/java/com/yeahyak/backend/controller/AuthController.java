@@ -22,44 +22,50 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/signup")
-    public ResponseEntity<ApiResponse<String>> signup(@Valid @RequestBody SignupRequest request) {
+    public ResponseEntity<String> signup(@Valid @RequestBody SignupRequest request) {
         authService.register(request);
+        return ResponseEntity.ok("회원가입이 완료되었습니다. 관리자의 승인을 기다립니다.");
+    }
+
+    @PostMapping("/admin/signup")
+    public ResponseEntity<ApiResponse<String>> adminSignup(@Valid @RequestBody AdminSignupRequest request) {
+        authService.registerAdmin(request);
         return ResponseEntity.ok(new ApiResponse<>(true, ""));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<String>> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<String> login(@Valid @RequestBody LoginRequest request) {
         authService.login(request);
-        return ResponseEntity.ok(new ApiResponse<>(true, ""));
+        return ResponseEntity.ok("로그인에 성공했습니다.");
     }
 
     @PostMapping("/admin/login")
-    public ResponseEntity<ApiResponse<String>> adminLogin(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<String> adminLogin(@Valid @RequestBody LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("해당 이메일의 사용자가 존재하지 않습니다."));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            return ResponseEntity.status(401).body(new ApiResponse<>(false, "비밀번호가 일치하지 않습니다."));
+            return ResponseEntity.status(401).body("비밀번호가 일치하지 않습니다.");
         }
 
         if (user.getUserRole() != UserRole.ADMIN) {
-            return ResponseEntity.status(403).body(new ApiResponse<>(false, "관리자 권한이 없습니다."));
+            return ResponseEntity.status(403).body("관리자 권한이 없습니다.");
         }
 
-        return ResponseEntity.ok(new ApiResponse<>(true, ""));
+        return ResponseEntity.ok("관리자 로그인에 성공했습니다.");
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<String>> logout(HttpSession session) {
+    public ResponseEntity<String> logout(HttpSession session) {
         session.invalidate();
-        return ResponseEntity.ok(new ApiResponse<>(true, ""));
+        return ResponseEntity.ok("로그아웃이 완료되었습니다.");
     }
 
     @PutMapping("/update/{pharmacyId}")
-    public ResponseEntity<ApiResponse<String>> updatePharmacy(
+    public ResponseEntity<String> updatePharmacy(
             @PathVariable Long pharmacyId,
             @Valid @RequestBody UpdatePharmacyRequest request) {
         authService.updatePharmacy(pharmacyId, request);
-        return ResponseEntity.ok(new ApiResponse<>(true, ""));
+        return ResponseEntity.ok("약국 정보가 성공적으로 수정되었습니다.");
     }
 }

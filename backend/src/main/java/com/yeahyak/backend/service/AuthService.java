@@ -1,14 +1,13 @@
 package com.yeahyak.backend.service;
 
-import com.yeahyak.backend.dto.LoginRequest;
-import com.yeahyak.backend.dto.SignupRequest;
-import com.yeahyak.backend.dto.UpdatePharmacyRequest;
+import com.yeahyak.backend.dto.*;
 import com.yeahyak.backend.entity.*;
-import org.springframework.security.authentication.AuthenticationManager;
+import com.yeahyak.backend.repository.AdminRepository;
 import com.yeahyak.backend.repository.PharmacyRepository;
 import com.yeahyak.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -24,6 +23,7 @@ public class AuthService {
     private final PharmacyRepository pharmacyRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final AdminRepository adminRepository;
 
     @Transactional
     public void register(SignupRequest request) {
@@ -49,7 +49,6 @@ public class AuthService {
                 .build();
         pharmacyRepository.save(pharmacy);
     }
-
 
     private void validateDuplication(SignupRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -84,5 +83,26 @@ public class AuthService {
         pharmacy.setPhoneNumber(request.getPhoneNumber());
 
         pharmacyRepository.save(pharmacy);
+    }
+
+    @Transactional
+    public void registerAdmin(AdminSignupRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("이미 등록된 이메일입니다.");
+        }
+
+        User user = User.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .userRole(UserRole.ADMIN)
+                .build();
+        userRepository.save(user);
+
+        Admin admin = Admin.builder()
+                .adminName(request.getAdminName())
+                .department(request.getDepartment())
+                .user(user)
+                .build();
+        adminRepository.save(admin);
     }
 }
