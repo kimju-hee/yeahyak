@@ -1,468 +1,279 @@
-// src/pages/HQ/HqProductEditPage.tsx
-import React, { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { LeftOutlined } from '@ant-design/icons';
 import {
   Button,
   Card,
+  Divider,
+  Flex,
   Form,
+  Image,
   Input,
   InputNumber,
-  Typography,
-  Row,
-  Col,
-  Divider,
   message,
-  Upload,
   Select,
-} from "antd";
-import type { UploadFile } from "antd/es/upload/interface";
-import { PlusOutlined } from "@ant-design/icons";
-import { productDetails, supplyDetails } from "../../utils/productData";
+  Space,
+  Typography,
+  Upload,
+  type UploadFile,
+  type UploadProps,
+} from 'antd';
+import dayjs from 'dayjs';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { SUB_CATEGORY_MAP, TYPES, type Type } from '../../types/product';
+import { mockProducts } from '../../types/product.mock';
 
-const { Title, Text } = Typography;
-const { TextArea } = Input;
-
-/** 의약품(상단 탭)의 카테고리 */
-const CATEGORY_OPTIONS = ["주사제", "백신", "흡입제", "내복제", "외용제", "기타"] as const;
-/** 의약소모품의 카테고리 */
-const SUPPLY_CATEGORY_OPTIONS = [
-  "주사용품/주사기/주사침",
-  "거즈/탈지면/붕대/솜/면봉",
-  "반창고/밴드/부직/테이프드레싱",
-  "소독/세척",
-  "봉합사/봉합침",
-  "마스크/모자/장갑",
-  "진단키트",
-] as const;
-
-/** 의약품 전용 옵션 */
-const RX_TYPE_OPTIONS = ["일반의약품", "전문의약품"] as const;
-const MFDS_OPTIONS = [
-  "프로바이오틱스제",
-  "소화효소제",
-  "소화기계용제",
-  "제산제",
-  "해열제",
-  "진해거담제",
-  "항히스타민제",
-  "진통제",
-  "지사제",
-  "진경제",
-  "기타",
-] as const;
-
-/** 수량 단위 + 직접입력 공통 */
-const UNIT_OPTIONS = ["정", "캡슐", "팩", "박스", "EA", "앰플", "바이알", "튜브", "병", "개"] as const;
-const UNIT_CUSTOM_VALUE = "__UNIT_CUSTOM__";
-const MFDS_CUSTOM_VALUE = "__MFDS_CUSTOM__";
-
-// 이미지 파일을 base64 데이터로 변환
-function getBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
+const getBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = (err) => reject(err);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
   });
-}
 
 export default function HqProductEditPage() {
-  const { id: rawId } = useParams();
-  const id = String(rawId ?? "");
-  const navigate = useNavigate();
+  const [messageApi, contextHolder] = message.useMessage();
+  const { id } = useParams();
   const [form] = Form.useForm();
+  const navigate = useNavigate();
 
-  // 편집 대상(의약품/의약소모품) 조회
-  const medicine =
-    (productDetails as any)[id] ??
-    Object.values(productDetails).find((p: any) => String(p.id) === id);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState('');
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const supply =
-    (supplyDetails as any)[id] ??
-    Object.values(supplyDetails).find((s: any) => String(s.id) === id);
+  const typeOptions = TYPES.map((type) => ({ value: type, label: type }));
+  const watchedType = Form.useWatch('type', form);
+  const subCategoryOptions =
+    watchedType && SUB_CATEGORY_MAP[watchedType as Type]
+      ? SUB_CATEGORY_MAP[watchedType as Type].map((label) => ({ value: label, label }))
+      : [];
 
-  const target: any = medicine ?? supply;
-  const isMedicine = !!medicine;
+  // NOTE: 제품 정보 섹션을 쪼개기로 정하면 사용
+  // const watchedType = Form.useWatch('type', form);
 
-  // 의약품 상세 키
-  const medicineDetailKeys = useMemo(() => {
-    if (!isMedicine || !target) return [];
-    return Object.keys(target.details || {});
-  }, [isMedicine, target]);
+  // TODO: 제품 정보 로드 API 호출 로직 추가 + mockProducts 제거
+  // const fetchProduct = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const res = await instance.get(`/products/${id}`);
+  //     const product = res.data as Product;
+  //     form.setFieldsValue(product);
+  //   } catch (e: any) {
+  //     console.error('제품 정보 로딩 실패:', e);
+  //     messageApi.error(e.message || '제품 정보 로딩 중 오류가 발생했습니다.');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+  //
+  // useEffect(() => {
+  //   fetchProduct();
+  // }, []);
 
-  // 업로드(미리보기) 상태
-  const [fileList, setFileList] = useState<UploadFile[]>(
-    target?.image ? [{ uid: "-1", name: "image", status: "done", url: target.image }] : []
-  );
+  const product = mockProducts.find((p) => p.id === Number(id));
 
-  // 초기값 구성
-  const initialValues = useMemo(() => {
-    if (!target) return {};
+  useEffect(() => {
+    if (!product) return;
 
-    // 수량단위: 옵션에 없으면 "직접입력" 모드
-    const unitIsCustom = !!target.unit && !UNIT_OPTIONS.includes(target.unit);
+    form.setFieldsValue(product);
 
-    const common: any = {
-      name: target.name,
-      manufacturer: target.manufacturer,
-      price: target.price,
-      registeredAt: target.registeredAt,
-      image: target.image ?? "",
-      // 수량 단위(의약품/소모품 모두 동일 UI 사용)
-      unitSelect: unitIsCustom ? UNIT_CUSTOM_VALUE : target.unit,
-      unitCustom: unitIsCustom ? target.unit : undefined,
-      // 카테고리
-      category: target.category,
-    };
-
-    if (isMedicine) {
-      const detailFields: Record<string, string> = {};
-      medicineDetailKeys.forEach((k) => {
-        detailFields[`detail_${k}`] = target.details?.[k] ?? "";
-      });
-      // 식약처 분류 초기값
-      const mfdsIsCustom = !!target.mfdsClass && !MFDS_OPTIONS.includes(target.mfdsClass);
-      return {
-        ...common,
-        rxType: target.rxType,
-        mfdsSelect: mfdsIsCustom ? MFDS_CUSTOM_VALUE : target.mfdsClass,
-        mfdsCustom: mfdsIsCustom ? target.mfdsClass : undefined,
-        ...detailFields,
-      };
+    if (product.productImgUrl) {
+      setFileList([
+        {
+          uid: '-1',
+          name: 'image.png',
+          status: 'done',
+          url: product.productImgUrl,
+        },
+      ]);
+    } else {
+      setFileList([]);
     }
+  }, [product]);
 
-    // 의약소모품: 상세 설명 1개 필드
-    return {
-      ...common,
-      supplyDescription: target.details?.["제품 상세 설명"] ?? "",
-    };
-  }, [target, isMedicine, medicineDetailKeys]);
-
-  if (!target) {
-    return (
-      <div style={{ padding: 32 }}>
-        해당 제품을 찾을 수 없습니다.{" "}
-        <Button type="link" onClick={() => navigate("/hq/products")}>
-          목록으로
-        </Button>
-      </div>
-    );
+  if (!product) {
+    return <Typography.Text>해당 제품을 찾을 수 없습니다.</Typography.Text>;
   }
 
-  // 이미지 업로드 핸들러
-  const handleUploadChange = async (info: { file: UploadFile; fileList: UploadFile[] }) => {
-    const { fileList: newList } = info;
-    setFileList(newList);
+  const handleChange: UploadProps['onChange'] = async ({ fileList }) => {
+    setFileList(fileList);
+    const file = fileList[0];
 
-    const first = newList[0];
-    if (first?.originFileObj) {
-      const base64 = await getBase64(first.originFileObj as File);
-      form.setFieldsValue({ image: base64 });
-    } else if (first?.url) {
-      form.setFieldsValue({ image: first.url });
-    } else {
-      // 삭제한 경우
-      form.setFieldsValue({ image: "" });
+    if (!file) {
+      form.setFieldsValue({ productImgUrl: '' });
+      return;
+    }
+
+    if (file.originFileObj) {
+      const base64 = await getBase64(file.originFileObj as File);
+      form.setFieldsValue({ productImgUrl: base64 });
+    } else if (file.url) {
+      form.setFieldsValue({ productImgUrl: file.url });
     }
   };
 
-  const onFinish = (values: any) => {
+  const handlePreview = async (file: UploadFile) => {
+    if (!file.url && !file.preview) {
+      file.preview = await getBase64(file.originFileObj as File);
+    }
+    setPreviewImage(file.url || (file.preview as string));
+    setPreviewOpen(true);
+  };
+
+  const handleSubmit = async () => {
     try {
-      // 이미지: undefined면 기존 유지, ""면 삭제
-      const imageToSave = values.image !== undefined ? values.image : target.image;
-
-      // 수량 단위(의약품/소모품 공통) 선택/직접입력 처리
-      const unitToSave =
-        values.unitSelect === UNIT_CUSTOM_VALUE
-          ? (values.unitCustom ?? "").trim()
-          : values.unitSelect;
-
-      const updated: any = {
-        ...target,
-        name: values.name,
-        manufacturer: values.manufacturer,
-        price: Number(values.price) || 0,
-        unit: unitToSave,
-        registeredAt: values.registeredAt,
-        category: values.category, // 선택한 카테고리 저장 → 목록에서 자동 분류
-        image: imageToSave,
-      };
-
-      if (isMedicine) {
-        // 식약처 분류(선택/직접입력)
-        const mfdsToSave =
-          values.mfdsSelect === MFDS_CUSTOM_VALUE
-            ? (values.mfdsCustom ?? "").trim()
-            : values.mfdsSelect;
-
-        // 상세 설명
-        const nextDetails: Record<string, string> = {};
-        Object.keys(values).forEach((k) => {
-          if (k.startsWith("detail_")) {
-            const key = k.replace("detail_", "");
-            nextDetails[key] = values[k] ?? "";
-          }
-        });
-
-        updated.rxType = values.rxType;
-        updated.mfdsClass = mfdsToSave;
-        updated.details = nextDetails;
-
-        (productDetails as any)[updated.id] = updated; // 저장
-      } else {
-        // 의약소모품
-        updated.details = { "제품 상세 설명": values.supplyDescription || "" };
-        (supplyDetails as any)[updated.id] = updated; // 저장
-      }
-
-      message.success("수정 사항을 저장했어요.");
-      navigate(`/hq/products/${target.id}`);
-    } catch (e) {
-      console.error(e);
-      message.error("저장 중 오류가 발생했어요.");
+      // TODO: 제품 정보 수정 API 호출 로직 추가
+      navigate(`/hq/products/${id}`);
+    } catch (e: any) {
+      console.error('제품 정보 수정 실패:', e);
+      messageApi.error(e.message || '제품 정보 수정 중 오류가 발생했습니다.');
     }
   };
-
-  // ‘직접입력’이 선택되었을 때만 필수로 만드는 유효성
-  const requireIfCustom = (depName: string, customValue: string, messageText: string) => ({
-    validator(_: any, value: any) {
-      const dep = form.getFieldValue(depName);
-      if (dep === customValue && (!value || !String(value).trim())) {
-        return Promise.reject(new Error(messageText));
-      }
-      return Promise.resolve();
-    },
-  });
 
   return (
-    <div style={{ padding: 32, maxWidth: 1100, margin: "0 auto" }}>
-      <div style={{ marginBottom: 16 }}>
-        <Text
-          style={{ fontSize: 18, color: "#1890ff", cursor: "pointer", fontWeight: 600 }}
-          onClick={() => navigate(`/hq/products/${target.id}`)}
-        >
-          ← 의약품 상세로
-        </Text>
-      </div>
+    <>
+      {contextHolder}
+      {/* TODO: 뒤로가기 버튼을 눌렀을 때 편집 여부에 따른 window.confirm 추가 */}
+      <Space size="large" align="baseline">
+        <Button
+          type="link"
+          size="large"
+          shape="circle"
+          icon={<LeftOutlined />}
+          onClick={() => navigate(-1)}
+        />
+        <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+          제품 정보 수정
+        </Typography.Title>
+      </Space>
 
-      <Card style={{ borderRadius: 12, padding: 24 }}>
-        <Row justify="space-between" align="middle">
-          <Title level={3} style={{ margin: 0 }}>
-            의약품 수정
-          </Title>
-          <Text type="secondary">ID: {target.id}</Text>
-        </Row>
+      <Card style={{ width: '80%', borderRadius: '12px', padding: '24px', margin: '0 auto' }}>
+        <Flex wrap justify="space-between" gap={24}>
+          <Typography.Text type="secondary">ID: {product.id}</Typography.Text>
+          <Typography.Text type="secondary">
+            등록일: {dayjs(product.createdAt).format('YYYY-MM-DD')}
+          </Typography.Text>
+        </Flex>
 
         <Divider />
 
-        <Form form={form} layout="vertical" initialValues={initialValues} onFinish={onFinish}>
-          <Row gutter={[24, 8]}>
-            <Col xs={24} md={12}>
+        <Form
+          form={form}
+          name="product-edit"
+          layout="vertical"
+          onFinish={handleSubmit}
+          autoComplete="off"
+        >
+          <Flex wrap justify="space-between" gap={36}>
+            <Flex vertical flex={1} justify="center" align="center">
+              <Upload
+                listType="picture-card"
+                fileList={fileList}
+                beforeUpload={() => false}
+                onChange={handleChange}
+                onPreview={handlePreview}
+                maxCount={1}
+              >
+                {fileList.length >= 1 ? null : '이미지 업로드'}
+              </Upload>
+              {previewImage && (
+                <Image
+                  wrapperStyle={{ display: 'none' }}
+                  preview={{
+                    visible: previewOpen,
+                    onVisibleChange: (visible) => setPreviewOpen(visible),
+                    afterOpenChange: (visible) => !visible && setPreviewImage(''),
+                  }}
+                  src={previewImage}
+                />
+              )}
+              <Form.Item name="productImgUrl" noStyle>
+                <Input type="hidden" />
+              </Form.Item>
+            </Flex>
+
+            <Flex vertical flex={1}>
               <Form.Item
+                name="productName"
                 label="제품명"
-                name="name"
-                rules={[{ required: true, message: "제품명을 입력하세요." }]}
+                rules={[{ required: true, message: '제품명을 입력하세요.' }]}
               >
                 <Input />
               </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
               <Form.Item
-                label="제조사"
                 name="manufacturer"
-                rules={[{ required: true, message: "제조사를 입력하세요." }]}
+                label="제조사"
+                rules={[{ required: true, message: '제조사를 입력하세요.' }]}
               >
                 <Input />
               </Form.Item>
-            </Col>
-
-            <Col xs={24} md={8}>
               <Form.Item
-                label="가격(원)"
-                name="price"
-                rules={[{ required: true, message: "가격을 입력하세요." }]}
+                name="productCode"
+                label="보험코드"
+                rules={[{ required: true, message: '보험코드를 입력하세요.' }]}
               >
-                <InputNumber min={0} style={{ width: "100%" }} placeholder="예: 6900" />
+                <Input />
               </Form.Item>
-            </Col>
+            </Flex>
+          </Flex>
 
-            {/* 수량 단위 (의약품/소모품 공통 – 드롭다운 + 직접입력) */}
-            <Col xs={24} md={8}>
+          <Divider />
+
+          <Flex wrap justify="space-between" gap={36}>
+            <Flex vertical flex={1}>
               <Form.Item
-                label="수량 단위"
-                name="unitSelect"
-                rules={[{ required: true, message: "수량 단위를 선택하세요." }]}
+                name="type"
+                label="유형"
+                rules={[{ required: true, message: '유형을 입력하세요.' }]}
               >
-                <Select placeholder="수량 단위 선택">
-                  {UNIT_OPTIONS.map((opt) => (
-                    <Select.Option key={opt} value={opt}>
-                      {opt}
-                    </Select.Option>
-                  ))}
-                  <Select.Option value={UNIT_CUSTOM_VALUE}>직접 입력</Select.Option>
-                </Select>
+                <Select options={typeOptions} />
               </Form.Item>
-            </Col>
-            <Col xs={24} md={8}>
               <Form.Item
-                label="수량 단위(직접 입력)"
-                name="unitCustom"
-                rules={[requireIfCustom("unitSelect", UNIT_CUSTOM_VALUE, "수량 단위를 입력하세요.")]}
+                name="subCategory"
+                label="구분"
+                rules={[{ required: true, message: '구분을 입력하세요.' }]}
               >
-                <Input placeholder="예: 포, 시럽병 등" />
+                <Select placeholder="선택" options={subCategoryOptions} disabled={!watchedType} />
               </Form.Item>
-            </Col>
+            </Flex>
 
-            <Col xs={24} md={8}>
+            <Flex vertical flex={1}>
               <Form.Item
-                label="등록일시"
-                name="registeredAt"
-                rules={[{ required: true, message: "등록일시를 입력하세요." }]}
+                name="unit"
+                label="단위"
+                rules={[{ required: true, message: '단위를 입력하세요.' }]}
               >
-                <Input placeholder="YYYY-MM-DD" />
+                <Input />
               </Form.Item>
-            </Col>
-
-            {/* 카테고리 */}
-            {isMedicine ? (
-              <Col xs={24} md={12}>
-                <Form.Item
-                  label="카테고리"
-                  name="category"
-                  rules={[{ required: true, message: "카테고리를 선택하세요." }]}
-                >
-                  <Select placeholder="카테고리 선택">
-                    {CATEGORY_OPTIONS.map((opt) => (
-                      <Select.Option key={opt} value={opt}>
-                        {opt}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-            ) : (
-              <Col xs={24} md={12}>
-                <Form.Item
-                  label="카테고리"
-                  name="category"
-                  rules={[{ required: true, message: "카테고리를 선택하세요." }]}
-                >
-                  <Select placeholder="카테고리 선택">
-                    {SUPPLY_CATEGORY_OPTIONS.map((opt) => (
-                      <Select.Option key={opt} value={opt}>
-                        {opt}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-            )}
-
-            {/* 이미지 업로드 */}
-            <Col xs={24} md={12}>
-              <Form.Item label="이미지 업로드">
-                <Upload
-                  listType="picture-card"
-                  fileList={fileList}
-                  beforeUpload={() => false}
-                  onChange={handleUploadChange}
-                  maxCount={1}
-                >
-                  {fileList.length >= 1 ? null : (
-                    <div>
-                      <PlusOutlined />
-                      <div style={{ marginTop: 8 }}>업로드</div>
-                    </div>
-                  )}
-                </Upload>
-                <Form.Item name="image" noStyle>
-                  <Input type="hidden" />
-                </Form.Item>
+              <Form.Item
+                name="unitPrice"
+                label="판매가"
+                rules={[{ required: true, message: '판매가를 입력하세요.' }]}
+              >
+                {/* FIXME: 가격 입력 시 천 단위 콤마 추가해서 보여주되 저장 시에는 숫자만 저장되게 해주세요 */}
+                <InputNumber
+                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원'}
+                  parser={(value) => value?.replace(/[원,]/g, '') as unknown as number}
+                  style={{ width: '100%' }}
+                />
               </Form.Item>
-            </Col>
+            </Flex>
+          </Flex>
 
-            {/* 의약품 전용 필드 */}
-            {isMedicine && (
-              <>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="전문의약품 구분"
-                    name="rxType"
-                    rules={[{ required: true, message: "전문의약품 구분을 선택하세요." }]}
-                  >
-                    <Select placeholder="선택">
-                      {RX_TYPE_OPTIONS.map((opt) => (
-                        <Select.Option key={opt} value={opt}>
-                          {opt}
-                        </Select.Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                </Col>
+          <Divider />
 
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="식약처 분류"
-                    name="mfdsSelect"
-                    rules={[{ required: true, message: "식약처 분류를 선택하세요." }]}
-                  >
-                    <Select placeholder="선택">
-                      {MFDS_OPTIONS.map((opt) => (
-                        <Select.Option key={opt} value={opt}>
-                          {opt}
-                        </Select.Option>
-                      ))}
-                      <Select.Option value={MFDS_CUSTOM_VALUE}>직접 입력</Select.Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
+          <Typography.Title level={4}>제품 상세 정보</Typography.Title>
+          <Form.Item name="details">
+            <Input.TextArea rows={8} />
+          </Form.Item>
 
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="식약처 분류(직접 입력)"
-                    name="mfdsCustom"
-                    rules={[requireIfCustom("mfdsSelect", MFDS_CUSTOM_VALUE, "식약처 분류를 입력하세요.")]}
-                  >
-                    <Input placeholder="예: 사용자가 직접 입력" />
-                  </Form.Item>
-                </Col>
-              </>
-            )}
-
-            {/* 상세 설명 */}
-            <Col span={24}>
-              <Divider />
-              <Title level={4} style={{ marginBottom: 12 }}>
-                제품 상세 설명
-              </Title>
-            </Col>
-
-            {isMedicine ? (
-              medicineDetailKeys.map((section) => (
-                <Col span={24} key={section}>
-                  <Form.Item label={section} name={`detail_${section}`}>
-                    <TextArea rows={4} placeholder={`${section} 내용을 입력하세요.`} />
-                  </Form.Item>
-                </Col>
-              ))
-            ) : (
-              <Col span={24}>
-                <Form.Item label="제품 상세 설명" name="supplyDescription">
-                  <TextArea rows={6} placeholder="제품 상세 설명을 입력하세요." />
-                </Form.Item>
-              </Col>
-            )}
-          </Row>
-
-          {/* 하단 버튼 */}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}>
-            <Button onClick={() => navigate(`/hq/products/${target.id}`)}>취소</Button>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
             <Button type="primary" htmlType="submit">
               저장
             </Button>
           </div>
         </Form>
       </Card>
-    </div>
+    </>
   );
 }
