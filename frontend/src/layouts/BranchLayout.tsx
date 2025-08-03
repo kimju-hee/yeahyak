@@ -1,15 +1,17 @@
 import {
   BellOutlined,
-  ContainerFilled,
+  CheckCircleTwoTone,
   FrownFilled,
   KeyOutlined,
   LogoutOutlined,
+  MinusCircleTwoTone,
   NotificationFilled,
+  ProductFilled,
   ShopOutlined,
   ShoppingFilled,
   UserOutlined,
 } from '@ant-design/icons';
-import { ConfigProvider, Dropdown, Layout, Menu, message, Row, Typography } from 'antd';
+import { ConfigProvider, Dropdown, Flex, Layout, Menu, message, Typography } from 'antd';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import type { Pharmacy } from '../mocks/types';
 import { useAuthStore } from '../stores/authStore';
@@ -43,17 +45,17 @@ const siderMenuItems = [
   },
   {
     key: 'stock',
-    label: <Link to="/branch/stock">재고관리</Link>,
-    icon: <ContainerFilled />,
+    label: <Link to="/branch/stock">재고 관리</Link>,
+    icon: <ProductFilled />,
   },
   {
     key: 'order-request',
-    label: <Link to="/branch/order-request">발주요청</Link>,
+    label: <Link to="/branch/order-request">발주 요청</Link>,
     icon: <ShoppingFilled />,
   },
   {
     key: 'return-request',
-    label: <Link to="/branch/return-request">반품요청</Link>,
+    label: <Link to="/branch/return-request">반품 요청</Link>,
     icon: <FrownFilled />,
   },
 ];
@@ -75,8 +77,8 @@ export default function BranchLayout() {
   const avatarMenuItems = {
     items: [
       {
-        key: 'pharmacy-edit',
-        label: <Link to="/branch/pharmacy-edit">약국 정보 수정</Link>,
+        key: 'profile-edit',
+        label: <Link to="/branch/profile-edit">약국 정보 수정</Link>,
         icon: <ShopOutlined />,
       },
       {
@@ -111,7 +113,7 @@ export default function BranchLayout() {
 
   return (
     <ConfigProvider theme={theme}>
-      <Layout style={{ height: '100vh', overflow: 'hidden' }}>
+      <Layout style={{ minHeight: '100vh' }}>
         <Header
           style={{
             position: 'sticky',
@@ -123,9 +125,19 @@ export default function BranchLayout() {
           }}
         >
           <Link to="/branch">예약</Link>
-          <Row>
-            <Typography.Text style={{ color: '#ffffff' }}>{pharmacy?.pharmacyName}</Typography.Text>
-            <BellOutlined style={{ fontSize: '24px', margin: '0 24px', color: '#ffffff' }} />
+          <Flex align="center" gap={'24px'}>
+            <Flex>
+              <Typography.Text style={{ color: '#ffffff' }}>
+                {/*{pharmacy.pharmacyName}*/}
+              </Typography.Text>
+              {/*pharmacy.status === 'APPROVED'*/}
+              {true ? (
+                <CheckCircleTwoTone twoToneColor="#52c41a" style={{ fontSize: '16px' }} />
+              ) : (
+                <MinusCircleTwoTone twoToneColor="#ff4d4f" style={{ fontSize: '16px' }} />
+              )}
+            </Flex>
+            <BellOutlined style={{ fontSize: '24px', color: '#ffffff' }} />
             <Dropdown
               trigger={['click']}
               menu={avatarMenuItems}
@@ -134,15 +146,12 @@ export default function BranchLayout() {
             >
               <UserOutlined style={{ fontSize: '24px', color: '#ffffff' }} />
             </Dropdown>
-          </Row>
+          </Flex>
         </Header>
         <Layout>
           <Sider
             style={{
               position: 'sticky',
-              overflow: 'auto',
-              scrollbarWidth: 'thin',
-              scrollbarGutter: 'stable',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -156,7 +165,7 @@ export default function BranchLayout() {
             ></Menu>
           </Sider>
           <Layout>
-            <Content style={{ margin: '24px', padding: '24px', overflow: 'auto' }}>
+            <Content style={{ margin: '24px', padding: '24px' }}>
               <Outlet />
             </Content>
             <Footer style={{ textAlign: 'center' }}>© 2025 Team yeahyak</Footer>

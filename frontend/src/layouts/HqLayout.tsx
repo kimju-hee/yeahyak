@@ -3,16 +3,17 @@ import {
   AreaChartOutlined,
   BellOutlined,
   BulbFilled,
-  ContainerFilled,
   EditOutlined,
   KeyOutlined,
   LogoutOutlined,
   MinusSquareFilled,
   NotificationFilled,
   PlusSquareFilled,
+  ProductFilled,
+  TagsFilled,
   UserOutlined,
 } from '@ant-design/icons';
-import { ConfigProvider, Dropdown, Layout, Menu, message, Row, Typography } from 'antd';
+import { ConfigProvider, Dropdown, Flex, Layout, Menu, message, Typography } from 'antd';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import type { Admin } from '../mocks/types';
 import { useAuthStore } from '../stores/authStore';
@@ -51,12 +52,12 @@ const siderMenuItems = [
   },
   {
     key: 'orders',
-    label: <Link to="/hq/orders">발주요청 관리</Link>,
+    label: <Link to="/hq/orders">발주 요청 관리</Link>,
     icon: <PlusSquareFilled />,
   },
   {
     key: 'returns',
-    label: <Link to="/hq/returns">반품요청 관리</Link>,
+    label: <Link to="/hq/returns">반품 요청 관리</Link>,
     icon: <MinusSquareFilled />,
   },
   {
@@ -66,13 +67,18 @@ const siderMenuItems = [
   },
   {
     key: 'forecast',
-    label: <Link to="/hq/forecast">수요예측</Link>,
+    label: <Link to="/hq/forecast">수요 예측</Link>,
     icon: <BulbFilled />,
   },
   {
     key: 'stock',
-    label: <Link to="/hq/stock">재고관리</Link>,
-    icon: <ContainerFilled />,
+    label: <Link to="/hq/stock">재고 관리</Link>,
+    icon: <ProductFilled />,
+  },
+  {
+    key: 'products',
+    label: <Link to="/hq/products">제품 목록</Link>,
+    icon: <TagsFilled />,
   },
 ];
 
@@ -129,7 +135,7 @@ export default function HqLayout() {
 
   return (
     <ConfigProvider theme={theme}>
-      <Layout style={{ height: '100vh', overflow: 'hidden' }}>
+      <Layout style={{ minHeight: '100vh' }}>
         <Header
           style={{
             position: 'sticky',
@@ -141,11 +147,11 @@ export default function HqLayout() {
           }}
         >
           <Link to="/hq">예약</Link>
-          <Row>
+          <Flex align="center" gap={'24px'}>
             <Typography.Text style={{ color: '#ffffff' }}>
-              {admin.adminName.slice(0, -1) + '*'}
+              {/*{admin.adminName.slice(0, -1) + '*'}*/}
             </Typography.Text>
-            <BellOutlined style={{ fontSize: '24px', margin: '0 24px', color: '#ffffff' }} />
+            <BellOutlined style={{ fontSize: '24px', color: '#ffffff' }} />
             <Dropdown
               trigger={['click']}
               menu={avatarMenuItems}
@@ -154,15 +160,12 @@ export default function HqLayout() {
             >
               <UserOutlined style={{ fontSize: '24px', color: '#ffffff' }} />
             </Dropdown>
-          </Row>
+          </Flex>
         </Header>
         <Layout>
           <Sider
             style={{
               position: 'sticky',
-              overflow: 'auto',
-              scrollbarWidth: 'thin',
-              scrollbarGutter: 'stable',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -176,7 +179,7 @@ export default function HqLayout() {
             ></Menu>
           </Sider>
           <Layout>
-            <Content style={{ margin: '24px', padding: '24px', overflow: 'auto' }}>
+            <Content style={{ margin: '24px', padding: '24px' }}>
               <Outlet />
             </Content>
             <Footer style={{ textAlign: 'center' }}>© 2025 Team yeahyak</Footer>
