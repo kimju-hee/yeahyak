@@ -1,4 +1,4 @@
-import type { EpidemicSummary, LawSummary, NewDrugSummary, Notice } from './types';
+import type { Notice } from '../types/notice';
 
 export const mockNotices: Notice[] = [
   {
@@ -63,49 +63,5 @@ export const mockNotices: Notice[] = [
     attachmentUrl: 'new_drug.pdf',
     createdAt: '2025-07-31T10:40:00Z',
     updatedAt: undefined,
-  },
-];
-
-export const mockLawSummaries: LawSummary[] = [
-  {
-    id: 1,
-    title: '약가 관리 제도 변경 사항 요약본',
-    content: '새로운 약가 책정 기준 및 관리 제도에 대한 요약본입니다.',
-    attachmentUrl: 'law_drug_pricing.pdf',
-    createdAt: '2024-10-15T10:59:00Z',
-  },
-  {
-    id: 2,
-    title: '마약류 관리법 시행령 일부 개정 요약본',
-    content: '마약류 관리에 관한 법률 시행령 개정 사항에 대한 요약본입니다.',
-    attachmentUrl: 'law_narcotics_202503.pdf',
-    createdAt: '2025-03-01T12:59:00Z',
-  },
-];
-
-export const mockEpidemicSummaries: EpidemicSummary[] = [
-  {
-    id: 1,
-    title: '수족구병 발생 동향 및 대응 요령 요약본',
-    content: '영유아에게 주로 발생하는 수족구병에 대한 정보와 대응 요령에 대한 요약본입니다.',
-    attachmentUrl: 'epidemic_hand_foot_mouth.pdf',
-    createdAt: '2024-09-20T14:59:00Z',
-  },
-  {
-    id: 2,
-    title: '계절성 독감 유행 현황 및 예방수칙 요약본',
-    content: '질병관리청 발표 최신 독감 유행 정보 및 예방 수칙에 대한 요약본입니다.',
-    attachmentUrl: 'epidemic_flu.pdf',
-    createdAt: '2025-06-25T10:59:00Z',
-  },
-];
-
-export const mockNewDrugSummaries: NewDrugSummary[] = [
-  {
-    id: 1,
-    title: '신약 정보 요약본',
-    content: '신약에 대한 정보 요약본입니다.',
-    attachmentUrl: 'new_drug.pdf',
-    createdAt: '2025-07-31T10:39:00Z',
   },
 ];
