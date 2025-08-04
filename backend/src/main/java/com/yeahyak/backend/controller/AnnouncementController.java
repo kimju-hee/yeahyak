@@ -4,6 +4,7 @@ import com.yeahyak.backend.entity.Announcement;
 import com.yeahyak.backend.service.AnnouncementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
 import com.yeahyak.backend.dto.ApiResponse;
 
 import java.time.LocalDateTime;
@@ -24,8 +25,13 @@ public class AnnouncementController {
     }
 
     @GetMapping
-    public ApiResponse<List<Announcement>> getAll() {
-        return new ApiResponse<>(true,announcementService.findAll());
+    public ApiResponse<List<Announcement>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String type) {
+
+        Page<Announcement> pagedResult = announcementService.findAllPaged(page, size, type);
+        return new ApiResponse<>(true, pagedResult.getContent());
     }
 
     @GetMapping("/{id}")
@@ -34,15 +40,13 @@ public class AnnouncementController {
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<Announcement> update(@PathVariable Long id,
-                               @RequestBody Announcement updated) {
+    public ApiResponse<Announcement> update(@PathVariable Long id, @RequestBody Announcement updated) {
         return new ApiResponse<>(true, announcementService.update(id, updated));
     }
 
     @PatchMapping("/{id}")
     public ApiResponse<Announcement> patch(@PathVariable Long id, @RequestBody Map<String, Object> fields) {
         Announcement announcement = announcementService.findById(id);
-
         if (fields.containsKey("title")) {
             announcement.setTitle((String) fields.get("title"));
         }
@@ -53,7 +57,6 @@ public class AnnouncementController {
 
         return new ApiResponse<>(true, announcementService.save(announcement));
     }
-
 
     @DeleteMapping("/{id}")
     public ApiResponse<String> delete(@PathVariable Long id) {

@@ -3,6 +3,9 @@ package com.yeahyak.backend.service;
 import com.yeahyak.backend.entity.Announcement;
 import com.yeahyak.backend.repository.AnnouncementRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -28,6 +31,15 @@ public class AnnouncementService {
         return announcementRepository.findAll();
     }
 
+    public Page<Announcement> findAllPaged(int page, int size, String type) {
+        Pageable pageable = PageRequest.of(page, size);
+        if (type != null && !type.isEmpty()) {
+            return announcementRepository.findByType(type, pageable);
+        } else {
+            return announcementRepository.findAll(pageable);
+        }
+    }
+
     public Announcement findById(Long id) {
         return announcementRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 ID의 공지사항이 없습니다."));
@@ -36,6 +48,7 @@ public class AnnouncementService {
     public void delete(Long id) {
         announcementRepository.deleteById(id);
     }
+
     public Announcement save(Announcement announcement) {
         return announcementRepository.save(announcement);
     }
@@ -49,5 +62,4 @@ public class AnnouncementService {
         original.setUpdatedAt(LocalDateTime.now());
         return announcementRepository.save(original);
     }
-
 }
