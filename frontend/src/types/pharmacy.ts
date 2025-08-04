@@ -1,5 +1,5 @@
 export interface Pharmacy {
-  id: number;
+  pharmacyId: number;
   userId: number;
   pharmacyName: string;
   bizRegNo: string;
@@ -15,6 +15,6 @@ export interface PharmacyRegistraionRequest {
   id: number;
   pharmacyId: number;
   createdAt: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING' | 'ACTIVE' | 'REJECTED';
   reviewedAt?: string;
 }

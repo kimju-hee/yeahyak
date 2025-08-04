@@ -1,10 +1,10 @@
 export interface User {
-  id: number;
+  userId: number;
   email: string;
-  balance?: number;
-  role: 'BRANCH' | 'HQ';
+  point?: number;
+  role: 'BRANCH' | 'ADMIN';
 }
 
-export type Role = 'BRANCH' | 'HQ';
+export type Role = 'BRANCH' | 'ADMIN';
 
-export const Roles: Role[] = ['BRANCH', 'HQ'];
+export const ROLES: Role[] = ['BRANCH', 'ADMIN'];
