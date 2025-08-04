@@ -40,9 +40,9 @@ export default function LoginPage() {
       children: <LoginForm role="BRANCH" form={form} handleSubmit={handleSubmit} />,
     },
     {
-      key: 'HQ',
+      key: 'ADMIN',
       label: '본사 로그인',
-      children: <LoginForm role="HQ" form={form} handleSubmit={handleSubmit} />,
+      children: <LoginForm role="ADMIN" form={form} handleSubmit={handleSubmit} />,
     },
   ];
 

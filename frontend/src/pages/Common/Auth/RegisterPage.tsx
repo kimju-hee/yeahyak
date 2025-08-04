@@ -22,18 +22,9 @@ export default function RegisterPage() {
   }) => {
     try {
       const { confirmPassword, agreement, ...payload } = values;
-      const dummyPayload = {
-        email: 'branch1@test.com',
-        password: 'qweasd123!',
-        pharmacyName: '현정약국',
-        bizRegNo: '111-11-11111',
-        representativeName: '송현정',
-        address: '부산 해운대구 우동 111-11',
-        phoneNumber: '051-111-1111',
-      };
-      const res = await instance.post('/auth/signup', dummyPayload);
-      // 테스트용 로그
-      console.log('🔥✅ 회원가입 응답:', res.data);
+      const res = await instance.post('/auth/signup', payload);
+      // LOG:  테스트용 로그
+      console.log('🧪 회원가입 응답:', res.data);
       navigate('/login', { replace: true });
     } catch (e: any) {
       console.error('회원가입 실패:', e);
@@ -121,7 +112,7 @@ export default function RegisterPage() {
               <Form.Item
                 name="pharmacyName"
                 label="약국명"
-                rules={[{ required: true, message: '약국명을 입력해주세요.', whitespace: true }]}
+                rules={[{ required: true, message: '약국명을 입력해주세요.' }]}
               >
                 <Input />
               </Form.Item>

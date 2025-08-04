@@ -11,7 +11,7 @@ interface LoginFormProps {
 
 export default function LoginForm({ role, form, handleSubmit }: LoginFormProps) {
   return (
-    <Form name={`${role}-login`} form={form} onFinish={handleSubmit}>
+    <Form name={`${role.toLowerCase()}-login`} form={form} onFinish={handleSubmit}>
       <Flex vertical justify="center">
         <Form.Item
           name="email"

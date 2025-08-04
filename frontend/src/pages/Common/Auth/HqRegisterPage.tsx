@@ -1,10 +1,13 @@
 import { Button, Card, Checkbox, Flex, Form, Input, message, Select, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import instance from '../../../api/api';
+import { DEPARTMENTS } from '../../../types/admin';
 
 export default function HqRegisterPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
+
+  const departmentOptions = DEPARTMENTS.map((dept) => ({ value: dept, label: dept }));
 
   const handleSubmit = async (values: {
     email: string;
@@ -16,19 +19,13 @@ export default function HqRegisterPage() {
   }) => {
     try {
       const { confirmPassword, agreement, ...payload } = values;
-      const dummyPayload = {
-        email: 'branch1@test.com',
-        password: 'qweasd123!',
-        adminName: '송현정',
-        department: '운영팀',
-      };
-      const res = await instance.post('/auth/admin/signup', dummyPayload);
-      // 테스트용 로그
-      console.log('🔥✅ 회원가입 응답:', res.data);
+      const res = await instance.post('/auth/admin/signup', payload);
+      // LOG: 테스트용 로그
+      console.log('🧪 회원가입 응답:', res.data);
       navigate('/login', { replace: true });
     } catch (e: any) {
       console.error('회원가입 실패:', e);
-      messageApi.error(e.message || '회원가입 중 오류가 발생했습니다.');
+      messageApi.error(e.response?.data?.message || '회원가입 중 오류가 발생했습니다.');
     }
   };
 
@@ -121,14 +118,7 @@ export default function HqRegisterPage() {
                 label="소속 부서"
                 rules={[{ required: true, message: '소속 부서를 선택해주세요.' }]}
               >
-                <Select
-                  placeholder="소속 부서를 선택하세요"
-                  options={[
-                    { value: '운영팀', label: '운영팀' },
-                    { value: '총무팀', label: '총무팀' },
-                    { value: '멍멍팀', label: '멍멍팀' },
-                  ]}
-                />
+                <Select placeholder="소속 부서를 선택하세요" options={departmentOptions} />
               </Form.Item>
               <Form.Item
                 name="agreement"
