@@ -1,0 +1,70 @@
+/*
+  #root {}
+  매우 중요하게 수정해야 할 부분입니다.
+  `max-width`, `margin: 0 auto;`, `text-align: center;`는
+  전체 애플리케이션의 내용을 중앙에 고정된 너비로 배치하고 가운데 정렬하는 스타일입니다.
+  약국 관리 시스템과 같은 엔터프라이즈 앱은 보통 전체 화면을 활용하고,
+  Ant Design의 Layout 컴포넌트(Header, Sider, Content 등)를 사용하여 복잡한 레이아웃을 구성합니다.
+  이 `#root` 스타일은 Ant Design의 레이아웃과 충돌하여 원하는 화면 구성을 방해할 것입니다.
+  따라서 이 부분들을 제거하거나, Ant Design 레이아웃에 맞게 조정해야 합니다.
+*/
+#root {
+  /* max-width: 1280px;
+  margin: 0 auto;
+  text-align: center; */
+  padding: 2rem;
+}
+
+/*
+  .logo, .logo:hover, .logo.react:hover, @keyframes logo-spin, @media (prefers-reduced-motion: no-preference)
+  이 부분들은 Vite + React 초기 템플릿의 로고 애니메이션과 관련된 스타일입니다.
+  Ant Design 컴포넌트와 직접적인 충돌은 없습니다.
+  만약 프로젝트에서 이 로고들을 더 이상 사용하지 않을 예정이라면 삭제해도 좋고,
+  그렇지 않다면 그대로 유지해도 무방합니다.
+*/
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+/*
+  .card {} (클래스 'card' 스타일)
+  이것은 특정 클래스에 적용되는 스타일이므로, Ant Design 컴포넌트와 직접 충돌하지 않습니다.
+  만약 프로젝트에서 이 `.card` 클래스를 계속 사용할 예정이라면 그대로 유지해도 좋습니다.
+  Ant Design에도 `Card` 컴포넌트가 있지만, 클래스 이름이 다르므로 충돌하지 않습니다.
+*/
+.card {
+  padding: 2em;
+}
+
+/*
+  .read-the-docs {} (클래스 'read-the-docs' 스타일)
+  마찬가지로 특정 클래스에 적용되는 스타일이므로 충돌하지 않습니다.
+  사용하지 않는다면 삭제해도 좋습니다.
+*/
+.read-the-docs {
+  color: #888;
+}
