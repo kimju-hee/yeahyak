@@ -95,6 +95,7 @@ public class AuthController {
                 .body(Map.of(
                         "success", true,
                         "data", Map.of(
+                                "accessToken", accessToken,
                                 "user", loginResponse.getUser(),
                                 "profile", loginResponse.getProfile()
                         )
