@@ -1,5 +1,7 @@
 package com.yeahyak.backend.dto;
 
+import com.yeahyak.backend.entity.enums.MainCategory;
+import com.yeahyak.backend.entity.enums.SubCategory;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -9,10 +11,12 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Data
 public class ProductRequestDTO {
     private String productName;
     private String productCode;
-    private String category;
+    private MainCategory mainCategory;
+    private SubCategory subCategory;
     private String manufacturer;
     private String unit;
     private BigDecimal unitPrice;

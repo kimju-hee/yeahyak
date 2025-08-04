@@ -1,5 +1,7 @@
 package com.yeahyak.backend.entity;
 
+import com.yeahyak.backend.entity.enums.MainCategory;
+import com.yeahyak.backend.entity.enums.SubCategory;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -21,7 +23,13 @@ public class Product {
 
     private String productName;
     private String productCode;
-    private String category;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MainCategory mainCategory;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SubCategory subCategory;
     private String manufacturer;
     @Lob
     private String details;
