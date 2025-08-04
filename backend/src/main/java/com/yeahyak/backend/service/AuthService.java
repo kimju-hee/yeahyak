@@ -124,7 +124,7 @@ public class AuthService {
         int safePoint = user.getPoint() != null ? user.getPoint() : 0;
 
         UserInfo userInfo = new UserInfo(user.getUserId(), user.getEmail(), safePoint, user.getUserRole().name());
-        AdminProfile profile = new AdminProfile(admin.getAdminId(), user.getUserId(), admin.getAdminName(), admin.getDepartment());
+        AdminProfile profile = new AdminProfile(admin.getAdminId(), user.getUserId(), admin.getAdminName(), admin.getDepartment().name());
 
         return new AdminLoginResponse(userInfo, profile);
     }
@@ -173,9 +173,16 @@ public class AuthService {
                 .build();
         userRepository.save(user);
 
+        Department department;
+        try {
+            department = Department.valueOf(request.getDepartment());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("유효하지 않은 부서입니다. (운영팀, 총무팀 중 선택)");
+        }
+
         Admin admin = Admin.builder()
                 .adminName(request.getAdminName())
-                .department(request.getDepartment())
+                .department(department)
                 .user(user)
                 .build();
         adminRepository.save(admin);
@@ -192,5 +199,30 @@ public class AuthService {
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+    }
+
+    @Transactional
+    public AdminProfile updateAdmin(Long adminId, UpdateAdminRequest request) {
+        Admin admin = adminRepository.findById(adminId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 관리자가 존재하지 않습니다."));
+
+        admin.setAdminName(request.getAdminName());
+
+        Department department;
+        try {
+            department = Department.valueOf(request.getDepartment());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("유효하지 않은 부서입니다. (운영팀, 총무팀 중 선택)");
+        }
+        admin.setDepartment(department);
+
+        adminRepository.save(admin);
+
+        return new AdminProfile(
+                admin.getAdminId(),
+                admin.getUser().getUserId(),
+                admin.getAdminName(),
+                admin.getDepartment().name()
+        );
     }
 }

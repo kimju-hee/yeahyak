@@ -185,4 +185,23 @@ public class AuthController {
                 )
         ));
     }
+
+    @PutMapping("/update/admin/{adminId}")
+    public ResponseEntity<?> updateAdmin(
+            @PathVariable Long adminId,
+            @Valid @RequestBody UpdateAdminRequest request) {
+
+        AdminProfile updatedProfile = authService.updateAdmin(adminId, request);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", Map.of(
+                        "adminId", updatedProfile.getAdminId(),
+                        "userId", updatedProfile.getUserId(),
+                        "adminName", updatedProfile.getAdminName(),
+                        "department", updatedProfile.getDepartment()
+                )
+        ));
+    }
+
 }

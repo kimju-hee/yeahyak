@@ -24,6 +24,7 @@ public class Admin {
     @Column(nullable = false, length = 50)
     private String adminName;
 
-    @Column(nullable = false, length = 50)
-    private String department;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Department department;
 }
