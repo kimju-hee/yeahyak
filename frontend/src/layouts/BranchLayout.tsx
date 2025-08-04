@@ -2,17 +2,17 @@ import {
   BellOutlined,
   CheckCircleTwoTone,
   FrownFilled,
+  HourglassTwoTone,
   KeyOutlined,
   LogoutOutlined,
-  MinusCircleTwoTone,
   NotificationFilled,
-  ProductFilled,
   ShopOutlined,
   ShoppingFilled,
+  TagsFilled,
   UserOutlined,
 } from '@ant-design/icons';
-import { ConfigProvider, Dropdown, Flex, Layout, Menu, message, Typography } from 'antd';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { ConfigProvider, Dropdown, Flex, Layout, Menu, Space, Typography } from 'antd';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import type { Pharmacy } from '../types/pharmacy';
 
@@ -44,9 +44,9 @@ const siderMenuItems = [
     icon: <NotificationFilled />,
   },
   {
-    key: 'stock',
-    label: <Link to="/branch/stock">재고 관리</Link>,
-    icon: <ProductFilled />,
+    key: 'products',
+    label: <Link to="/branch/products">제품 목록</Link>,
+    icon: <TagsFilled />,
   },
   {
     key: 'order-request',
@@ -62,16 +62,9 @@ const siderMenuItems = [
 
 export default function BranchLayout() {
   const location = useLocation();
-  const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
   const profile = useAuthStore((state) => state.profile);
-  const pharmacy = profile as Pharmacy;
-  const logout = useAuthStore((state) => state.logout);
-
-  const handleLogout = () => {
-    logout();
-    message.success('로그아웃 되었습니다.');
-    navigate('/login', { replace: true });
-  };
+  const pharmacy = user?.role === 'BRANCH' ? (profile as Pharmacy) : null;
 
   // 아바타 메뉴 아이템
   const avatarMenuItems = {
@@ -88,10 +81,9 @@ export default function BranchLayout() {
       },
       {
         key: 'logout',
-        label: '로그아웃',
+        label: <Link to="/logout">로그아웃</Link>,
         icon: <LogoutOutlined />,
         danger: true,
-        onClick: handleLogout,
       },
     ],
   };
@@ -126,17 +118,16 @@ export default function BranchLayout() {
         >
           <Link to="/branch">예약</Link>
           <Flex align="center" gap={'24px'}>
-            <Flex>
+            <Space>
               <Typography.Text style={{ color: '#ffffff' }}>
-                {/*{pharmacy.pharmacyName}*/}
+                {pharmacy?.pharmacyName}
               </Typography.Text>
-              {/*pharmacy.status === 'APPROVED'*/}
-              {true ? (
+              {pharmacy?.status === 'ACTIVE' ? (
                 <CheckCircleTwoTone twoToneColor="#52c41a" style={{ fontSize: '16px' }} />
               ) : (
-                <MinusCircleTwoTone twoToneColor="#ff4d4f" style={{ fontSize: '16px' }} />
+                <HourglassTwoTone twoToneColor="#ff4d4f" style={{ fontSize: '16px' }} />
               )}
-            </Flex>
+            </Space>
             <BellOutlined style={{ fontSize: '24px', color: '#ffffff' }} />
             <Dropdown
               trigger={['click']}

@@ -13,8 +13,8 @@ import {
   TagsFilled,
   UserOutlined,
 } from '@ant-design/icons';
-import { ConfigProvider, Dropdown, Flex, Layout, Menu, message, Typography } from 'antd';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { ConfigProvider, Dropdown, Flex, Layout, Menu, Typography } from 'antd';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import type { Admin } from '../types/admin';
 
@@ -84,16 +84,9 @@ const siderMenuItems = [
 
 export default function HqLayout() {
   const location = useLocation();
-  const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
   const profile = useAuthStore((state) => state.profile);
-  const admin = profile as Admin;
-  const logout = useAuthStore((state) => state.logout);
-
-  const handleLogout = () => {
-    logout();
-    message.success('로그아웃 되었습니다.');
-    navigate('/login', { replace: true });
-  };
+  const admin = user?.role === 'ADMIN' ? (profile as Admin) : null;
 
   // 아바타 메뉴 아이템
   const avatarMenuItems = {
@@ -110,10 +103,9 @@ export default function HqLayout() {
       },
       {
         key: 'logout',
-        label: '로그아웃',
+        label: <Link to="/logout">로그아웃</Link>,
         icon: <LogoutOutlined />,
         danger: true,
-        onClick: handleLogout,
       },
     ],
   };
@@ -149,7 +141,7 @@ export default function HqLayout() {
           <Link to="/hq">예약</Link>
           <Flex align="center" gap={'24px'}>
             <Typography.Text style={{ color: '#ffffff' }}>
-              {/*{admin.adminName.slice(0, -1) + '*'}*/}
+              {admin?.adminName.slice(0, -1) + '*'}
             </Typography.Text>
             <BellOutlined style={{ fontSize: '24px', color: '#ffffff' }} />
             <Dropdown
