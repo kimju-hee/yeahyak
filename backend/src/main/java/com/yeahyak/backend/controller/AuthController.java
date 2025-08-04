@@ -115,9 +115,9 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(HttpSession session) {
+    public ResponseEntity<ApiResponse<String>> logout(HttpSession session) {
         session.invalidate();
-        return ResponseEntity.ok("로그아웃이 완료되었습니다.");
+        return ResponseEntity.ok(new ApiResponse<>(true, ""));
     }
 
     @PutMapping("/update/{pharmacyId}")
