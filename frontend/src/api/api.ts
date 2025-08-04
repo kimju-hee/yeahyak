@@ -8,4 +8,14 @@ const instance = axios.create({
   withCredentials: true,
 });
 
+// NOTE: 요청 인터셉터가 로컬 스토리지에 저장된 access token을 가져와 헤더에 자동으로 추가
+instance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('accessToken');
+    config.headers['Authorization'] = `Bearer ${token}`;
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
 export default instance;
