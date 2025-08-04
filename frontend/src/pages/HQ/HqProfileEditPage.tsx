@@ -1,37 +1,44 @@
 import { Button, Card, Form, Input, message, Select, Typography } from 'antd';
+import { useEffect, useState } from 'react';
 import instance from '../../api/api';
 import { useAuthStore } from '../../stores/authStore';
-import type { Admin } from '../../types/admin';
+import { DEPARTMENTS, type Admin } from '../../types/admin';
 
 export default function HqProfileEditPage() {
-  const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
+  const [form] = Form.useForm();
   const profile = useAuthStore((state) => state.profile) as Admin;
   const updateProfile = useAuthStore((state) => state.updateProfile);
 
-  // 로그인 API 연동 후 주석 해제
-  // useEffect(() => {
-  //   form.setFieldsValue({
-  //     adminName: profile.adminName,
-  //     department: profile.department,
-  //   });
-  // }, [form, profile]);
+  const [loading, setLoading] = useState(true);
 
-  const handleSubmit = async (values: Partial<Admin>) => {
+  const departmentOptions = DEPARTMENTS.map((dept) => ({ value: dept, label: dept }));
+
+  useEffect(() => {
+    form.setFieldsValue({
+      adminName: profile.adminName,
+      department: profile.department,
+    });
+  }, [form, profile]);
+
+  const handleSubmit = async (values: { adminName: string; department: string }) => {
     try {
-      const payload = { ...profile, ...values };
-      const dummyPayload = {
-        adminName: '송쫑이',
-        department: '멍멍부',
+      const payload = {
+        adminId: profile.adminId,
+        userId: profile.userId,
+        adminName: values.adminName,
+        department: values.department,
       };
-      const res = await instance.put(`/auth/admin/update/${profile.id}`, dummyPayload);
-      // 테스트용 로그
+      const res = await instance.put(`/auth/update/admin/${profile.adminId}`, payload);
+      // LOG: 테스트용 로그
       console.log('🔥✅ 개인 정보 수정 응답:', res.data);
-      updateProfile(payload);
-      messageApi.success('개인 정보가 수정되었습니다!');
-    } catch (error: any) {
-      console.error('개인 정보 수정 실패:', error);
-      messageApi.error(error.response?.data?.message || '개인 정보 수정에 실패했습니다.');
+      if (res.data.success) {
+        updateProfile(payload);
+        messageApi.success('개인 정보가 수정되었습니다!');
+      }
+    } catch (e: any) {
+      console.error('개인 정보 수정 실패:', e);
+      messageApi.error(e.response?.data?.message || '개인 정보 수정 중 오류가 발생했습니다.');
     }
   };
 
@@ -42,7 +49,7 @@ export default function HqProfileEditPage() {
         내 정보 수정
       </Typography.Title>
 
-      <Card style={{ padding: '8px' }}>
+      <Card style={{ width: '80%', padding: '8px', margin: '0 auto' }}>
         <Form form={form} name="hq-profile-edit" onFinish={handleSubmit}>
           <Form.Item
             name="adminName"
@@ -56,20 +63,14 @@ export default function HqProfileEditPage() {
             label="소속 부서"
             rules={[{ required: true, message: '소속 부서를 선택해주세요.' }]}
           >
-            {/* <Select defaultValue={profile.department} />*/}
-            <Select
-              placeholder="소속 부서를 선택하세요"
-              options={[
-                { value: '운영팀', label: '운영팀' },
-                { value: '총무팀', label: '총무팀' },
-                { value: '멍멍부', label: '멍멍부' },
-              ]}
-            />
+            <Select placeholder="소속 부서를 선택하세요" options={departmentOptions} />
           </Form.Item>
 
-          <Button type="primary" htmlType="submit" block>
-            수정
-          </Button>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <Button type="primary" htmlType="submit">
+              수정
+            </Button>
+          </div>
         </Form>
       </Card>
     </>

@@ -1,45 +1,62 @@
 import { Button, Card, Form, Input, message, Typography } from 'antd';
+import { useEffect, useState } from 'react';
 import instance from '../../api/api';
 import AddressInput from '../../components/AddressInput';
 import { useAuthStore } from '../../stores/authStore';
 import type { Pharmacy } from '../../types/pharmacy';
 
 export default function BranchProfileEditPage() {
-  const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
+  const [form] = Form.useForm();
   const profile = useAuthStore((state) => state.profile) as Pharmacy;
   const updateProfile = useAuthStore((state) => state.updateProfile);
 
-  // 로그인 API 연동 후 주석 해제
-  // useEffect(() => {
-  //   form.setFieldsValue({
-  //     pharmacyName: profile.pharmacyName,
-  //     bizRegNo: profile.bizRegNo,
-  //     representativeName: profile.representativeName,
-  //     postcode: profile.postcode,
-  //     address: profile.address,
-  //     detailAddress: profile.detailAddress,
-  //     contact: profile.contact,
-  //   });
-  // }, [form, profile]);
+  const [loading, setLoading] = useState(true);
 
-  const handleSubmit = async (values: Partial<Pharmacy>) => {
+  useEffect(() => {
+    form.setFieldsValue({
+      pharmacyName: profile.pharmacyName,
+      bizRegNo: profile.bizRegNo,
+      representativeName: profile.representativeName,
+      postcode: profile.postcode,
+      address: profile.address,
+      detailAddress: profile.detailAddress,
+      contact: profile.contact,
+    });
+  }, [form, profile]);
+
+  const handleSubmit = async (values: {
+    pharmacyName: string;
+    bizRegNo: string;
+    representativeName: string;
+    postcode: string;
+    address: string;
+    detailAddress: string;
+    contact: string;
+  }) => {
     try {
-      const payload = { ...profile, ...values };
-      const dummyPayload = {
-        pharmacyName: '쫑이약국',
-        representativeName: '송쫑이',
-        address: '부산 해운대구 우동 111-11',
-        phoneNumber: '051-123-4567',
+      const payload = {
+        pharmacyId: profile.pharmacyId,
+        userId: profile.userId,
+        pharmacyName: values.pharmacyName,
+        bizRegNo: values.bizRegNo,
+        representativeName: values.representativeName,
+        postcode: values.postcode,
+        address: values.address,
+        detailAddress: values.detailAddress,
+        contact: values.contact,
+        status: profile.status,
       };
-      const res = await instance.put(`/auth/update/${profile.id}`, dummyPayload);
-      // 테스트용 로그
+      const res = await instance.put(`/auth/update/${profile.pharmacyId}`, payload);
+      // LOG: 테스트용 로그
       console.log('🔥✅ 약국 정보 수정 응답:', res.data);
-      updateProfile(payload);
-      messageApi.success('약국 정보가 수정되었습니다!');
-    } catch (error: any) {
-      console.error('약국 정보 수정 실패:', error);
-      messageApi.error(error.response?.data?.message || '약국 정보 수정에 실패했습니다.');
+      if (res.data.success) {
+        updateProfile(payload);
+        messageApi.success('약국 정보가 수정되었습니다!');
+      }
+    } catch (e: any) {
+      console.error('약국 정보 수정 실패:', e);
+      messageApi.error(e.response?.data?.message || '약국 정보 수정 중 오류가 발생했습니다.');
     }
   };
 
@@ -50,12 +67,12 @@ export default function BranchProfileEditPage() {
         약국 정보 수정
       </Typography.Title>
 
-      <Card style={{ padding: '8px' }}>
+      <Card style={{ width: '80%', padding: '8px', margin: '0 auto' }}>
         <Form form={form} name="branch-profile-edit" onFinish={handleSubmit}>
           <Form.Item
             name="pharmacyName"
             label="약국명"
-            rules={[{ required: true, message: '약국명을 입력해주세요.', whitespace: true }]}
+            rules={[{ required: true, message: '약국명을 입력해주세요.' }]}
           >
             <Input />
           </Form.Item>
@@ -84,9 +101,11 @@ export default function BranchProfileEditPage() {
             <Input />
           </Form.Item>
 
-          <Button type="primary" htmlType="submit" block>
-            수정
-          </Button>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <Button type="primary" htmlType="submit">
+              수정
+            </Button>
+          </div>
         </Form>
       </Card>
     </>
