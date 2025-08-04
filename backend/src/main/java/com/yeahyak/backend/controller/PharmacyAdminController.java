@@ -3,7 +3,9 @@ package com.yeahyak.backend.controller;
 import com.yeahyak.backend.dto.PharmacyApprovalResponse;
 import com.yeahyak.backend.dto.PharmacyDto;
 import com.yeahyak.backend.dto.PharmacyRequestDto;
-import com.yeahyak.backend.entity.*;
+import com.yeahyak.backend.entity.Pharmacy;
+import com.yeahyak.backend.entity.PharmacyRegistrationRequest;
+import com.yeahyak.backend.entity.User;
 import com.yeahyak.backend.entity.enums.Status;
 import com.yeahyak.backend.entity.enums.UserRole;
 import com.yeahyak.backend.repository.PharmacyRegistrationRequestRepository;
@@ -16,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 import java.util.Map;
 
@@ -91,10 +94,9 @@ public class PharmacyAdminController {
         return ResponseEntity.ok("약국이 승인되었고, 권한이 부여되었습니다.");
     }
 
-
     @PostMapping("/{id}/reject")
     public ResponseEntity<String> rejectPharmacy(@PathVariable Long id) {
-        Pharmacy pharmacy= pharmacyRepository.findById(id)
+        Pharmacy pharmacy = pharmacyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 약국이 존재하지 않습니다."));
         pharmacy.setStatus(Status.REJECTED);
         pharmacyRepository.save(pharmacy);

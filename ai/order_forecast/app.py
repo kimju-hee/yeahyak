@@ -98,7 +98,12 @@ def predict_order(file):
     result_base = original_df[original_df['date'] == next_month][['date', 'store_id', 'product_name']].reset_index(drop=True)
     result = pd.concat([result_base, test_data[['predicted_order']].reset_index(drop=True)], axis=1)
 
-    return jsonify(result.to_dict(orient='records')), 200, {'Content-Type': 'application/json; charset=utf-8'}
+    return jsonify({
+        "success": True,
+        "data": result.to_dict(orient="records"),
+        "error": None
+    }), 200
+
 
 if __name__ == '__main__':
     app.run(debug=True)

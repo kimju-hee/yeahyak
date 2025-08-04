@@ -1,5 +1,6 @@
 package com.yeahyak.backend.controller;
 
+import com.yeahyak.backend.dto.AnnouncementRequestDTO;
 import com.yeahyak.backend.entity.Announcement;
 import com.yeahyak.backend.service.AnnouncementService;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +20,14 @@ public class AnnouncementController {
     private final AnnouncementService announcementService;
 
     @PostMapping
-    public ApiResponse<Announcement> create(@RequestBody Announcement announcement) {
-        announcement.setCreatedAt(LocalDateTime.now());
+    public ApiResponse<Announcement> create(@RequestBody AnnouncementRequestDTO dto) {
+        Announcement announcement = Announcement.builder()
+                .type(dto.getType())
+                .title(dto.getTitle())
+                .content(dto.getContent())
+                .createdAt(LocalDateTime.now())
+                .build();
+
         return new ApiResponse<>(true, announcementService.save(announcement));
     }
 
@@ -40,8 +47,16 @@ public class AnnouncementController {
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<Announcement> update(@PathVariable Long id, @RequestBody Announcement updated) {
-        return new ApiResponse<>(true, announcementService.update(id, updated));
+    public ApiResponse<Announcement> update(@PathVariable Long id, @RequestBody AnnouncementRequestDTO dto) {
+        Announcement announcement = Announcement.builder()
+                .announcementId(id)
+                .type(dto.getType())
+                .title(dto.getTitle())
+                .content(dto.getContent())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        return new ApiResponse<>(true, announcementService.update(id, announcement));
     }
 
     @PatchMapping("/{id}")

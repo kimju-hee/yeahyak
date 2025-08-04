@@ -1,5 +1,6 @@
 package com.yeahyak.backend.entity;
 
+import com.yeahyak.backend.entity.enums.AnnouncementType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,8 +19,9 @@ public class Announcement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long announcementId;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String type;  // LAW, EDU, POLICY, EPIDEMIC
+    private AnnouncementType type;
 
     @Column(nullable = false)
     private String title;
