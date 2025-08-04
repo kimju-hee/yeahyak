@@ -1,7 +1,7 @@
 package com.yeahyak.backend.controller;
 
 import com.yeahyak.backend.dto.ReturnRequestDto;
-import com.yeahyak.backend.entity.ReturnStatus;
+import com.yeahyak.backend.entity.enums.ReturnStatus;
 import com.yeahyak.backend.service.ReturnService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

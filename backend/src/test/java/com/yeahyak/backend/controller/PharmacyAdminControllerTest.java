@@ -3,6 +3,8 @@ package com.yeahyak.backend.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yeahyak.backend.dto.UpdatePharmacyRequest;
 import com.yeahyak.backend.entity.*;
+import com.yeahyak.backend.entity.enums.Status;
+import com.yeahyak.backend.entity.enums.UserRole;
 import com.yeahyak.backend.repository.PharmacyRepository;
 import com.yeahyak.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;

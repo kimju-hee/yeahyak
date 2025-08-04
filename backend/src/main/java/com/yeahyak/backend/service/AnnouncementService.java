@@ -1,7 +1,7 @@
 package com.yeahyak.backend.service;
 
 import com.yeahyak.backend.entity.Announcement;
-import com.yeahyak.backend.entity.AnnouncementType;
+import com.yeahyak.backend.entity.enums.AnnouncementType;
 import com.yeahyak.backend.repository.AnnouncementRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

@@ -1,9 +1,9 @@
 package com.yeahyak.backend.controller;
 
 import com.yeahyak.backend.entity.Pharmacy;
-import com.yeahyak.backend.entity.Status;
+import com.yeahyak.backend.entity.enums.Status;
 import com.yeahyak.backend.entity.User;
-import com.yeahyak.backend.entity.UserRole;
+import com.yeahyak.backend.entity.enums.UserRole;
 import com.yeahyak.backend.repository.PharmacyRepository;
 import com.yeahyak.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

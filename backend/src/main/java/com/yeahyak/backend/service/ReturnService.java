@@ -2,6 +2,7 @@ package com.yeahyak.backend.service;
 
 import com.yeahyak.backend.dto.ReturnRequestDto;
 import com.yeahyak.backend.entity.*;
+import com.yeahyak.backend.entity.enums.ReturnStatus;
 import com.yeahyak.backend.repository.PharmacyRepository;
 import com.yeahyak.backend.repository.ProductRepository;
 import com.yeahyak.backend.repository.ReturnItemsRepository;

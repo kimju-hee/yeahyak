@@ -2,7 +2,7 @@ package com.yeahyak.backend.service;
 
 import com.yeahyak.backend.dto.PointRequestDto;
 import com.yeahyak.backend.entity.Point;
-import com.yeahyak.backend.entity.PointStatus;
+import com.yeahyak.backend.entity.enums.PointStatus;
 import com.yeahyak.backend.entity.User;
 import com.yeahyak.backend.repository.PointRepository;
 import com.yeahyak.backend.repository.UserRepository;

@@ -1,6 +1,6 @@
 package com.yeahyak.backend.dto;
 
-import com.yeahyak.backend.entity.AnnouncementType;
+import com.yeahyak.backend.entity.enums.AnnouncementType;
 import lombok.Data;
 
 @Data

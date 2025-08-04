@@ -2,6 +2,9 @@ package com.yeahyak.backend.service;
 
 import com.yeahyak.backend.dto.*;
 import com.yeahyak.backend.entity.*;
+import com.yeahyak.backend.entity.enums.Department;
+import com.yeahyak.backend.entity.enums.Status;
+import com.yeahyak.backend.entity.enums.UserRole;
 import com.yeahyak.backend.repository.AdminRepository;
 import com.yeahyak.backend.repository.PharmacyRepository;
 import com.yeahyak.backend.repository.UserRepository;

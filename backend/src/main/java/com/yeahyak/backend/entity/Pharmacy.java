@@ -1,5 +1,6 @@
 package com.yeahyak.backend.entity;
 
+import com.yeahyak.backend.entity.enums.Status;
 import jakarta.persistence.*;
 import lombok.*;
 

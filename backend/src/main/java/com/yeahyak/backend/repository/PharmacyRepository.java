@@ -1,7 +1,7 @@
 package com.yeahyak.backend.repository;
 
 import com.yeahyak.backend.entity.Pharmacy;
-import com.yeahyak.backend.entity.Status;
+import com.yeahyak.backend.entity.enums.Status;
 import com.yeahyak.backend.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
