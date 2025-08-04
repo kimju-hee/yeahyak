@@ -1,6 +1,7 @@
 package com.yeahyak.backend.controller;
 
 import com.yeahyak.backend.dto.*;
+import com.yeahyak.backend.entity.Pharmacy;
 import com.yeahyak.backend.entity.User;
 import com.yeahyak.backend.entity.UserRole;
 import com.yeahyak.backend.repository.UserRepository;
@@ -160,12 +161,27 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponse<>(true, "비밀번호가 변경되었습니다."));
     }
 
-
     @PutMapping("/update/{pharmacyId}")
-    public ResponseEntity<String> updatePharmacy(
+    public ResponseEntity<?> updatePharmacy(
             @PathVariable Long pharmacyId,
             @Valid @RequestBody UpdatePharmacyRequest request) {
-        authService.updatePharmacy(pharmacyId, request);
-        return ResponseEntity.ok("약국 정보가 성공적으로 수정되었습니다.");
+
+        PharmacyProfile updatedProfile = authService.updatePharmacy(pharmacyId, request);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", Map.of(
+                        "pharmacyId", updatedProfile.getPharmacyId(),
+                        "userId", updatedProfile.getUserId(),
+                        "pharmacyName", updatedProfile.getPharmacyName(),
+                        "bizRegNo", updatedProfile.getBizRegNo(),
+                        "representativeName", updatedProfile.getRepresentativeName(),
+                        "postcode", updatedProfile.getPostcode(),
+                        "address", updatedProfile.getAddress(),
+                        "detailAddress", updatedProfile.getDetailAddress(),
+                        "contact", updatedProfile.getContact(),
+                        "status", updatedProfile.getStatus()
+                )
+        ));
     }
 }

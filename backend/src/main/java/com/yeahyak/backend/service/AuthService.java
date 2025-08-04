@@ -129,17 +129,35 @@ public class AuthService {
         return new AdminLoginResponse(userInfo, profile);
     }
 
-    public void updatePharmacy(Long pharmacyId, UpdatePharmacyRequest request) {
+    public PharmacyProfile updatePharmacy(Long pharmacyId, UpdatePharmacyRequest request) {
         Pharmacy pharmacy = pharmacyRepository.findById(pharmacyId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 약국이 존재하지 않습니다."));
 
         pharmacy.setPharmacyName(request.getPharmacyName());
         pharmacy.setRepresentativeName(request.getRepresentativeName());
         pharmacy.setAddress(request.getAddress());
-        pharmacy.setPhoneNumber(request.getPhoneNumber());
+        pharmacy.setDetailAddress(request.getDetailAddress());
+        pharmacy.setPostcode(request.getPostcode());
+        pharmacy.setPhoneNumber(request.getContact());
+
+        pharmacy.setStatus(Status.valueOf(request.getStatus()));
 
         pharmacyRepository.save(pharmacy);
+
+        return new PharmacyProfile(
+                pharmacy.getPharmacyId(),
+                pharmacy.getUser().getUserId(),
+                pharmacy.getPharmacyName(),
+                pharmacy.getBizRegNo(),
+                pharmacy.getRepresentativeName(),
+                pharmacy.getPostcode(),
+                pharmacy.getAddress(),
+                pharmacy.getDetailAddress(),
+                pharmacy.getPhoneNumber(),
+                pharmacy.getStatus().name()
+        );
     }
+
 
     @Transactional
     public void registerAdmin(AdminSignupRequest request) {
