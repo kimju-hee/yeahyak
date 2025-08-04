@@ -14,6 +14,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -126,12 +129,36 @@ public class AuthController {
         ));
     }
 
-
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<String>> logout(HttpSession session) {
         session.invalidate();
         return ResponseEntity.ok(new ApiResponse<>(true, ""));
     }
+
+    @PutMapping("/password")
+    public ResponseEntity<ApiResponse<String>> changePassword(
+            @RequestBody @Valid ChangePasswordRequest request
+    ) {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        String email;
+        if (principal instanceof User user) {
+            email = user.getEmail();
+        } else if (principal instanceof org.springframework.security.core.userdetails.User userDetails) {
+            email = userDetails.getUsername(); // spring userDetails
+        } else if (principal instanceof String str) {
+            email = str;
+        } else {
+            throw new RuntimeException("인증된 사용자 정보를 찾을 수 없습니다.");
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        authService.changePassword(user.getUserId(), request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "비밀번호가 변경되었습니다."));
+    }
+
 
     @PutMapping("/update/{pharmacyId}")
     public ResponseEntity<String> updatePharmacy(
