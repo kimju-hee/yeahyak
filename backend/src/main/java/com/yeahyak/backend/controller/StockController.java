@@ -15,26 +15,27 @@ public class StockController {
     private final StockService stockService;
 
     @GetMapping("/summary")
-    public List<StockSummaryDTO> getSummary(@RequestParam Long pharmacyId,
+    public ApiResponse<List<StockSummaryDTO>> getSummary(@RequestParam Long pharmacyId,
                                             @RequestParam(required = false) String category,
                                             @RequestParam(required = false) String keyword) {
-        return stockService.getStockSummary(pharmacyId, category, keyword);
+        return new ApiResponse<>(true, stockService.getStockSummary(pharmacyId, category, keyword));
     }
 
     @PostMapping("/update")
-    public void updateStock(@RequestParam Long pharmacyId,
+    public ApiResponse<String> updateStock(@RequestParam Long pharmacyId,
                             @RequestBody StockUpdateRequest request) {
         stockService.updateStock(pharmacyId, request);
+        return new ApiResponse<>(true, "수정되었습니다.");
     }
 
     @GetMapping("/transactions")
-    public List<StockTransactionDTO> getTransactions(@RequestParam Long pharmacyId,
+    public ApiResponse<List<StockTransactionDTO>> getTransactions(@RequestParam Long pharmacyId,
                                                      @RequestParam(required = false) Long productId) {
-        return stockService.getStockTransactions(pharmacyId, productId);
+        return new ApiResponse<>(true, stockService.getStockTransactions(pharmacyId, productId));
     }
 
     @PostMapping("/statistics")
-    public List<StockStatisticsDTO> getStatistics(@RequestBody StockStatisticsRequest request) {
-        return stockService.getStockStatistics(request.getPharmacyId(), request.getFrom(), request.getTo());
+    public ApiResponse<List<StockStatisticsDTO>> getStatistics(@RequestBody StockStatisticsRequest request) {
+        return new ApiResponse<>(true, stockService.getStockStatistics(request.getPharmacyId(), request.getFrom(), request.getTo()));
     }
 }

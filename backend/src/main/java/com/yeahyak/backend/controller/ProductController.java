@@ -1,5 +1,6 @@
 package com.yeahyak.backend.controller;
 
+import com.yeahyak.backend.dto.ApiResponse;
 import com.yeahyak.backend.dto.ProductRequestDTO;
 import com.yeahyak.backend.entity.Product;
 import com.yeahyak.backend.service.ProductService;
@@ -17,32 +18,32 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping
-    public ResponseEntity<Long> registerProduct(@RequestBody ProductRequestDTO dto) {
+    public ApiResponse<ResponseEntity<Long>> registerProduct(@RequestBody ProductRequestDTO dto) {
         Long productId = productService.registerProduct(dto);
-        return ResponseEntity.ok(productId);
+        return new ApiResponse<>(true, ResponseEntity.ok(productId));
     }
 
     @GetMapping
-    public ResponseEntity<List<Product>> getAllProducts() {
+    public ApiResponse<ResponseEntity<List<Product>>> getAllProducts() {
         List<Product> products = productService.getAllProducts();
-        return ResponseEntity.ok(products);
+        return new ApiResponse<>(true, ResponseEntity.ok(products));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Product> getProductById(@PathVariable Long id) {
+    public ApiResponse<ResponseEntity<Product>> getProductById(@PathVariable Long id) {
         Product product = productService.getProductById(id);
-        return ResponseEntity.ok(product);
+        return new ApiResponse<>(true, ResponseEntity.ok(product));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
+    public ApiResponse<ResponseEntity<Void>> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
-        return ResponseEntity.noContent().build();
+        return new ApiResponse<>(true, ResponseEntity.noContent().build());
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody ProductRequestDTO dto) {
+    public ApiResponse<ResponseEntity<Product>> updateProduct(@PathVariable Long id, @RequestBody ProductRequestDTO dto) {
         Product updated = productService.updateProduct(id, dto);
-        return ResponseEntity.ok(updated);
+        return new ApiResponse<>(true,ResponseEntity.ok(updated));
     }
 }

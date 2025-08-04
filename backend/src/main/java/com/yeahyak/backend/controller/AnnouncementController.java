@@ -4,6 +4,7 @@ import com.yeahyak.backend.entity.Announcement;
 import com.yeahyak.backend.service.AnnouncementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import com.yeahyak.backend.dto.ApiResponse;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,29 +18,29 @@ public class AnnouncementController {
     private final AnnouncementService announcementService;
 
     @PostMapping
-    public Announcement create(@RequestBody Announcement announcement) {
+    public ApiResponse<Announcement> create(@RequestBody Announcement announcement) {
         announcement.setCreatedAt(LocalDateTime.now());
-        return announcementService.save(announcement);
+        return new ApiResponse<>(true, announcementService.save(announcement));
     }
 
     @GetMapping
-    public List<Announcement> getAll() {
-        return announcementService.findAll();
+    public ApiResponse<List<Announcement>> getAll() {
+        return new ApiResponse<>(true,announcementService.findAll());
     }
 
     @GetMapping("/{id}")
-    public Announcement getOne(@PathVariable Long id) {
-        return announcementService.findById(id);
+    public ApiResponse<Announcement> getOne(@PathVariable Long id) {
+        return new ApiResponse<>(true, announcementService.findById(id));
     }
 
     @PutMapping("/{id}")
-    public Announcement update(@PathVariable Long id,
+    public ApiResponse<Announcement> update(@PathVariable Long id,
                                @RequestBody Announcement updated) {
-        return announcementService.update(id, updated);
+        return new ApiResponse<>(true, announcementService.update(id, updated));
     }
 
     @PatchMapping("/{id}")
-    public Announcement patch(@PathVariable Long id, @RequestBody Map<String, Object> fields) {
+    public ApiResponse<Announcement> patch(@PathVariable Long id, @RequestBody Map<String, Object> fields) {
         Announcement announcement = announcementService.findById(id);
 
         if (fields.containsKey("title")) {
@@ -50,12 +51,13 @@ public class AnnouncementController {
         }
         announcement.setUpdatedAt(LocalDateTime.now());
 
-        return announcementService.save(announcement);
+        return new ApiResponse<>(true, announcementService.save(announcement));
     }
 
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public ApiResponse<String> delete(@PathVariable Long id) {
         announcementService.delete(id);
+        return new ApiResponse<>(true, "삭제되었습니다.");
     }
 }
