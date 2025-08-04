@@ -5,12 +5,11 @@ import BranchLayout from './layouts/BranchLayout';
 import HqLayout from './layouts/HqLayout';
 import PublicLayout from './layouts/PublicLayout';
 import BranchDashboardPage from './pages/branch/BranchDashboardPage';
+import BranchProfileEditPage from './pages/branch/BranchProfileEditPage';
 import BranchStockPage from './pages/branch/BranchStockPage';
 import OrderRequestPage from './pages/branch/OrderRequestPage';
-import PharmacyEditPage from './pages/branch/PharmacyEditPage';
 import ReturnRequestPage from './pages/branch/ReturnRequestPage';
-import AdminLoginPage from './pages/common/auth/AdminLoginPage';
-import AdminRegisterPage from './pages/common/auth/AdminRegisterPage';
+import HqRegisterPage from './pages/common/auth/HqRegisterPage';
 import LoginPage from './pages/common/auth/LoginPage';
 import PasswordChangePage from './pages/common/auth/PasswordChangePage';
 import RegisterPage from './pages/common/auth/RegisterPage';
@@ -29,9 +28,9 @@ import HqNoticeEditPage from './pages/hq/HqNoticeEditPage';
 import HqNoticeRegisterPage from './pages/hq/HqNoticeRegisterPage';
 import HqProductEditPage from './pages/hq/HqProductEditPage';
 import HqProductRegisterPage from './pages/hq/HqProductRegisterPage';
+import HqProfileEditPage from './pages/hq/HqProfileEditPage';
 import HqStockPage from './pages/hq/HqStockPage';
 import OrderManagementPage from './pages/hq/OrderManagementPage';
-import ProfileEditPage from './pages/hq/ProfileEditPage';
 import ReturnManagementPage from './pages/hq/ReturnManagementPage';
 {
   /*import LogoutPage from './pages/common/auth/LogoutPage';*/
@@ -46,9 +45,8 @@ export default function App() {
         <Route index element={<Navigate to="/login" replace />} />
         {/* 인증 */}
         <Route path="login" element={<LoginPage />} />
-        <Route path="admin-login" element={<AdminLoginPage />} />
         <Route path="register" element={<RegisterPage />} />
-        <Route path="admin-register" element={<AdminRegisterPage />} />
+        <Route path="hq-register" element={<HqRegisterPage />} />
         {/* <Route path="logout" element={<LogoutPage />} />*/}
         {/* 에러 */}
         <Route path="403" element={<ForbiddenPage />} />
@@ -61,7 +59,7 @@ export default function App() {
       <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
         <Route path="/hq" element={<HqLayout />}>
           <Route index element={<HqDashboardPage />} />
-          <Route path="profile-edit" element={<ProfileEditPage />} />
+          <Route path="profile-edit" element={<HqProfileEditPage />} />
           <Route path="password-change" element={<PasswordChangePage />} />
           <Route path="notices" element={<NoticeListPage />} />
           <Route path="notices/:id" element={<NoticeDetailPage />} />
@@ -85,7 +83,7 @@ export default function App() {
         <Route path="/branch" element={<BranchLayout />}>
           <Route index element={<BranchDashboardPage />} />
           <Route path="password-change" element={<PasswordChangePage />} />
-          <Route path="pharmacy-edit" element={<PharmacyEditPage />} />
+          <Route path="profile-edit" element={<BranchProfileEditPage />} />
           <Route path="notices" element={<NoticeListPage />} />
           <Route path="notices/:id" element={<NoticeDetailPage />} />
           <Route path="order-request" element={<OrderRequestPage />} />
