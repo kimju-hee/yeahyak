@@ -1,6 +1,7 @@
 package com.yeahyak.backend.service;
 
 import com.yeahyak.backend.entity.Announcement;
+import com.yeahyak.backend.entity.AnnouncementType;
 import com.yeahyak.backend.repository.AnnouncementRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,7 +18,7 @@ public class AnnouncementService {
 
     private final AnnouncementRepository announcementRepository;
 
-    public Announcement create(String type, String title, String content) {
+    public Announcement create(AnnouncementType type, String title, String content) {
         Announcement announcement = Announcement.builder()
                 .type(type)
                 .title(title)
@@ -34,11 +35,13 @@ public class AnnouncementService {
     public Page<Announcement> findAllPaged(int page, int size, String type) {
         Pageable pageable = PageRequest.of(page, size);
         if (type != null && !type.isEmpty()) {
-            return announcementRepository.findByType(type, pageable);
+            AnnouncementType enumType = AnnouncementType.valueOf(type.toUpperCase());
+            return announcementRepository.findByType(enumType, pageable);
         } else {
             return announcementRepository.findAll(pageable);
         }
     }
+
 
     public Announcement findById(Long id) {
         return announcementRepository.findById(id)

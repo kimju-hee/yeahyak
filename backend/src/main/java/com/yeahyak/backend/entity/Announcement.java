@@ -18,8 +18,9 @@ public class Announcement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long announcementId;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String type;  // LAW, EDU, POLICY, EPIDEMIC
+    private AnnouncementType type;
 
     @Column(nullable = false)
     private String title;
