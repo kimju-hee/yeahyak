@@ -19,6 +19,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -80,7 +81,7 @@ public class PharmacyAdminController {
     }
 
     @PostMapping("/{id}/approve")
-    public ResponseEntity<String> approvePharmacy(@PathVariable Long id) {
+    public ResponseEntity<?> approvePharmacy(@PathVariable Long id) {
         Pharmacy pharmacy = pharmacyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 약국이 존재하지 않습니다"));
 
@@ -91,15 +92,35 @@ public class PharmacyAdminController {
         user.setUserRole(UserRole.PHARMACIST);
         userRepository.save(user);
 
-        return ResponseEntity.ok("약국이 승인되었고, 권한이 부여되었습니다.");
+        PharmacyRegistrationRequest request = registrationRequestRepository.findByPharmacy(pharmacy)
+                .orElseThrow(() -> new IllegalArgumentException("등록 요청이 존재하지 않습니다."));
+        request.setStatus(Status.ACTIVE);
+        request.setReviewedAt(LocalDateTime.now());
+        registrationRequestRepository.save(request);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", ""
+        ));
     }
 
     @PostMapping("/{id}/reject")
-    public ResponseEntity<String> rejectPharmacy(@PathVariable Long id) {
+    public ResponseEntity<?> rejectPharmacy(@PathVariable Long id) {
         Pharmacy pharmacy = pharmacyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 약국이 존재하지 않습니다."));
+
         pharmacy.setStatus(Status.REJECTED);
         pharmacyRepository.save(pharmacy);
-        return ResponseEntity.ok("약국이 거절되었습니다.");
+
+        PharmacyRegistrationRequest request = registrationRequestRepository.findByPharmacy(pharmacy)
+                .orElseThrow(() -> new IllegalArgumentException("등록 요청이 존재하지 않습니다."));
+        request.setStatus(Status.REJECTED);
+        request.setReviewedAt(LocalDateTime.now());
+        registrationRequestRepository.save(request);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", ""
+        ));
     }
 }
