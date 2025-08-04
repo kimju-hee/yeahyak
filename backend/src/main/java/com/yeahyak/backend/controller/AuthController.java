@@ -124,6 +124,7 @@ public class AuthController {
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "data", Map.of(
+                        "accessToken", accessToken,
                         "user", loginResponse.getUser(),
                         "profile", loginResponse.getProfile()
                 )
