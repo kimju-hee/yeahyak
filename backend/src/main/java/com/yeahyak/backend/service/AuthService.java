@@ -62,16 +62,47 @@ public class AuthService {
         }
     }
 
-    public void login(LoginRequest request) {
+    @Transactional
+    public LoginResponse login(LoginRequest request) {
+        Authentication authentication;
         try {
-            Authentication authentication = authenticationManager.authenticate(
+            authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
             SecurityContextHolder.getContext().setAuthentication(authentication);
         } catch (AuthenticationException e) {
             throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        Pharmacy pharmacy = pharmacyRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalArgumentException("약국 정보를 찾을 수 없습니다."));
+
+        UserInfo userInfo = new UserInfo(
+                user.getUserId(),
+                user.getEmail(),
+                user.getPoint(),
+                user.getUserRole().name()
+        );
+
+        PharmacyProfile profile = new PharmacyProfile(
+                pharmacy.getPharmacyId(),
+                user.getUserId(),
+                pharmacy.getPharmacyName(),
+                pharmacy.getBizRegNo(),
+                pharmacy.getRepresentativeName(),
+                pharmacy.getPostcode(),
+                pharmacy.getAddress(),
+                pharmacy.getDetailAddress(),
+                pharmacy.getPhoneNumber(),
+                pharmacy.getStatus().name()
+        );
+
+        return new LoginResponse(userInfo, profile);
     }
+
 
     public void updatePharmacy(Long pharmacyId, UpdatePharmacyRequest request) {
         Pharmacy pharmacy = pharmacyRepository.findById(pharmacyId)
