@@ -99,20 +99,33 @@ public class AuthController {
     }
 
     @PostMapping("/admin/login")
-    public ResponseEntity<String> adminLogin(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<?> adminLogin(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+        AdminLoginResponse loginResponse = authService.adminLogin(request);
+
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("해당 이메일의 사용자가 존재하지 않습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            return ResponseEntity.status(401).body("비밀번호가 일치하지 않습니다.");
-        }
+        String accessToken = jwtUtil.createAccessToken(user);
+        String refreshToken = jwtUtil.createRefreshToken(user);
 
-        if (user.getUserRole() != UserRole.ADMIN) {
-            return ResponseEntity.status(403).body("관리자 권한이 없습니다.");
-        }
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60)
+                .build();
 
-        return ResponseEntity.ok("관리자 로그인에 성공했습니다.");
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", Map.of(
+                        "user", loginResponse.getUser(),
+                        "profile", loginResponse.getProfile()
+                )
+        ));
     }
+
 
     @PostMapping("/logout")
     public ResponseEntity<String> logout(HttpSession session) {

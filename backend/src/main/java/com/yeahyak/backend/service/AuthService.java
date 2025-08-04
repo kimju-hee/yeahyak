@@ -33,6 +33,7 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .userRole(UserRole.BRANCH)
+                .point(0)
                 .build();
         userRepository.save(user);
 
@@ -80,10 +81,12 @@ public class AuthService {
         Pharmacy pharmacy = pharmacyRepository.findByUser(user)
                 .orElseThrow(() -> new IllegalArgumentException("약국 정보를 찾을 수 없습니다."));
 
+        int safePoint = user.getPoint() != null ? user.getPoint() : 0;
+
         UserInfo userInfo = new UserInfo(
                 user.getUserId(),
                 user.getEmail(),
-                user.getPoint(),
+                safePoint,
                 user.getUserRole().name()
         );
 
@@ -103,6 +106,28 @@ public class AuthService {
         return new LoginResponse(userInfo, profile);
     }
 
+    public AdminLoginResponse adminLogin(LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("해당 이메일의 사용자가 존재하지 않습니다."));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        }
+
+        if (user.getUserRole() != UserRole.ADMIN) {
+            throw new IllegalArgumentException("관리자 권한이 없습니다.");
+        }
+
+        Admin admin = adminRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalArgumentException("관리자 정보가 존재하지 않습니다."));
+
+        int safePoint = user.getPoint() != null ? user.getPoint() : 0;
+
+        UserInfo userInfo = new UserInfo(user.getUserId(), user.getEmail(), safePoint, user.getUserRole().name());
+        AdminProfile profile = new AdminProfile(admin.getAdminId(), user.getUserId(), admin.getAdminName(), admin.getDepartment());
+
+        return new AdminLoginResponse(userInfo, profile);
+    }
 
     public void updatePharmacy(Long pharmacyId, UpdatePharmacyRequest request) {
         Pharmacy pharmacy = pharmacyRepository.findById(pharmacyId)
@@ -126,6 +151,7 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .userRole(UserRole.ADMIN)
+                .point(0)
                 .build();
         userRepository.save(user);
 

@@ -34,7 +34,6 @@ public class User implements UserDetails {
     @Column(length = 20, nullable = false)
     private UserRole userRole;
 
-    @Column(nullable = false)
     private Integer point = 0;
 
     @PrePersist

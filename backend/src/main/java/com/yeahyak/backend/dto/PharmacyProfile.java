@@ -8,7 +8,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 public class PharmacyProfile {
-    private Long id;
+    private Long pharmacyId;
     private Long userId;
     private String pharmacyName;
     private String bizRegNo;

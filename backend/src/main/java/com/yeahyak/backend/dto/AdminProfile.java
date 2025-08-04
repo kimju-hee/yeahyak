@@ -7,9 +7,9 @@ import lombok.Setter;
 @Getter
 @Setter
 @AllArgsConstructor
-public class UserInfo {
+public class AdminProfile {
+    private Long adminId;
     private Long userId;
-    private String email;
-    private int point;
-    private String role;
+    private String adminName;
+    private String department;
 }
