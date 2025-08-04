@@ -2,6 +2,7 @@ package com.yeahyak.backend.service;
 
 import com.yeahyak.backend.dto.*;
 import com.yeahyak.backend.entity.*;
+import com.yeahyak.backend.entity.enums.TransactionType;
 import com.yeahyak.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -1,9 +1,7 @@
 package com.yeahyak.backend.controller;
 
 import com.yeahyak.backend.dto.*;
-import com.yeahyak.backend.entity.Pharmacy;
 import com.yeahyak.backend.entity.User;
-import com.yeahyak.backend.entity.UserRole;
 import com.yeahyak.backend.repository.UserRepository;
 import com.yeahyak.backend.security.JwtUtil;
 import com.yeahyak.backend.service.AuthService;
@@ -15,9 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -148,7 +144,7 @@ public class AuthController {
         if (principal instanceof User user) {
             email = user.getEmail();
         } else if (principal instanceof org.springframework.security.core.userdetails.User userDetails) {
-            email = userDetails.getUsername(); // spring userDetails
+            email = userDetails.getUsername();
         } else if (principal instanceof String str) {
             email = str;
         } else {

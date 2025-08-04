@@ -1,5 +1,6 @@
 package com.yeahyak.backend.entity;
 
+import com.yeahyak.backend.entity.enums.PointStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

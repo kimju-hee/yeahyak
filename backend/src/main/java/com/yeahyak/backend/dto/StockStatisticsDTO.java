@@ -1,6 +1,6 @@
 package com.yeahyak.backend.dto;
 
-import com.yeahyak.backend.entity.TransactionType;
+import com.yeahyak.backend.entity.enums.TransactionType;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;

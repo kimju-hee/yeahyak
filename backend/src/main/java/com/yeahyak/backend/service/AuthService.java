@@ -2,7 +2,11 @@ package com.yeahyak.backend.service;
 
 import com.yeahyak.backend.dto.*;
 import com.yeahyak.backend.entity.*;
+import com.yeahyak.backend.entity.enums.Department;
+import com.yeahyak.backend.entity.enums.Status;
+import com.yeahyak.backend.entity.enums.UserRole;
 import com.yeahyak.backend.repository.AdminRepository;
+import com.yeahyak.backend.repository.PharmacyRegistrationRequestRepository;
 import com.yeahyak.backend.repository.PharmacyRepository;
 import com.yeahyak.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -15,6 +19,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
 @RequiredArgsConstructor
 @Service
 public class AuthService {
@@ -24,6 +30,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final AdminRepository adminRepository;
+    private final PharmacyRegistrationRequestRepository registrationRequestRepository;
 
     @Transactional
     public void register(SignupRequest request) {
@@ -48,7 +55,15 @@ public class AuthService {
                 .status(Status.PENDING)
                 .user(user)
                 .build();
+
+        PharmacyRegistrationRequest regRequest = PharmacyRegistrationRequest.builder()
+                .pharmacy(pharmacy)
+                .requestedAt(LocalDateTime.now())
+                .status(Status.PENDING)
+                .build();
+
         pharmacyRepository.save(pharmacy);
+        registrationRequestRepository.save(regRequest);
     }
 
     private void validateDuplication(SignupRequest request) {
