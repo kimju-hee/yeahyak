@@ -19,8 +19,13 @@ import {
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { SUB_CATEGORY_MAP, TYPES, type Type } from '../../types/product';
-import { mockProducts } from '../../types/product.mock';
+import { instance } from '../../api/api';
+import {
+  PRODUCT_MAIN_CATEGORY,
+  PRODUCT_SUB_CATEGORY,
+  type ProductMainCategory,
+  type ProductResponse,
+} from '../../types/product.type';
 
 const getBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -41,60 +46,43 @@ export default function HqProductEditPage() {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const typeOptions = TYPES.map((type) => ({ value: type, label: type }));
-  const watchedType = Form.useWatch('type', form);
+  const typeOptions = Object.keys(PRODUCT_MAIN_CATEGORY).map((type) => ({
+    value: type,
+    label: PRODUCT_MAIN_CATEGORY[type as ProductMainCategory],
+  }));
+  const watchedType = Form.useWatch('mainCategory', form);
   const subCategoryOptions =
-    watchedType && SUB_CATEGORY_MAP[watchedType as Type]
-      ? SUB_CATEGORY_MAP[watchedType as Type].map((label) => ({ value: label, label }))
+    watchedType && PRODUCT_SUB_CATEGORY[watchedType as ProductMainCategory]
+      ? PRODUCT_SUB_CATEGORY[watchedType as ProductMainCategory].map((label) => ({
+          value: label,
+          label,
+        }))
       : [];
 
-  // NOTE: 제품 정보 섹션을 쪼개기로 정하면 사용
-  // const watchedType = Form.useWatch('type', form);
-
-  // TODO: 제품 정보 로드 API 호출 로직 추가 + mockProducts 제거
-  // const fetchProduct = async () => {
-  //   setLoading(true);
-  //   try {
-  //     const res = await instance.get(`/products/${id}`);
-  //     const product = res.data as Product;
-  //     form.setFieldsValue(product);
-  //   } catch (e: any) {
-  //     console.error('제품 정보 로딩 실패:', e);
-  //     messageApi.error(e.message || '제품 정보 로딩 중 오류가 발생했습니다.');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-  //
-  // useEffect(() => {
-  //   fetchProduct();
-  // }, []);
-
-  const product = mockProducts.find((p) => p.id === Number(id));
+  // TODO: API 연동 확인
+  const fetchProduct = async () => {
+    setLoading(true);
+    try {
+      const res = await instance.get(`/products/${id}`);
+      // LOG: 테스트용 로그
+      console.log('✨ 제품 정보 로딩 응답:', res.data);
+      if (res.data.success) {
+        const product = res.data.data as ProductResponse;
+        form.setFieldsValue(product);
+      }
+    } catch (e: any) {
+      console.error('제품 정보 로딩 실패:', e);
+      messageApi.error(e.message || '제품 정보 로딩 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (!product) return;
+    fetchProduct();
+  }, []);
 
-    form.setFieldsValue(product);
-
-    if (product.productImgUrl) {
-      setFileList([
-        {
-          uid: '-1',
-          name: 'image.png',
-          status: 'done',
-          url: product.productImgUrl,
-        },
-      ]);
-    } else {
-      setFileList([]);
-    }
-  }, [product]);
-
-  if (!product) {
-    return <Typography.Text>해당 제품을 찾을 수 없습니다.</Typography.Text>;
-  }
-
+  // TODO: 이미지 업로드 기능 테스트
   const handleChange: UploadProps['onChange'] = async ({ fileList }) => {
     setFileList(fileList);
     const file = fileList[0];
@@ -120,13 +108,17 @@ export default function HqProductEditPage() {
     setPreviewOpen(true);
   };
 
+  // TODO: API 연동 확인
   const handleSubmit = async () => {
     try {
-      // TODO: 제품 정보 수정 API 호출 로직 추가
+      const payload = await form.getFieldsValue();
+      const res = await instance.put(`/products/${id}`, payload);
+      // LOG: 테스트용 로그
+      console.log('✨ 제품 정보 수정 응답:', res.data);
       navigate(`/hq/products/${id}`);
     } catch (e: any) {
       console.error('제품 정보 수정 실패:', e);
-      messageApi.error(e.message || '제품 정보 수정 중 오류가 발생했습니다.');
+      messageApi.error(e.response?.data?.message || '제품 정보 수정 중 오류가 발생했습니다.');
     }
   };
 
@@ -149,9 +141,9 @@ export default function HqProductEditPage() {
 
       <Card style={{ width: '80%', borderRadius: '12px', padding: '24px', margin: '0 auto' }}>
         <Flex wrap justify="space-between" gap={24}>
-          <Typography.Text type="secondary">ID: {product.id}</Typography.Text>
+          <Typography.Text type="secondary">ID: {form.getFieldValue('productId')}</Typography.Text>
           <Typography.Text type="secondary">
-            등록일: {dayjs(product.createdAt).format('YYYY-MM-DD')}
+            등록일: {dayjs(form.getFieldValue('createdAt')).format('YYYY-MM-DD')}
           </Typography.Text>
         </Flex>
 
@@ -166,6 +158,7 @@ export default function HqProductEditPage() {
         >
           <Flex wrap justify="space-between" gap={36}>
             <Flex vertical flex={1} justify="center" align="center">
+              {/* TODO: 인증된 사용자만 파일 업로드 가능하도록 제한 + 파일 용량 제한 + 파일 형식 제한 */}
               <Upload
                 listType="picture-card"
                 fileList={fileList}

@@ -12,9 +12,12 @@ import {
   Typography,
   type DescriptionsProps,
 } from 'antd';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { instance } from '../../../api/api';
 import { useAuthStore } from '../../../stores/authStore';
-import { mockProducts } from '../../../types/product.mock';
+import { PRODUCT_MAIN_CATEGORY, type ProductResponse } from '../../../types/product.type';
+import { USER_ROLE } from '../../../types/profile.type';
 
 export default function ProductDetailPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -22,33 +25,52 @@ export default function ProductDetailPage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
 
-  const product = mockProducts.find((p) => p.id === Number(id));
+  const [product, setProduct] = useState<ProductResponse>();
+  const [loading, setLoading] = useState(true);
 
-  if (!product) {
-    return <Typography.Text>해당 제품을 찾을 수 없습니다.</Typography.Text>;
-  }
+  // TODO: API 연동 확인
+  const fetchProduct = async () => {
+    setLoading(true);
+    try {
+      const res = await instance.get(`/products/${id}`);
+      // LOG: 테스트용 로그
+      console.log('✨ 제품 정보 로딩 응답:', res.data);
+      if (res.data.success) {
+        const product = res.data.data as ProductResponse;
+      }
+    } catch (e: any) {
+      console.error('제품 정보 로딩 실패:', e);
+      messageApi.error(e.response?.data?.message || '제품 정보 로딩 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProduct();
+  }, []);
 
   const handleDelete = async () => {
     try {
       if (window.confirm('정말 삭제하시겠습니까?')) {
-        // TODO: 제품 삭제 API 호출 로직 추가하기
+        const res = await instance.delete(`/products/${id}`);
+        // LOG: 테스트용 로그
+        console.log('✨ 제품 삭제 응답:', res.data);
         navigate('/hq/products');
       }
     } catch (e: any) {
       console.error('제품 삭제 실패:', e);
-      messageApi.error(e.message || '제품 삭제 중 오류가 발생했습니다.');
+      messageApi.error(e.response?.data?.message || '제품 삭제 중 오류가 발생했습니다.');
     }
   };
 
   const handleAddToCart = async () => {
     try {
-      if (window.confirm('정말 장바구니에 추가하시겠습니까?')) {
-        // TODO: 제품 장바구니 추가 API 호출 로직 추가하기
-        messageApi.success('장바구니에 추가되었습니다.');
-      }
+      // TODO: 제품 장바구니 추가 API 호출 로직 추가하기 (일단 보류)
+      messageApi.success('장바구니에 추가되었습니다.');
     } catch (e: any) {
       console.error('제품 장바구니 추가 실패:', e);
-      messageApi.error(e.message || '제품 장바구니 추가 중 오류가 발생했습니다.');
+      messageApi.error(e.response?.data?.message || '제품 장바구니 추가 중 오류가 발생했습니다.');
     }
   };
 
@@ -56,27 +78,27 @@ export default function ProductDetailPage() {
     {
       key: 'manufacturer',
       label: '제조사',
-      children: product.manufacturer,
+      children: product?.manufacturer,
     },
     {
       key: 'productCode',
       label: '보험코드',
-      children: product.productCode,
+      children: product?.productCode,
     },
     {
       key: 'subCategory',
       label: '구분',
-      children: product.subCategory,
+      children: product?.subCategory,
     },
     {
       key: 'unit',
       label: '단위',
-      children: product.unit,
+      children: product?.unit,
     },
     {
       key: 'unitPrice',
       label: '판매가',
-      children: `${product.unitPrice.toLocaleString()}원`,
+      children: product?.unitPrice !== undefined ? `${product.unitPrice.toLocaleString()}원` : '',
     },
   ];
 
@@ -99,6 +121,7 @@ export default function ProductDetailPage() {
       <Card style={{ width: '80%', borderRadius: '12px', padding: '24px', margin: '0 auto' }}>
         <Flex wrap justify="space-between" gap={36}>
           <div style={{ flex: 1 }}>
+            {/* TODO: 제품 이미지 확인 */}
             <Image
               preview={false}
               src="https://developers.elementor.com/docs/assets/img/elementor-placeholder-image.png"
@@ -109,24 +132,23 @@ export default function ProductDetailPage() {
 
           <Flex vertical flex={1}>
             <Flex wrap justify="space-between" align="start">
-              <Typography.Title level={3}>{product.productName}</Typography.Title>
+              <Typography.Title level={3}>{product?.productName}</Typography.Title>
               <Tag
                 color={
-                  product.type === '전문의약품'
+                  product?.mainCategory === PRODUCT_MAIN_CATEGORY.전문의약품
                     ? 'geekblue'
-                    : product.type === '일반의약품'
+                    : product?.mainCategory === PRODUCT_MAIN_CATEGORY.일반의약품
                       ? 'magenta'
                       : 'purple'
                 }
               >
-                {product.type}
+                {product?.mainCategory}
               </Tag>
             </Flex>
 
             <Descriptions column={1} items={descriptionsItems} style={{ margin: '24px 0' }} />
 
-            {/* TODO: 로그인 API 연동 후 주석 해제 {user.role === 'HQ ? ( */}
-            {true ? (
+            {user?.role === USER_ROLE.ADMIN ? (
               <Space wrap>
                 <Button type="primary" onClick={() => navigate(`/hq/products/${id}/edit`)}>
                   수정
@@ -146,7 +168,7 @@ export default function ProductDetailPage() {
         <Divider />
 
         <Typography.Title level={4}>제품 상세 정보</Typography.Title>
-        <Typography.Paragraph>{product.details}</Typography.Paragraph>
+        <Typography.Paragraph>{product?.details}</Typography.Paragraph>
 
         {/* NOTE: 제품 정보 섹션을 쪼개기로 정하면 사용 */}
         {/* {Object.entries(product.details ?? {}).map(([section, content]) => (

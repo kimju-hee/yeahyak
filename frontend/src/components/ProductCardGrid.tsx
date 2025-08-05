@@ -1,6 +1,8 @@
 import { Card, Col, Image, Row } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import type { Product } from '../types/product';
+import { useAuthStore } from '../stores/authStore';
+import type { Product } from '../types/product.type';
+import { USER_ROLE } from '../types/profile.type';
 
 interface ProductCardGridProps {
   products: Product[];
@@ -8,14 +10,18 @@ interface ProductCardGridProps {
 
 export default function ProductCardGrid({ products }: ProductCardGridProps) {
   const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
 
   return (
     <Row gutter={[16, 16]}>
       {products.map((product) => (
-        <Col key={product.id} span={6}>
+        <Col key={product.productId} span={6}>
           <Card
             hoverable
-            onClick={() => navigate(`/hq/products/${product.id}`)}
+            onClick={() => {
+              const pathPrefix = user?.role === USER_ROLE.BRANCH ? '/hq' : '/branch';
+              navigate(`${pathPrefix}/products/${product.productId}`);
+            }}
             cover={
               <Image
                 preview={false}

@@ -1,4 +1,3 @@
-// src/pages/HQ/HqProductRegisterPage.tsx
 import { LeftOutlined, UploadOutlined } from '@ant-design/icons';
 import {
   Button,
@@ -18,7 +17,12 @@ import {
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SUB_CATEGORY_MAP, TYPES, type Type } from '../../types/product';
+import { instance } from '../../api/api';
+import {
+  PRODUCT_MAIN_CATEGORY,
+  PRODUCT_SUB_CATEGORY,
+  type ProductMainCategory,
+} from '../../types/product.type';
 
 const getBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -38,17 +42,24 @@ export default function HqProductRegisterPage() {
   const [imgList, setImgList] = useState<UploadFile[]>([]);
   const [pdfList, setPdfList] = useState<UploadFile[]>([]);
 
-  const typeOptions = TYPES.map((type) => ({ value: type, label: type }));
-  const watchedType = Form.useWatch('type', form);
+  const typeOptions = Object.keys(PRODUCT_MAIN_CATEGORY).map((type) => ({
+    value: type,
+    label: PRODUCT_MAIN_CATEGORY[type as ProductMainCategory],
+  }));
+  const watchedType = Form.useWatch('mainCategory', form);
   const subCategoryOptions =
-    watchedType && SUB_CATEGORY_MAP[watchedType as Type]
-      ? SUB_CATEGORY_MAP[watchedType as Type].map((label) => ({ value: label, label }))
+    watchedType && PRODUCT_SUB_CATEGORY[watchedType as ProductMainCategory]
+      ? PRODUCT_SUB_CATEGORY[watchedType as ProductMainCategory].map((label) => ({
+          value: label,
+          label,
+        }))
       : [];
 
   useEffect(() => {
     form.setFieldsValue({ subCategory: undefined });
   }, [watchedType]);
 
+  // TODO: 이미지 업로드 기능 테스트
   const handleImgChange: UploadProps['onChange'] = async ({ fileList }) => {
     setImgList(fileList);
     const img = fileList[0];
@@ -73,10 +84,12 @@ export default function HqProductRegisterPage() {
     setPreviewOpen(true);
   };
 
+  // TODO: PDF 업로드 기능 테스트
   const handlePdfChange: UploadProps['onChange'] = async ({ fileList }) => {
     setPdfList(fileList);
   };
 
+  // TODO: AI 요약 기능 테스트
   const handleAiSummarize = async () => {
     if (pdfList.length === 0) {
       messageApi.warning('PDF 파일을 먼저 업로드해 주세요.');
@@ -84,22 +97,35 @@ export default function HqProductRegisterPage() {
     }
 
     try {
-      // TODO: AI 요약 API 호출 로직 추가
-      form.setFieldsValue({ details: '이곳에 PDF 내용을 기반으로 요약이 채워집니다.' });
-      messageApi.success('AI가 제품 정보를 요약했습니다.');
+      // TODO: API 연동 확인
+      const res = await instance.post('summarize/new-drug', {
+        file: pdfList[0].originFileObj,
+      });
+      // LOG: 테스트용 로그
+      console.log('✨ AI 요약 응답:', res.data);
+      if (res.data.success) {
+        form.setFieldsValue({ details: res.data.summary });
+        messageApi.success('AI가 제품 정보를 요약했습니다.');
+      }
     } catch (e: any) {
       console.error('제품 정보 요약 실패:', e);
-      messageApi.error(e.message || '제품 정보 요약 중 오류가 발생했습니다.');
+      messageApi.error(e.response?.data?.message || '제품 정보 요약 중 오류가 발생했습니다.');
     }
   };
 
+  // TODO: API 연동 확인
   const handleSubmit = async () => {
     try {
-      // TODO: 제품 등록 API 호출 로직 추가 (완료 후 res.data.data.id 페이지로 이동)
-      navigate(`/hq/products`);
+      const payload = await form.getFieldsValue();
+      const res = await instance.post('/products', payload);
+      // LOG: 테스트용 로그
+      console.log('✨ 제품 등록 응답:', res.data);
+      if (res.data.success) {
+        navigate(`/hq/products/${res.data.data.productId}`);
+      }
     } catch (e: any) {
       console.error('제품 등록 실패:', e);
-      messageApi.error(e.message || '제품 등록 중 오류가 발생했습니다.');
+      messageApi.error(e.response?.data?.message || '제품 등록 중 오류가 발생했습니다.');
     }
   };
 
