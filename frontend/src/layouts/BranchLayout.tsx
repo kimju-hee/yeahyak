@@ -13,9 +13,9 @@ import {
 } from '@ant-design/icons';
 import { ConfigProvider, Dropdown, Flex, Layout, Menu, Space, Typography } from 'antd';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { useAuthStore } from '../stores/authStore';
-import type { Pharmacy } from '../types/pharmacy';
 import Chatbot from '../components/Chatbot';
+import { useAuthStore } from '../stores/authStore';
+import { PHARMACY_STATUS, USER_ROLE, type Pharmacy } from '../types/profile.type';
 const { Sider, Header, Content, Footer } = Layout;
 
 // Design Token
@@ -64,7 +64,7 @@ export default function BranchLayout() {
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const profile = useAuthStore((state) => state.profile);
-  const pharmacy = user?.role === 'BRANCH' ? (profile as Pharmacy) : null;
+  const pharmacy = user?.role === USER_ROLE.BRANCH ? (profile as Pharmacy) : null;
 
   // 아바타 메뉴 아이템
   const avatarMenuItems = {
@@ -122,7 +122,7 @@ export default function BranchLayout() {
               <Typography.Text style={{ color: '#ffffff' }}>
                 {pharmacy?.pharmacyName}
               </Typography.Text>
-              {pharmacy?.status === 'ACTIVE' ? (
+              {pharmacy?.status === PHARMACY_STATUS.ACTIVE ? (
                 <CheckCircleTwoTone twoToneColor="#52c41a" style={{ fontSize: '16px' }} />
               ) : (
                 <HourglassTwoTone twoToneColor="#ff4d4f" style={{ fontSize: '16px' }} />
