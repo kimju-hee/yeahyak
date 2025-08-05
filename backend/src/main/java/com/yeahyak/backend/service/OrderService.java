@@ -16,11 +16,16 @@ import com.yeahyak.backend.repository.PharmacyRepository;
 import com.yeahyak.backend.repository.ProductRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -117,4 +122,53 @@ public class OrderService {
         }).toList();
     }
 
+    public Map<String, Object> getAllOrders(int page, int size, String status, String pharmacyName) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<Order> orders = orderRepository.findAllWithFilters(status, pharmacyName, pageable);
+        return convertToPagedResponse(orders);
+    }
+
+    public Map<String, Object> getOrdersByPharmacy(Long pharmacyId, int page, int size, String status) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        OrderStatus orderStatus = OrderStatus.valueOf(status);
+
+        Page<Order> orders = orderRepository.findByPharmacy_PharmacyIdAndStatus(pharmacyId, orderStatus, pageable);
+        return convertToPagedResponse(orders);
+    }
+
+
+
+    private Map<String, Object> convertToPagedResponse(Page<Order> orders) {
+        List<OrderResponse> orderResponses = orders.getContent().stream().map(order -> {
+            List<OrderItems> items = orderItemRepository.findByOrders(order);
+            List<OrderItemResponse> itemResponses = items.stream().map(item ->
+                    OrderItemResponse.builder()
+                            .productName(item.getProduct().getProductName())
+                            .quantity(item.getQuantity())
+                            .unitPrice(item.getUnitPrice())
+                            .subtotalPrice(item.getSubtotalPrice())
+                            .build()
+            ).toList();
+
+            return OrderResponse.builder()
+                    .orderId(order.getOrderId())
+                    .pharmacyId(order.getPharmacy().getPharmacyId())
+                    .pharmacyName(order.getPharmacy().getPharmacyName())
+                    .createdAt(order.getCreatedAt())
+                    .totalPrice(order.getTotalPrice())
+                    .status(order.getStatus().name())
+                    .updatedAt(order.getUpdatedAt())
+                    .items(itemResponses)
+                    .build();
+        }).toList();
+
+        return Map.of(
+                "success", true,
+                "data", orderResponses,
+                "totalPages", orders.getTotalPages(),
+                "totalElements", orders.getTotalElements(),
+                "currentPage", orders.getNumber()
+        );
+    }
 }

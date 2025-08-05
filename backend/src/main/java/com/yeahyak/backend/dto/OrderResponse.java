@@ -10,9 +10,11 @@ import java.util.List;
 @Builder
 public class OrderResponse {
     private Long orderId;
+    private Long pharmacyId;
     private String pharmacyName;
     private LocalDateTime createdAt;
     private Integer totalPrice;
     private String status;
+    private LocalDateTime updatedAt;
     private List<OrderItemResponse> items;
 }
