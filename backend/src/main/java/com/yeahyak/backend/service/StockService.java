@@ -15,4 +15,5 @@ public interface StockService {
     List<StockTransactionDTO> getStockTransactions(Long pharmacyId, Long productId);
     List<StockStatisticsDTO> getStockStatistics(Long pharmacyId, LocalDate from, LocalDate to);
     Page<StockSummaryDTO> getStockSummary(Long pharmacyId, MainCategory mainCategory, SubCategory subCategory, String keyword, int page, int size);
+    Page<StockTransactionDTO> getProductStockHistory(Long pharmacyId, Long productId, LocalDate startDate, LocalDate endDate, int page, int size);
 }

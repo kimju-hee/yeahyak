@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,7 +27,7 @@ public class StockServiceImpl implements StockService {
     private final PharmacyRepository pharmacyRepository;
     private final ProductRepository productRepository;
     private final PharmacyStockRepository pharmacyStockRepository;
-    private final PharmacyStockTransactionRepository transactionRepository;
+    private final PharmacyStockTransactionRepository pharmacyStockTransactionRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -35,7 +36,6 @@ public class StockServiceImpl implements StockService {
         return stockList.stream().map(stock -> {
             String status;
             if (stock.getQuantity() <= 0) status = "위험";
-
             else if (stock.getQuantity() <= 3) status = "경고";
             else status = "적정";
             return StockSummaryDTO.builder()
@@ -47,7 +47,6 @@ public class StockServiceImpl implements StockService {
                     .lastOutboundDate(stock.getLastOutboundAt())
                     .status(status)
                     .build();
-
         }).collect(Collectors.toList());
     }
 
@@ -85,13 +84,13 @@ public class StockServiceImpl implements StockService {
                 .transactionDate(now)
                 .build();
 
-        transactionRepository.save(transaction);
+        pharmacyStockTransactionRepository.save(transaction);  // 🔧 FIXED
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<StockTransactionDTO> getStockTransactions(Long pharmacyId, Long productId) {
-        return transactionRepository.findTransactions(pharmacyId, productId);
+        return pharmacyStockTransactionRepository.findTransactions(pharmacyId, productId);  // 🔧 FIXED
     }
 
     @Override
@@ -100,7 +99,7 @@ public class StockServiceImpl implements StockService {
         LocalDateTime fromDateTime = from.atStartOfDay();
         LocalDateTime toDateTime = to.plusDays(1).atStartOfDay().minusSeconds(1);
 
-        List<Object[]> rawResults = transactionRepository.findStatisticsNative(pharmacyId, fromDateTime, toDateTime);
+        List<Object[]> rawResults = pharmacyStockTransactionRepository.findStatisticsNative(pharmacyId, fromDateTime, toDateTime);  // 🔧 FIXED
 
         return rawResults.stream()
                 .map(row -> new StockStatisticsDTO(
@@ -110,6 +109,7 @@ public class StockServiceImpl implements StockService {
                 ))
                 .collect(Collectors.toList());
     }
+
     @Override
     @Transactional(readOnly = true)
     public Page<StockSummaryDTO> getStockSummary(Long pharmacyId, MainCategory mainCategory, SubCategory subCategory, String keyword, int page, int size) {
@@ -133,4 +133,20 @@ public class StockServiceImpl implements StockService {
         });
     }
 
+    @Override
+    public Page<StockTransactionDTO> getProductStockHistory(Long pharmacyId, Long productId, LocalDate startDate, LocalDate endDate, int page, int size) {
+        LocalDateTime startDateTime = (startDate != null) ? startDate.atStartOfDay() : null;
+        LocalDateTime endDateTime = (endDate != null) ? endDate.atTime(LocalTime.MAX) : null;
+
+        Page<PharmacyStockTransaction> history = pharmacyStockTransactionRepository.findByPharmacyAndProductAndDateRange(
+                pharmacyId, productId, startDateTime, endDateTime, PageRequest.of(page, size)
+        );
+
+        return history.map(tx -> new StockTransactionDTO(
+                tx.getProduct().getProductName(),
+                tx.getTransactionType(),
+                tx.getQuantity(),
+                tx.getTransactionDate()
+        ));
+    }
 }
