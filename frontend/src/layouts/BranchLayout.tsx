@@ -15,7 +15,7 @@ import { ConfigProvider, Dropdown, Flex, Layout, Menu, Space, Typography } from 
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import type { Pharmacy } from '../types/pharmacy';
-
+import Chatbot from '../components/Chatbot';
 const { Sider, Header, Content, Footer } = Layout;
 
 // Design Token
@@ -163,7 +163,7 @@ export default function BranchLayout() {
           </Layout>
         </Layout>
       </Layout>
-      {/*<Chatbot />*/}
+      <Chatbot />
     </ConfigProvider>
   );
 }

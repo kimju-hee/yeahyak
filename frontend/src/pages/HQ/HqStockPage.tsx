@@ -1,16 +1,16 @@
 import { Button, Input, Modal, Space, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import React, { useState } from 'react';
-
+ 
 import { mockOrders } from '../../mocks/order.mock';
 import { mockPharmacies } from '../../mocks/pharmacy.mock';
 import { mockProducts } from '../../mocks/product.mock';
 import { mockReturns } from '../../mocks/return.mock';
 import { mockHqStocks, mockHqStockTransactions } from '../../mocks/stock.mock';
 import type { Product } from '../../mocks/types';
-
+ 
 const { Title } = Typography;
-
+ 
 interface StockItem {
   key: string;
   stockId: number;
@@ -22,8 +22,8 @@ interface StockItem {
   lastInboundDate: string;
   lastOutboundDate: string;
 }
-
-function buildStockData(): StockItem[] {
+ 
+const buildStockData = (): StockItem[] => {
   return mockHqStocks.map((stock) => {
     const product = mockProducts.find((p: Product) => p.id === stock.productId);
     return {
@@ -38,24 +38,49 @@ function buildStockData(): StockItem[] {
       lastOutboundDate: stock.lastOutboundedAt?.slice(0, 10) ?? '-',
     };
   });
-}
-
+};
+ 
+const StockTransactionTable: React.FC<{ data: any[] }> = ({ data }) => (
+  <div
+    style={{
+      maxHeight: 400,
+      overflowY: 'auto',
+      paddingRight: 8, // 스크롤 여백
+    }}
+  >
+    <Table
+      size="small"
+      pagination={false}
+      columns={[
+        { title: '날짜', dataIndex: 'date', key: 'date' },
+        { title: '구분', dataIndex: 'type', key: 'type' },
+        { title: '수량', dataIndex: 'quantity', key: 'quantity' },
+        { title: '재고', dataIndex: 'balance', key: 'balance' },
+        { title: '비고', dataIndex: 'remark', key: 'remark' },
+      ]}
+      dataSource={data}
+      rowKey="id"
+      scroll={{ y: 360 }} // 추가적으로 Ant Design 테이블 자체 스크롤도 지정
+    />
+  </div>
+);
+ 
+ 
 export default function HqStockPage() {
-  const [activeTab, setActiveTab] = useState<'inbound' | 'outbound'>('inbound');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<StockItem | null>(null);
   const [filteredData, setFilteredData] = useState<StockItem[]>(buildStockData());
   const [searchKeyword, setSearchKeyword] = useState<string>('');
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+ 
   const showModal = (item: StockItem) => {
     setSelectedItem(item);
     setIsModalOpen(true);
-    setActiveTab('inbound');
   };
-
-  const handleOk = () => setIsModalOpen(false);
+ 
   const handleCancel = () => setIsModalOpen(false);
-
+ 
   const handleSearch = () => {
     const keyword = searchKeyword.trim().toLowerCase();
     const data = buildStockData();
@@ -67,47 +92,38 @@ export default function HqStockPage() {
         )
       : data;
     setFilteredData(result);
+    setCurrentPage(1); // 검색 시 첫 페이지로 초기화
   };
-
+ 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchKeyword(value);
     if (value.trim() === '') {
       setFilteredData(buildStockData());
+      setCurrentPage(1);
     }
   };
-
-  const getModalData = (): {
-    id: number;
-    date: string;
-    type: '입고' | '출고' | '반품입고';
-    quantity: number;
-    balance: number;
-    remark: string;
-  }[] => {
+ 
+  const getModalData = () => {
     if (!selectedItem) return [];
-
-    // 1. 해당 품목 거래 내역 필터
+ 
     const txList = mockHqStockTransactions
       .filter((tx) => tx.hqStockId === selectedItem.stockId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // 역순 정렬
-
-    // 2. 기준 재고 설정 (최신 기준)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+ 
     let currentStock = selectedItem.quantity;
-
-    // 3. 누적 배열 생성 (역산)
+ 
     const result = txList.map((tx) => {
       let typeLabel: '입고' | '출고' | '반품입고';
       let isInbound = false;
       let remark = '-';
-
+ 
       if (tx.type === 'IN') {
         typeLabel = '입고';
         isInbound = true;
       } else if (tx.type === 'RETURN_IN') {
         typeLabel = '반품입고';
         isInbound = true;
-
         if (tx.returnId) {
           const ret = mockReturns.find((r) => r.id === tx.returnId);
           const pharmacy = mockPharmacies.find((p) => p.id === ret?.pharmacyId);
@@ -116,14 +132,13 @@ export default function HqStockPage() {
       } else {
         typeLabel = '출고';
         isInbound = false;
-
         if (tx.orderId) {
           const order = mockOrders.find((o) => o.id === tx.orderId);
           const pharmacy = mockPharmacies.find((p) => p.id === order?.pharmacyId);
           if (pharmacy) remark = pharmacy.pharmacyName;
         }
       }
-
+ 
       const row = {
         id: tx.id,
         date: tx.createdAt.slice(0, 10),
@@ -132,22 +147,19 @@ export default function HqStockPage() {
         balance: currentStock,
         remark,
       };
-
-      // 다음 줄 계산 준비
+ 
       currentStock -= isInbound ? tx.quantity : -tx.quantity;
-
       return row;
     });
-
-    // 4. 다시 시간순 정렬하여 테이블에 표시
+ 
     return result.reverse();
   };
-
+ 
   const columns: ColumnsType<StockItem> = [
     {
       title: 'No',
       key: 'index',
-      render: (_text, _record, index) => index + 1,
+      render: (_text, _record, index) => (currentPage - 1) * pageSize + index + 1,
       width: 60,
     },
     {
@@ -184,11 +196,11 @@ export default function HqStockPage() {
       key: 'lastOutboundDate',
     },
   ];
-
+ 
   return (
-    <div>
+    <>
       <Title level={3}>본사 재고 현황</Title>
-
+ 
       <Space style={{ marginBottom: 16 }}>
         <Input.Search
           placeholder="품목코드 또는 품목명 검색"
@@ -202,38 +214,27 @@ export default function HqStockPage() {
           조회
         </Button>
       </Space>
-
+ 
       <Table
         columns={columns}
         dataSource={filteredData}
-        pagination={{ pageSize: 10 }}
+        pagination={{
+          pageSize,
+          onChange: (page) => setCurrentPage(page),
+        }}
         rowKey="key"
       />
-
+ 
       <Modal
         title={selectedItem?.productName}
         open={isModalOpen}
-        footer={null} // ✅ OK/Cancel 버튼 제거
+        footer={null}
         onCancel={handleCancel}
         destroyOnClose
         width={700}
       >
-        {selectedItem && (
-          <Table
-            size="small"
-            pagination={false}
-            columns={[
-              { title: '날짜', dataIndex: 'date', key: 'date' },
-              { title: '구분', dataIndex: 'type', key: 'type' },
-              { title: '수량', dataIndex: 'quantity', key: 'quantity' },
-              { title: '재고', dataIndex: 'balance', key: 'balance' },
-              { title: '비고', dataIndex: 'remark', key: 'remark' },
-            ]}
-            dataSource={getModalData()}
-            rowKey="id"
-          />
-        )}
+        {selectedItem && <StockTransactionTable data={getModalData()} />}
       </Modal>
-    </div>
+    </>
   );
 }
