@@ -183,7 +183,7 @@ public class OrderService {
                         .productId(item.getProduct().getProductId())
                         .productName(item.getProduct().getProductName())
                         .manufacturer(item.getProduct().getManufacturer())
-                        .category(item.getProduct().getCategory())
+                        .category(item.getProduct().getSubCategory().getMainCategory().name() + " > " + item.getProduct().getSubCategory().name())
                         .quantity(item.getQuantity())
                         .unitPrice(item.getUnitPrice())
                         .subtotalPrice(item.getSubtotalPrice())
