@@ -1,9 +1,11 @@
-import { Card, Col, List, Row, Table } from 'antd';
+import { Card, Col, List, message, Row, Table } from 'antd';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockNotices } from '../../mocks/notice.mock';
-import { mockOrders } from '../../mocks/order.mock';
-import { mockPharmacies } from '../../mocks/pharmacy.mock';
+import instance from '../../api/api';
+import type { Notice } from '../../types/announcement';
+import type { Order } from '../../types/order';
 
+// FIXME: 베스트셀러 하드코딩 해놓음
 const bestSeller = [
   { key: 1, productName: '타이레놀정500mg', manufacturer: '한국존슨앤드존슨판매', quantity: 22292 },
   { key: 2, productName: '까스활명수큐액', manufacturer: '동화약품', quantity: 10440 },
@@ -12,9 +14,36 @@ const bestSeller = [
 ];
 
 export default function HqDashboardPage() {
-  const latestNotices = [...mockNotices]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5);
+  const [messageApi, contextHolder] = message.useMessage();
+  const [latestNotices, setLatestNotices] = useState<Notice[]>([]);
+  const [requestedOrders, setRequestedOrders] = useState<Order[]>([]);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const noticeRes = await instance.get('/announcements?limit=5');
+        // LOG: 테스트용 로그
+        console.log('✨ 최근 공지사항 로딩 응답:', noticeRes.data);
+        if (noticeRes.data.success) {
+          setLatestNotices(noticeRes.data.data || []);
+        }
+
+        const orderRes = await instance.get(`/orders?status=REQUESTED`);
+        // LOG: 테스트용 로그
+        console.log('✨ 발주 요청 현황 로딩 응답:', orderRes.data);
+        if (orderRes.data.success) {
+          setRequestedOrders(orderRes.data.data || []);
+        }
+      } catch (e: any) {
+        console.error('대시보드 데이터 로드 실패:', e);
+        messageApi.error(
+          e.response?.data?.message || '대시보드 데이터 로딩 중 오류가 발생했습니다.',
+        );
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   const bestSellerColumns = [
     {
@@ -34,16 +63,6 @@ export default function HqDashboardPage() {
       render: (val: number) => val.toLocaleString(),
     },
   ];
-
-  const requestedOrders = mockOrders
-    .filter((order) => order.status === 'REQUESTED')
-    .map((order) => {
-      const pharmacy = mockPharmacies.find((pharmacy) => pharmacy.id === order.pharmacyId);
-      return {
-        ...order,
-        pharmacyName: pharmacy?.pharmacyName,
-      };
-    });
 
   const requestedOrdersColumns = [
     {
@@ -67,6 +86,7 @@ export default function HqDashboardPage() {
 
   return (
     <>
+      {contextHolder}
       <Row gutter={16}>
         <Col span={24}>
           <Card title="최근 공지사항" variant="borderless">
@@ -74,7 +94,7 @@ export default function HqDashboardPage() {
               dataSource={latestNotices}
               renderItem={(item) => (
                 <List.Item>
-                  <Link to={`/hq/notices/${item.id}`}>{item.title}</Link>
+                  <Link to={`/hq/notices/${item.announcementId}`}>{item.title}</Link>
                 </List.Item>
               )}
             ></List>
@@ -103,7 +123,7 @@ export default function HqDashboardPage() {
               dataSource={requestedOrders}
               columns={requestedOrdersColumns}
               pagination={false}
-              rowKey="id"
+              rowKey="orderId"
               size="small"
             ></Table>
           </Card>

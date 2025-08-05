@@ -1,33 +1,48 @@
-import { Card, Col, List, Row, Table } from 'antd';
+import { Card, Col, List, message, Row, Table } from 'antd';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockNotices } from '../../mocks/notice.mock';
-import { mockOrderItems, mockOrders } from '../../mocks/order.mock';
-import { mockProducts } from '../../mocks/product.mock';
-import type { Pharmacy, User } from '../../mocks/types';
+import instance from '../../api/api';
 import { useAuthStore } from '../../stores/authStore';
+import type { Notice } from '../../types/announcement';
+import type { User } from '../../types/auth';
+import type { OrderItem } from '../../types/order';
+import type { Pharmacy } from '../../types/pharmacy-reg';
 
 export default function BranchDashboardPage() {
+  const [messageApi, contextHolder] = message.useMessage();
   const user = useAuthStore((state) => state.user) as User;
   const profile = useAuthStore((state) => state.profile) as Pharmacy;
-  const pharmacyId = profile.id;
+  const pharmacyId = profile.pharmacyId;
 
-  const latestNotices = [...mockNotices]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5);
+  const [latestNotices, setLatestNotices] = useState<Notice[]>([]);
+  const [recentOrderItems, setRecentOrderItems] = useState<OrderItem[]>([]);
 
-  const recentOrder = [...mockOrders]
-    .filter((order) => order.pharmacyId === pharmacyId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const noticeRes = await instance.get('/announcements?limit=5');
+        // LOG: 테스트용 로그
+        console.log('✨ 최근 공지사항 로딩 응답:', noticeRes.data);
+        if (noticeRes.data.success) {
+          setLatestNotices(noticeRes.data.data || []);
+        }
 
-  const recentOrderItems = mockOrderItems
-    .filter((item) => item.orderId === recentOrder.id)
-    .map((item) => {
-      const product = mockProducts.find((product) => product.id === item.productId);
-      return {
-        ...item,
-        productName: product?.productName,
-      };
-    });
+        const orderRes = await instance.get(`/orders/latest?pharmacyId=${pharmacyId}`);
+        // LOG: 테스트용 로그
+        console.log('✨ 최근 발주 상세 로딩 응답:', orderRes.data);
+        if (orderRes.data.success) {
+          setRecentOrderItems(orderRes.data.data.items || []);
+        }
+      } catch (e: any) {
+        console.error('대시보드 데이터 로드 실패:', e);
+        messageApi.error(
+          e.response?.data?.message || '대시보드 데이터 로딩 중 오류가 발생했습니다.',
+        );
+      }
+    };
+
+    fetchDashboardData();
+  }, [pharmacyId]);
 
   const recentOrderItemsColumns = [
     {
@@ -56,36 +71,37 @@ export default function BranchDashboardPage() {
 
   return (
     <>
-      <Row gutter={16}>
+      {contextHolder}
+      <Row wrap gutter={16}>
         <Col span={24}>
           <Card title="최근 공지사항" variant="borderless">
             <List
               dataSource={latestNotices}
               renderItem={(item) => (
                 <List.Item>
-                  <Link to={`/branch/notices/${item.id}`}>{item.title}</Link>
+                  <Link to={`/branch/notices/${item.announcementId}`}>{item.title}</Link>
                 </List.Item>
               )}
-            ></List>
+            />
           </Card>
         </Col>
       </Row>
 
-      <Row gutter={16} style={{ marginTop: '16px' }}>
+      <Row wrap gutter={16} style={{ marginTop: '16px' }}>
         <Col span={12}>
           <Card title="최근 발주 상세" variant="borderless">
             <Table
               dataSource={recentOrderItems}
               columns={recentOrderItemsColumns}
               pagination={false}
-              rowKey="id"
+              rowKey="itemId"
               size="small"
-            ></Table>
+            />
           </Card>
         </Col>
         <Col span={12}>
           <Card title="잔액 현황" variant="borderless">
-            {user.balance?.toLocaleString()}원
+            {user.point?.toLocaleString()}원
           </Card>
         </Col>
       </Row>
