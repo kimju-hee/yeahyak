@@ -13,18 +13,31 @@ import {
   Table,
   Tag,
   Typography,
+  message,
 } from 'antd';
-import React, { useMemo, useState } from 'react';
+// [변경] useCallback 훅 추가 및 api 모듈 임포트
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import api from '../../api/api';
 // antd에서 필요한 타입들을 가져옵니다.
 import type { CascaderProps, GetProp, TableColumnsType, TableProps } from 'antd';
 
-// 목(mock) 데이터를 가져옵니다.
-import { mockOrderItems, mockOrders } from '../../mocks/order.mock';
-import { mockProducts } from '../../mocks/product.mock';
+// [변경] 백엔드 API 응답(OrderResponse, OrderItemResponse)에 따른 타입 정의
+interface OrderItem {
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  subtotalPrice: number;
+  productId: number; // [추가] 제품 ID
+}
 
-// 데이터 타입을 정의한 파일에서 타입들을 가져옵니다.
-import { mockPharmacies } from '../../mocks/pharmacy.mock';
-import type { Order, Pharmacy, Product } from '../../mocks/types';
+interface Order {
+  orderId: number;
+  pharmacyName: string;
+  createdAt: string;
+  totalPrice: number;
+  status: 'REQUESTED' | 'APPROVED' | 'PROCESSING' | 'SHIPPING' | 'COMPLETED' | 'CANCELED';
+  items: OrderItem[];
+}
 
 const { Content } = Layout; // Layout에서 Content 컴포넌트를 사용합니다.
 const { Text } = Typography; // Typography에서 Text 컴포넌트를 사용합니다.
@@ -41,10 +54,9 @@ type Sorts = GetSingle<Parameters<OnChange<OrderTableDataType>>[2]>;
 // Cascader의 옵션 타입을 가져옵니다.
 type DefaultOptionType = GetProp<CascaderProps, 'options'>[number];
 
-// 주문 테이블에 표시될 데이터의 타입을 정의합니다.
+// [변경] OrderTableDataType 인터페이스 수정 (pharmacyName은 Order 인터페이스에 포함됨)
 interface OrderTableDataType extends Order {
   key: React.Key; // 테이블 행의 고유 키
-  pharmacyName: string; // 약국 이름
   productSummary: string; // 주문 상품 요약
 }
 
@@ -98,38 +110,57 @@ const getStatusTag = (status: Order['status']) => {
 export default function OrderManagementPage() {
   const [loadings, setLoadings] = useState<boolean[]>([]); // 버튼 로딩 상태를 관리합니다.
   const [sortedInfo, setSortedInfo] = useState<Sorts>({}); // 테이블 정렬 상태를 관리합니다.
-  // 주문 데이터를 목 데이터로부터 생성하여 상태로 관리합니다.
-  const [orders, setOrders] = useState<OrderTableDataType[]>(() => {
-    const pharmacyMap = new Map<number, Pharmacy>(mockPharmacies.map((p) => [p.id, p]));
-    const productMap = new Map<number, Product>(mockProducts.map((p) => [p.id, p]));
-
-    return mockOrders.map((order) => {
-      const pharmacy = pharmacyMap.get(order.pharmacyId); // auth.mock의 pharmacy에서 order의 pharmacyId와 같은 데이터 불러와서 저장
-      const items = mockOrderItems.filter((item) => item.orderId === order.id); // order의 id를 가지고 있는 주문정보를 골라서 저장
-      const productSummary =
-        items.length > 0
-          ? `${productMap.get(items[0].productId)?.productName ?? '알 수 없는 제품'} ${
-              // productId와 일치하는 약품 이름 불러오기
-              items.length > 1 ? `외 ${items.length - 1}건` : ''
-            }`
-          : '주문 항목 없음'; // 배열을 요약해서 문자열로 표시 "~~ 약 외 2건"
-
-      return {
-        ...order,
-        key: order.id,
-        pharmacyName: pharmacy?.pharmacyName ?? '알 수 없는 약국',
-        productSummary, // 약국 이름과 약품 요약 문자열 추가해서 반환
-      };
-    });
-  });
-
-  const [filteredOrders, setFilteredOrders] = useState<OrderTableDataType[]>(orders); // 필터링된 주문 데이터를 관리합니다.
+  // [변경] 주문 데이터 상태 초기값을 빈 배열로 변경 (API에서 가져옴)
+  const [orders, setOrders] = useState<OrderTableDataType[]>([]); // 주문 데이터를 관리합니다.
+  // [변경] 필터링된 주문 데이터 상태 초기값을 빈 배열로 변경
+  const [filteredOrders, setFilteredOrders] = useState<OrderTableDataType[]>([]); // 필터링된 주문 데이터를 관리합니다.
+  // [변경] 주문 데이터 로딩 상태 추가
+  const [loadingOrders, setLoadingOrders] = useState<boolean>(true); // 주문 데이터 로딩 상태
+  // [변경] 에러 상태 추가
   const [selectedOrder, setSelectedOrder] = useState<OrderTableDataType | null>(null); // 사용자가 선택한 주문의 상세 정보를 관리합니다.
   const [modalVisible, setModalVisible] = useState(false); // 상세 정보 모달의 표시 여부를 관리합니다.
   const [form] = Form.useForm(); // Ant Design의 Form 인스턴스를 생성합니다.
 
+  const [messageApi, contextHolder] = message.useMessage();
+
+  // [변경] 주문 데이터를 API에서 가져오는 함수 (useCallback으로 메모이제이션)
+  const fetchOrders = useCallback(async () => {
+    try {
+      setLoadingOrders(true);
+
+      const response = await api.get<Order[]>('/admin/orders'); // admin/orders 를 통해 모든 발주요청 불러와서 저장
+      console.log(' 주문데이터 목록 응답 ', response.data);
+      if (response.data.length >= 1) {     // 주문 목록에 하나라도 들어 있을 경우
+        messageApi.success('목록이 성공적으로 불러와졌습니다!');
+        const fetchedOrders = response.data.map((order) => ({
+          ...order,
+          key: order.orderId,
+          productSummary:
+            order.items.length > 0
+              ? `${order.items[0].productName}${
+                  order.items.length > 1 ? ` 외 ${order.items.length - 1}건` : ''
+                }`
+              : '주문 항목 없음',
+        }));
+
+        setOrders(fetchedOrders);
+        setFilteredOrders(fetchedOrders); // 모든 주문을 필터링된 주문으로 초기 설정
+      }
+    } catch (e: any) {
+      console.error('발주 목록 불러오기 실패:', e);
+      messageApi.error('주문 데이터를 불러오는 데 실패했습니다.');      // 발주 목록 불러오기 실패했을 경우
+    } finally {
+      setLoadingOrders(false);
+    }
+  }, [setOrders, setFilteredOrders, setLoadingOrders, messageApi]);
+
+  // [변경] 컴포넌트 마운트 시 fetchOrders 호출
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
   // 테이블의 정렬 기능이 변경될 때 호출되는 핸들러입니다.
-  const handleSort: OnChange<OrderTableDataType> = (pagination, filters, sorter) => {
+  const handleSort: OnChange<OrderTableDataType> = (__, _, sorter) => {
     setSortedInfo(sorter as Sorts);
   };
 
@@ -139,30 +170,45 @@ export default function OrderManagementPage() {
     setModalVisible(true); // 모달을 표시합니다.
   };
 
-  // 주문 상태를 업데이트하는 핸들러입니다. (예: 승인 처리)
-  const handleStatusUpdate = (orderId: number, newStatus: Order['status']) => {
-    const updateOrder = (order: OrderTableDataType) =>
-      order.id === orderId
-        ? { ...order, status: newStatus, updatedAt: new Date().toISOString() }
-        : order;
+  // [변경] 주문 상태 업데이트 핸들러 (API 호출 포함)
+  // TODO: API 에 상태변경 함수 또는 파트가 있어야 함
+  const handleStatusUpdate = async (orderId: number, newStatus: Order['status']) => {
+    try {
+      // [변경] API 엔드포인트에 따라 조건부 호출
+      if (newStatus === 'APPROVED') {
+        await api.patch(`/orders/${orderId}/approve`);
+      } else if (newStatus === 'CANCELED') {
+        await api.patch(`/orders/${orderId}/reject`);
+      } else {
+        // 다른 상태 변경이 필요한 경우 여기에 추가
+        await api.patch(`/orders/${orderId}`, { status: newStatus });
+      }
 
-    const newOrders = orders.map(updateOrder);
-    const newFilteredOrders = filteredOrders.map(updateOrder);
+      // API 호출 성공 시에만 프론트엔드 상태 업데이트
+      const updateOrder = (order: OrderTableDataType) =>
+        order.orderId === orderId ? { ...order, status: newStatus } : order;
 
-    setOrders(newOrders); // 전체 주문 목록을 업데이트합니다.
-    setFilteredOrders(newFilteredOrders); // 필터링된 주문 목록도 업데이트합니다.
+      const newOrders = orders.map(updateOrder);
+      const newFilteredOrders = filteredOrders.map(updateOrder);
 
-    // 현재 모달에 표시된 주문의 상태도 업데이트합니다.
-    if (selectedOrder?.id === orderId) {
-      setSelectedOrder({
-        ...selectedOrder,
-        status: newStatus,
-        updatedAt: new Date().toISOString(),
-      });
+      setOrders(newOrders); // 전체 주문 목록을 업데이트합니다.
+      setFilteredOrders(newFilteredOrders); // 필터링된 주문 목록도 업데이트합니다.
+
+      // 현재 모달에 표시된 주문의 상태도 업데이트합니다.
+      if (selectedOrder?.orderId === orderId) {
+        setSelectedOrder({
+          ...selectedOrder,
+          status: newStatus,
+        });
+      }
+    } catch (error) {
+      console.error('주문 상태 업데이트 실패:', error);
+      // 에러 처리 로직 (예: 사용자에게 알림)
     }
   };
 
-  // '발주 조회' 버튼 클릭 시 호출되는 필터링 핸들러입니다.
+  // [변경] '발주 조회' 버튼 클릭 시 fetchOrders 호출 (백엔드 필터링 가정)
+  // TODO: Form 옵션에 따른 필터링 검색 기능이 백엔드 API에 추가되어야 함
   const handleFilterSearch = () => {
     const { branch, date } = form.getFieldsValue(); // 폼에서 현재 값들을 가져옵니다. ( 지점명, 기간 )
     const selectedBranch =
@@ -170,8 +216,7 @@ export default function OrderManagementPage() {
     const [startDate, endDate] = date ?? [null, null];
 
     const filtered = orders.filter((order) => {
-      const pharmacy = mockPharmacies.find((p) => p.id === order.pharmacyId);
-      const matchBranch = !selectedBranch || pharmacy?.address.includes(selectedBranch);
+      const matchBranch = !selectedBranch || order.pharmacyName.includes(selectedBranch);
       const orderDate = new Date(order.createdAt);
       const matchDate =
         !startDate ||
@@ -203,7 +248,8 @@ export default function OrderManagementPage() {
 
   // 주문 목록을 표시할 테이블의 컬럼 정의입니다.
   const columns: TableColumnsType<OrderTableDataType> = [
-    { title: '주문번호', dataIndex: 'id', key: 'id', width: 100, ellipsis: true },
+    // [변경] dataIndex를 'id'에서 'orderId'로 변경
+    { title: '주문번호', dataIndex: 'orderId', key: 'orderId', width: 100, ellipsis: true },
     {
       title: '지점',
       dataIndex: 'pharmacyName',
@@ -252,7 +298,8 @@ export default function OrderManagementPage() {
             size="small"
             onClick={(e) => {
               e.stopPropagation(); // 행 클릭 이벤트 전파 방지
-              handleStatusUpdate(record.id, 'APPROVED');
+              // [변경] record.id에서 record.orderId로 변경
+              handleStatusUpdate(record.orderId, 'APPROVED');
             }}
           >
             승인
@@ -266,160 +313,164 @@ export default function OrderManagementPage() {
   // 선택된 주문의 상세 품목 정보를 계산합니다. (useMemo로 성능 최적화)
   const selectedOrderItems = useMemo(() => {
     if (!selectedOrder) return [];
-    const productMap = new Map<number, Product>(mockProducts.map((p) => [p.id, p])); // 제품 ID를 키로 하는 Map 생성
-    return mockOrderItems
-      .filter((item) => item.orderId === selectedOrder.id) // 현재 선택된 주문의 id에 속한 주문 항목만 필터링
-      .map((item) => ({
-        ...item,
-        productName: productMap.get(item.productId)?.productName ?? '알 수 없는 제품',
-      }));
-  }, [selectedOrder]); // 필터링된 주문 항목에 주문 id에 맞는 제품 이름을 추가해서 반환
+    // [변경] selectedOrder.items를 직접 반환하도록 수정 (API 응답에 items 포함)
+    return selectedOrder.items; // 선택된 주문의 items 배열을 직접 반환
+  }, [selectedOrder]);
 
   return (
-    <Content style={{ margin: '24px', padding: '24px' }}>
-      {/* 페이지 제목 */}
-      <Row justify="space-between" align="middle" style={{ marginBottom: '30px' }}>
-        <Col>
-          <Text strong style={{ fontSize: '30px' }}>
-            발주 조회/승인
-          </Text>
-        </Col>
-      </Row>
-
-      {/* 필터링 옵션 폼 */}
-      <Form layout="vertical" form={form}>
-        <Row justify="space-between" style={{ padding: '5px 50px' }}>
-          <Space>
-            <Col>
-              <Form.Item label="지점명" name="branch">
-                <Cascader options={options} placeholder="지역 선택" showSearch={{ filter }} />
-              </Form.Item>
-            </Col>
-            <Col>
-              <Form.Item label="기간" name="date">
-                <DatePicker.RangePicker placeholder={['시작일', '종료일']} style={{ width: 400 }} />
-              </Form.Item>
-            </Col>
-          </Space>
+    <>
+      {contextHolder}
+      <Content style={{ margin: '24px', padding: '24px' }}>
+        {/* 페이지 제목 */}
+        <Row justify="space-between" align="middle" style={{ marginBottom: '30px' }}>
           <Col>
-            <Form.Item label=" ">
-              <Button
-                onClick={() => {
-                  form.resetFields(); // 폼 필드 초기화
-                  setFilteredOrders(orders); // 필터링된 목록을 전체 목록으로 복원
-                }}
-              >
-                옵션 초기화
-              </Button>
-              <Button
-                type="primary"
-                loading={loadings[0]}
-                onClick={() => {
-                  enterLoading(0);
-                  handleFilterSearch();
-                }}
-                style={{ marginLeft: 8 }}
-              >
-                발주 조회
-              </Button>
-            </Form.Item>
+            <Text strong style={{ fontSize: '30px' }}>
+              발주 조회/승인
+            </Text>
           </Col>
         </Row>
-      </Form>
 
-      {/* 주문 목록 테이블 */}
-      <Row justify="center" style={{ marginTop: 20 }}>
-        <Col span={22}>
-          <Table<OrderTableDataType>
-            columns={columns}
-            dataSource={filteredOrders}
-            onChange={handleSort}
-            pagination={{ position: ['bottomCenter'], pageSize: 6 }} // 페이지네이션 설정
-            onRow={(record) => ({ onClick: () => handleRowClick(record) })} // 행 클릭 이벤트
-            rowKey="id"
-          />
-        </Col>
-      </Row>
+        {/* 필터링 옵션 폼 */}
+        <Form layout="vertical" form={form}>
+          <Row justify="space-between" style={{ padding: '5px 50px' }}>
+            <Space>
+              <Col>
+                <Form.Item label="지점명" name="branch">
+                  <Cascader options={options} placeholder="지역 선택" showSearch={{ filter }} />
+                </Form.Item>
+              </Col>
+              <Col>
+                <Form.Item label="기간" name="date">
+                  <DatePicker.RangePicker
+                    placeholder={['시작일', '종료일']}
+                    style={{ width: 400 }}
+                  />
+                </Form.Item>
+              </Col>
+            </Space>
+            <Col>
+              <Form.Item label=" ">
+                <Button
+                  onClick={() => {
+                    form.resetFields(); // 폼 필드 초기화
+                    setFilteredOrders(orders); // 필터링된 목록을 전체 목록으로 복원
+                  }}
+                >
+                  옵션 초기화
+                </Button>
+                <Button
+                  type="primary"
+                  loading={loadings[0]}
+                  onClick={() => {
+                    enterLoading(0);
+                    handleFilterSearch();
+                  }}
+                  style={{ marginLeft: 8 }}
+                >
+                  발주 조회
+                </Button>
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
 
-      {/* 주문 상세 정보 모달 */}
-      <Modal
-        title="발주 상세 정보"
-        open={modalVisible}
-        closable={false}
-        onCancel={() => setModalVisible(false)}
-        footer={[
-          <Button key="close" onClick={() => setModalVisible(false)}>
-            닫기
-          </Button>,
-          // 상태가 'REQUESTED'일 때만 승인 버튼을 표시합니다.
-          selectedOrder?.status === 'REQUESTED' && (
-            <Button
-              key="approve"
-              type="primary"
-              onClick={() => {
-                if (selectedOrder) {
-                  handleStatusUpdate(selectedOrder.id, 'APPROVED');
-                  setModalVisible(false);
-                }
-              }}
-            >
-              승인
-            </Button>
-          ),
-        ]}
-        width={800}
-      >
-        {selectedOrder && (
-          <Descriptions bordered column={2} size="middle">
-            <Descriptions.Item label="주문번호" span={1}>
-              {selectedOrder.id}
-            </Descriptions.Item>
-            <Descriptions.Item label="지점명" span={1}>
-              {selectedOrder.pharmacyName}
-            </Descriptions.Item>
-            <Descriptions.Item label="요청일자" span={1}>
-              {new Date(selectedOrder.createdAt).toLocaleString()}
-            </Descriptions.Item>
-            <Descriptions.Item label="최종 수정일" span={1}>
-              {selectedOrder.updatedAt ? new Date(selectedOrder.updatedAt).toLocaleString() : 'N/A'}
-            </Descriptions.Item>
-            <Descriptions.Item label="상태" span={2}>
-              {getStatusTag(selectedOrder.status)}
-            </Descriptions.Item>
-            <Descriptions.Item label="주문 항목" span={2}>
-              {/* 주문 상세 품목 테이블 */}
-              <Table
-                dataSource={selectedOrderItems} // 선택된 행에 대한 제품 정보만
-                columns={[
-                  { title: '제품명', dataIndex: 'productName', key: 'productName' },
-                  { title: '수량', dataIndex: 'quantity', key: 'quantity' },
-                  {
-                    title: '단가',
-                    dataIndex: 'unitPrice',
-                    key: 'unitPrice',
-                    render: (v) => `${v.toLocaleString()}원`,
-                  },
-                  {
-                    title: '소계',
-                    dataIndex: 'subtotalPrice',
-                    key: 'subtotalPrice',
-                    render: (v) => `${v.toLocaleString()}원`,
-                  },
-                ]}
-                pagination={false}
-                rowKey="id"
-                size="small"
-              />
-            </Descriptions.Item>
-            <Descriptions.Item label="총 주문 금액" span={2}>
-              <Text
-                strong
-                style={{ fontSize: 16 }}
-              >{`${selectedOrder.totalPrice.toLocaleString()}원`}</Text>
-            </Descriptions.Item>
-          </Descriptions>
-        )}
-      </Modal>
-    </Content>
+        {/* 주문 목록 테이블 */}
+        <Row justify="center" style={{ marginTop: 20 }}>
+          <Col span={22}>
+            <Table<OrderTableDataType>
+              columns={columns}
+              dataSource={filteredOrders}
+              onChange={handleSort}
+              pagination={{ position: ['bottomCenter'], pageSize: 6 }} // 페이지네이션 설정
+              onRow={(record) => ({ onClick: () => handleRowClick(record) })} // 행 클릭 이벤트
+              // [변경] rowKey를 'id'에서 'orderId'로 변경
+              rowKey="orderId"
+              // [변경] 로딩 상태 추가
+              loading={loadingOrders}
+            />
+          </Col>
+        </Row>
+
+        {/* 주문 상세 정보 모달 */}
+        <Modal
+          title="발주 상세 정보"
+          open={modalVisible}
+          closable={false}
+          onCancel={() => setModalVisible(false)}
+          footer={[
+            <Button key="close" onClick={() => setModalVisible(false)}>
+              닫기
+            </Button>,
+            // 상태가 'REQUESTED'일 때만 승인 버튼을 표시합니다.
+            selectedOrder?.status === 'REQUESTED' && (
+              <Button
+                key="approve"
+                type="primary"
+                onClick={() => {
+                  if (selectedOrder) {
+                    // [변경] selectedOrder.id에서 selectedOrder.orderId로 변경
+                    handleStatusUpdate(selectedOrder.orderId, 'APPROVED');
+                    setModalVisible(false);
+                  }
+                }}
+              >
+                승인
+              </Button>
+            ),
+          ]}
+          width={800}
+        >
+          {selectedOrder && (
+            <Descriptions bordered column={2} size="middle">
+              {/* [변경] dataIndex를 'id'에서 'orderId'로 변경 */}
+              <Descriptions.Item label="주문번호" span={1}>
+                {selectedOrder.orderId}
+              </Descriptions.Item>
+              <Descriptions.Item label="지점명" span={1}>
+                {selectedOrder.pharmacyName}
+              </Descriptions.Item>
+              <Descriptions.Item label="요청일자" span={1}>
+                {new Date(selectedOrder.createdAt).toLocaleString()}
+              </Descriptions.Item>
+              {/* [변경] 최종 수정일 항목 제거 (백엔드 DTO에 없음) */}
+              <Descriptions.Item label="상태" span={2}>
+                {getStatusTag(selectedOrder.status)}
+              </Descriptions.Item>
+              <Descriptions.Item label="주문 항목" span={2}>
+                {/* 주문 상세 품목 테이블 */}
+                <Table
+                  dataSource={selectedOrderItems} // 선택된 행에 대한 제품 정보만
+                  columns={[
+                    { title: '제품명', dataIndex: 'productName', key: 'productName' },
+                    { title: '수량', dataIndex: 'quantity', key: 'quantity' },
+                    {
+                      title: '단가',
+                      dataIndex: 'unitPrice',
+                      key: 'unitPrice',
+                      render: (v) => `${v.toLocaleString()}원`,
+                    },
+                    {
+                      title: '소계',
+                      dataIndex: 'subtotalPrice',
+                      key: 'subtotalPrice',
+                      render: (v) => `${v.toLocaleString()}원`,
+                    },
+                  ]}
+                  pagination={false}
+                  rowKey="productName"
+                  size="small"
+                />
+              </Descriptions.Item>
+              <Descriptions.Item label="총 주문 금액" span={2}>
+                <Text
+                  strong
+                  style={{ fontSize: 16 }}
+                >{`${selectedOrder.totalPrice.toLocaleString()}원`}</Text>
+              </Descriptions.Item>
+            </Descriptions>
+          )}
+        </Modal>
+      </Content>
+    </>
   );
 }
