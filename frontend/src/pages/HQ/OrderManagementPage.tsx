@@ -17,9 +17,10 @@ import {
 } from 'antd';
 // [변경] useCallback 훅 추가 및 api 모듈 임포트
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import api from '../../api/api';
+
 // antd에서 필요한 타입들을 가져옵니다.
 import type { CascaderProps, GetProp, TableColumnsType, TableProps } from 'antd';
+import { instance } from '../../api/api';
 
 // [변경] 백엔드 API 응답(OrderResponse, OrderItemResponse)에 따른 타입 정의
 interface OrderItem {
@@ -128,11 +129,12 @@ export default function OrderManagementPage() {
     try {
       setLoadingOrders(true);
 
-      const response = await api.get<Order[]>('/admin/orders'); // admin/orders 를 통해 모든 발주요청 불러와서 저장
+      const response = await instance.get<Order[]>('/admin/orders'); // admin/orders 를 통해 모든 발주요청 불러와서 저장
       console.log(' 주문데이터 목록 응답 ', response.data);
-      if (response.data.length >= 1) {     // 주문 목록에 하나라도 들어 있을 경우
+      if (response.data.length >= 1) {
+        // 주문 목록에 하나라도 들어 있을 경우
         messageApi.success('목록이 성공적으로 불러와졌습니다!');
-        const fetchedOrders = response.data.map((order) => ({
+        const fetchedOrders = response.data.map((order: Order) => ({
           ...order,
           key: order.orderId,
           productSummary:
@@ -148,7 +150,7 @@ export default function OrderManagementPage() {
       }
     } catch (e: any) {
       console.error('발주 목록 불러오기 실패:', e);
-      messageApi.error('주문 데이터를 불러오는 데 실패했습니다.');      // 발주 목록 불러오기 실패했을 경우
+      messageApi.error('주문 데이터를 불러오는 데 실패했습니다.'); // 발주 목록 불러오기 실패했을 경우
     } finally {
       setLoadingOrders(false);
     }
@@ -176,12 +178,12 @@ export default function OrderManagementPage() {
     try {
       // [변경] API 엔드포인트에 따라 조건부 호출
       if (newStatus === 'APPROVED') {
-        await api.patch(`/orders/${orderId}/approve`);
+        await instance.patch(`/orders/${orderId}/approve`);
       } else if (newStatus === 'CANCELED') {
-        await api.patch(`/orders/${orderId}/reject`);
+        await instance.patch(`/orders/${orderId}/reject`);
       } else {
         // 다른 상태 변경이 필요한 경우 여기에 추가
-        await api.patch(`/orders/${orderId}`, { status: newStatus });
+        await instance.patch(`/orders/${orderId}`, { status: newStatus });
       }
 
       // API 호출 성공 시에만 프론트엔드 상태 업데이트
