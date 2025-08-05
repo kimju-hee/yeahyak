@@ -2,9 +2,15 @@ package com.yeahyak.backend.service;
 
 import com.yeahyak.backend.dto.*;
 import com.yeahyak.backend.entity.*;
+import com.yeahyak.backend.entity.enums.MainCategory;
+import com.yeahyak.backend.entity.enums.SubCategory;
 import com.yeahyak.backend.entity.enums.TransactionType;
 import com.yeahyak.backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,21 +30,24 @@ public class StockServiceImpl implements StockService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<StockSummaryDTO> getStockSummary(Long pharmacyId, String category, String keyword) {
-        List<PharmacyStock> stockList = pharmacyStockRepository.findFilteredStocks(pharmacyId, category, keyword);
+    public List<StockSummaryDTO> getStockSummary(Long pharmacyId, MainCategory mainCategory, SubCategory subCategory, String keyword) {
+        List<PharmacyStock> stockList = pharmacyStockRepository.findFilteredStocks(pharmacyId, mainCategory, subCategory, keyword);
         return stockList.stream().map(stock -> {
             String status;
             if (stock.getQuantity() <= 0) status = "위험";
+
             else if (stock.getQuantity() <= 3) status = "경고";
             else status = "적정";
             return StockSummaryDTO.builder()
                     .productName(stock.getProduct().getProductName())
-                    .category(stock.getProduct().getCategory())
+                    .mainCategory(stock.getProduct().getMainCategory().name())
+                    .subCategory(stock.getProduct().getSubCategory().name())
                     .quantity(stock.getQuantity())
                     .lastInboundDate(stock.getLastInboundedAt())
                     .lastOutboundDate(stock.getLastOutboundAt())
                     .status(status)
                     .build();
+
         }).collect(Collectors.toList());
     }
 
@@ -101,4 +110,27 @@ public class StockServiceImpl implements StockService {
                 ))
                 .collect(Collectors.toList());
     }
+    @Override
+    @Transactional(readOnly = true)
+    public Page<StockSummaryDTO> getStockSummary(Long pharmacyId, MainCategory mainCategory, SubCategory subCategory, String keyword, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "lastInboundedAt"));
+        Page<PharmacyStock> stockPage = pharmacyStockRepository.findFilteredStocks(pharmacyId, mainCategory, subCategory, keyword, pageable);
+        return stockPage.map(stock -> {
+            String status;
+            if (stock.getQuantity() <= 0) status = "위험";
+            else if (stock.getQuantity() <= 3) status = "경고";
+            else status = "적정";
+
+            return StockSummaryDTO.builder()
+                    .productName(stock.getProduct().getProductName())
+                    .mainCategory(stock.getProduct().getMainCategory().name())
+                    .subCategory(stock.getProduct().getSubCategory().name())
+                    .quantity(stock.getQuantity())
+                    .lastInboundDate(stock.getLastInboundedAt())
+                    .lastOutboundDate(stock.getLastOutboundAt())
+                    .status(status)
+                    .build();
+        });
+    }
+
 }

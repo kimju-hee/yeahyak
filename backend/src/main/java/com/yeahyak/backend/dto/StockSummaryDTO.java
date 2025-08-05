@@ -3,15 +3,15 @@ package com.yeahyak.backend.dto;
 import lombok.*;
 import java.time.LocalDateTime;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@Data
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class StockSummaryDTO {
     private String productName;
-    private String category;
-    private int quantity;
+    private String mainCategory;
+    private String subCategory;
+    private Integer quantity;
     private LocalDateTime lastInboundDate;
     private LocalDateTime lastOutboundDate;
     private String status;

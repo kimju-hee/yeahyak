@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -33,7 +34,7 @@ public class AnnouncementService {
     }
 
     public Page<Announcement> findAllPaged(int page, int size, String type) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         if (type != null && !type.isEmpty()) {
             AnnouncementType enumType = AnnouncementType.valueOf(type.toUpperCase());
             return announcementRepository.findByType(enumType, pageable);
@@ -41,6 +42,7 @@ public class AnnouncementService {
             return announcementRepository.findAll(pageable);
         }
     }
+
 
 
     public Announcement findById(Long id) {
