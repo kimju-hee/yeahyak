@@ -45,4 +45,12 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getOrdersByPharmacy(pharmacyId, page, size, status));
     }
 
+    @GetMapping("/{orderId}")
+    public ResponseEntity<?> getOrderDetail(@PathVariable Long orderId) {
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", orderService.getOrderDetail(orderId)
+        ));
+    }
+
 }

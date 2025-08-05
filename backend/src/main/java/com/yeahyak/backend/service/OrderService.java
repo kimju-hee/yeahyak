@@ -138,7 +138,6 @@ public class OrderService {
     }
 
 
-
     private Map<String, Object> convertToPagedResponse(Page<Order> orders) {
         List<OrderResponse> orderResponses = orders.getContent().stream().map(order -> {
             List<OrderItems> items = orderItemRepository.findByOrders(order);
@@ -170,5 +169,36 @@ public class OrderService {
                 "totalElements", orders.getTotalElements(),
                 "currentPage", orders.getNumber()
         );
+    }
+
+    public OrderResponse getOrderDetail(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 주문이 존재하지 않습니다."));
+
+        Pharmacy pharmacy = order.getPharmacy();
+        List<OrderItems> items = orderItemRepository.findByOrders(order);
+
+        List<OrderItemResponse> itemResponses = items.stream().map(item ->
+                OrderItemResponse.builder()
+                        .productId(item.getProduct().getProductId())
+                        .productName(item.getProduct().getProductName())
+                        .manufacturer(item.getProduct().getManufacturer())
+                        .category(item.getProduct().getCategory())
+                        .quantity(item.getQuantity())
+                        .unitPrice(item.getUnitPrice())
+                        .subtotalPrice(item.getSubtotalPrice())
+                        .build()
+        ).toList();
+
+        return OrderResponse.builder()
+                .orderId(order.getOrderId())
+                .pharmacyId(pharmacy.getPharmacyId())
+                .pharmacyName(pharmacy.getPharmacyName())
+                .createdAt(order.getCreatedAt())
+                .totalPrice(order.getTotalPrice())
+                .status(order.getStatus().name())
+                .updatedAt(order.getUpdatedAt())
+                .items(itemResponses)
+                .build();
     }
 }
