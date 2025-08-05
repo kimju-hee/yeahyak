@@ -1,25 +1,19 @@
 import { Button, Card, Checkbox, Flex, Form, Input, message, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import instance from '../../../api/api';
+import { instance } from '../../../api/api';
 import AddressInput from '../../../components/AddressInput';
+import type { SignupRequest } from '../../../types/auth.type';
 
 export default function RegisterPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
 
-  const handleSubmit = async (values: {
-    email: string;
-    password: string;
-    confirmPassword: string;
-    pharmacyName: string;
-    bizRegNo: string;
-    representativeName: string;
-    postcode: string;
-    address: string;
-    detailAddress: string;
-    contact: string;
-    agreement: boolean;
-  }) => {
+  const handleSubmit = async (
+    values: SignupRequest & {
+      confirmPassword: string;
+      agreement: boolean;
+    },
+  ) => {
     try {
       const { confirmPassword, agreement, ...payload } = values;
       const res = await instance.post('/auth/signup', payload);

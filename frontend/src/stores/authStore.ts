@@ -1,9 +1,18 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import instance from '../api/api';
-import type { Admin } from '../types/admin';
-import type { User } from '../types/auth';
-import type { Pharmacy } from '../types/pharmacy';
+import { instance } from '../api/api';
+import type { LoginRequest } from '../types/auth.type';
+import {
+  USER_ROLE,
+  type Admin,
+  type Pharmacy,
+  type User,
+  type UserRole,
+} from '../types/profile.type';
+
+export interface LoginPayload extends LoginRequest {
+  role: UserRole;
+}
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -11,7 +20,7 @@ interface AuthState {
   profile: Admin | Pharmacy | null;
   accessToken: string | null;
 
-  login: (email: string, password: string, role: 'BRANCH' | 'ADMIN') => Promise<void>;
+  login: ({ email, password, role }: LoginPayload) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (updatedFields: Partial<User>) => void;
   updateProfile: (updatedFields: Partial<Admin> | Partial<Pharmacy>) => void;
@@ -25,9 +34,9 @@ export const useAuthStore = create<AuthState>()(
       profile: null,
       accessToken: null,
 
-      login: async (email, password, role) => {
+      login: async ({ email, password, role }) => {
         try {
-          const endpoint = role === 'BRANCH' ? '/auth/login' : '/auth/admin/login';
+          const endpoint = role === USER_ROLE.BRANCH ? '/auth/login' : '/auth/admin/login';
           const res = await instance.post(endpoint, { email, password });
           // LOG: 테스트용 로그
           console.log('🧪 로그인 응답:', res.data);
@@ -46,14 +55,13 @@ export const useAuthStore = create<AuthState>()(
         try {
           const res = await instance.post('/auth/logout', {});
           // LOG: 테스트용 로그
-          console.log('🧪 로그아웃 응답:', res.data.data);
-          if (res.data.success) {
-            set({ isAuthenticated: false, user: null, profile: null, accessToken: null });
-            localStorage.removeItem('accessToken');
-          }
+          console.log('🧪 로그아웃 응답:', res.data);
         } catch (e: any) {
           console.error('로그아웃 실패:', e);
           throw new Error(e.response?.data?.message || '로그아웃 중 오류가 발생했습니다.');
+        } finally {
+          set({ isAuthenticated: false, user: null, profile: null, accessToken: null });
+          localStorage.removeItem('accessToken');
         }
       },
 

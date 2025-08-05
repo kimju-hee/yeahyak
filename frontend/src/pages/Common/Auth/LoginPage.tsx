@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LoginForm from '../../../components/LoginForm';
 import { useAuthStore } from '../../../stores/authStore';
-import type { Role } from '../../../types/auth';
+import { USER_ROLE, type UserRole } from '../../../types/profile.type';
 
 export default function LoginPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -13,11 +13,11 @@ export default function LoginPage() {
   const user = useAuthStore((state) => state.user);
   const login = useAuthStore((state) => state.login);
 
-  const [activeTab, setActiveTab] = useState<Role>('BRANCH');
+  const [activeTab, setActiveTab] = useState<UserRole>(USER_ROLE.BRANCH);
 
   useEffect(() => {
     if (isAuthenticated) {
-      if (user?.role === 'BRANCH') {
+      if (user?.role === USER_ROLE.BRANCH) {
         navigate('/branch', { replace: true });
       } else {
         navigate('/hq', { replace: true });
@@ -27,22 +27,22 @@ export default function LoginPage() {
 
   const handleSubmit = async (values: { email: string; password: string }) => {
     try {
-      await login(values.email, values.password, activeTab);
+      await login({ ...values, role: activeTab });
     } catch (e: any) {
-      messageApi.error(e.message);
+      messageApi.error(e.response?.data?.message);
     }
   };
 
   const tabsItems = [
     {
-      key: 'BRANCH',
+      key: USER_ROLE.BRANCH,
       label: '가맹점 로그인',
-      children: <LoginForm role="BRANCH" form={form} handleSubmit={handleSubmit} />,
+      children: <LoginForm role={USER_ROLE.BRANCH} form={form} handleSubmit={handleSubmit} />,
     },
     {
-      key: 'ADMIN',
+      key: USER_ROLE.ADMIN,
       label: '본사 로그인',
-      children: <LoginForm role="ADMIN" form={form} handleSubmit={handleSubmit} />,
+      children: <LoginForm role={USER_ROLE.ADMIN} form={form} handleSubmit={handleSubmit} />,
     },
   ];
 
@@ -59,7 +59,7 @@ export default function LoginPage() {
             activeKey={activeTab}
             centered
             items={tabsItems}
-            onChange={(key) => setActiveTab(key as Role)}
+            onChange={(key) => setActiveTab(key as UserRole)}
           />
         </Card>
       </Flex>
