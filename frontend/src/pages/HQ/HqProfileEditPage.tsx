@@ -1,8 +1,13 @@
 import { Button, Card, Form, Input, message, Select, Typography } from 'antd';
 import { useEffect, useState } from 'react';
-import instance from '../../api/api';
+import { instance } from '../../api/api';
 import { useAuthStore } from '../../stores/authStore';
-import { DEPARTMENTS, type Admin } from '../../types/admin';
+import {
+  ADMIN_DEPARTMENT,
+  type Admin,
+  type AdminDepartment,
+  type AdminProfileUpdateRequest,
+} from '../../types/profile.type';
 
 export default function HqProfileEditPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -12,23 +17,26 @@ export default function HqProfileEditPage() {
 
   const [loading, setLoading] = useState(true);
 
-  const departmentOptions = DEPARTMENTS.map((dept) => ({ value: dept, label: dept }));
+  const departmentOptions = Object.entries(ADMIN_DEPARTMENT).map(([value, label]) => ({
+    value,
+    label,
+  }));
 
   useEffect(() => {
     form.setFieldsValue({
       adminName: profile.adminName,
       department: profile.department,
     });
-  }, [form, profile]);
+  }, [profile]);
 
-  const handleSubmit = async (values: { adminName: string; department: string }) => {
+  const handleSubmit = async (values: { adminName: string; department: AdminDepartment }) => {
+    const payload: AdminProfileUpdateRequest = {
+      adminId: profile.adminId,
+      userId: profile.userId,
+      adminName: values.adminName,
+      department: values.department,
+    };
     try {
-      const payload = {
-        adminId: profile.adminId,
-        userId: profile.userId,
-        adminName: values.adminName,
-        department: values.department,
-      };
       const res = await instance.put(`/auth/update/admin/${profile.adminId}`, payload);
       // LOG: 테스트용 로그
       console.log('🔥✅ 개인 정보 수정 응답:', res.data);

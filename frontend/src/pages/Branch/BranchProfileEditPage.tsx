@@ -1,9 +1,9 @@
 import { Button, Card, Form, Input, message, Typography } from 'antd';
 import { useEffect, useState } from 'react';
-import instance from '../../api/api';
+import { instance } from '../../api/api';
 import AddressInput from '../../components/AddressInput';
 import { useAuthStore } from '../../stores/authStore';
-import type { Pharmacy } from '../../types/pharmacy';
+import type { Pharmacy, PharmacyProfileUpdateRequest } from '../../types/profile.type';
 
 export default function BranchProfileEditPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -23,30 +23,16 @@ export default function BranchProfileEditPage() {
       detailAddress: profile.detailAddress,
       contact: profile.contact,
     });
-  }, [form, profile]);
+  }, [profile]);
 
-  const handleSubmit = async (values: {
-    pharmacyName: string;
-    bizRegNo: string;
-    representativeName: string;
-    postcode: string;
-    address: string;
-    detailAddress: string;
-    contact: string;
-  }) => {
+  const handleSubmit = async (values: Omit<PharmacyProfileUpdateRequest, 'status'>) => {
+    const payload: PharmacyProfileUpdateRequest = {
+      ...values,
+      pharmacyId: profile.pharmacyId,
+      userId: profile.userId,
+      status: profile.status,
+    };
     try {
-      const payload = {
-        pharmacyId: profile.pharmacyId,
-        userId: profile.userId,
-        pharmacyName: values.pharmacyName,
-        bizRegNo: values.bizRegNo,
-        representativeName: values.representativeName,
-        postcode: values.postcode,
-        address: values.address,
-        detailAddress: values.detailAddress,
-        contact: values.contact,
-        status: profile.status,
-      };
       const res = await instance.put(`/auth/update/${profile.pharmacyId}`, payload);
       // LOG: 테스트용 로그
       console.log('🔥✅ 약국 정보 수정 응답:', res.data);
