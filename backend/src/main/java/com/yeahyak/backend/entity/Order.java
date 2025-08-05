@@ -1,5 +1,6 @@
 package com.yeahyak.backend.entity;
 
+import com.yeahyak.backend.entity.enums.OrderStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,7 +27,8 @@ public class Order {
 
     private Integer totalPrice;
 
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status;
 
     private LocalDateTime updatedAt;
 }
