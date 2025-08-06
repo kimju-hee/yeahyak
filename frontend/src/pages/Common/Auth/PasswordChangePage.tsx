@@ -1,7 +1,8 @@
 import { Button, Card, Form, Input, message, Typography } from 'antd';
 import { useEffect } from 'react';
-import instance from '../../../api/api';
+import { instance } from '../../../api/api';
 import { useAuthStore } from '../../../stores/authStore';
+import type { PasswordChangeRequest } from '../../../types/auth.type';
 
 export default function PasswordChangePage() {
   const [form] = Form.useForm();
@@ -18,17 +19,15 @@ export default function PasswordChangePage() {
     });
   }, [form, user]);
 
-  const handleSubmit = async (values: {
-    currentPassword: string;
-    newPassword: string;
-    confirmNewPassword: string;
-  }) => {
+  const handleSubmit = async (values: PasswordChangeRequest & { confirmNewPassword: string }) => {
     try {
-      const payload = { currentPassword: values.currentPassword, newPassword: values.newPassword };
+      const { currentPassword, newPassword } = values;
+      const payload: PasswordChangeRequest = { currentPassword, newPassword };
       const res = await instance.put('/auth/password', payload);
       // LOG: 테스트용 로그
       console.log('🧪 비밀번호 변경 응답:', res.data);
       messageApi.success('비밀번호가 변경되었습니다!');
+      form.resetFields(['currentPassword', 'newPassword', 'confirmNewPassword']);
     } catch (e: any) {
       console.error('비밀번호 변경 실패:', e);
       messageApi.error(e.response?.data?.message || '비밀번호 변경 중 오류가 발생했습니다.');

@@ -5,12 +5,14 @@ from FAQ_chatbot.app import chatbot as faq_chatbot
 from QnA_chatbot.app import chatbot
 from order_forecast.app import *
 from summarize_law.app import summarize_text
-import os
+from flask_cors import CORS
 
+import os
 import json
 import chardet
 
 app = Flask(__name__)
+CORS(app, origins=["http://localhost:5173"], supports_credentials=True)
 
 @app.route('/summarize/epidemic', methods=['POST'])
 def epidemic():
@@ -20,7 +22,7 @@ def epidemic():
             "success": False,
             "data": None,
             "error": "PDF 파일을 업로드 해주세요"
-        }), 400
+        }),  400
 
     try:
         text = extract_text_from_pdf(file)

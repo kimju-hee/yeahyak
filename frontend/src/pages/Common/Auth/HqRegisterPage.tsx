@@ -1,22 +1,24 @@
 import { Button, Card, Checkbox, Flex, Form, Input, message, Select, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import instance from '../../../api/api';
-import { DEPARTMENTS } from '../../../types/admin';
+import { instance } from '../../../api/api';
+import type { AdminSignupRequest } from '../../../types/auth.type';
+import { ADMIN_DEPARTMENT } from '../../../types/profile.type';
 
 export default function HqRegisterPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
 
-  const departmentOptions = DEPARTMENTS.map((dept) => ({ value: dept, label: dept }));
+  const departmentOptions = Object.entries(ADMIN_DEPARTMENT).map(([value, label]) => ({
+    value,
+    label,
+  }));
 
-  const handleSubmit = async (values: {
-    email: string;
-    password: string;
-    confirmPassword: string;
-    adminName: string;
-    department: string;
-    agreement: string;
-  }) => {
+  const handleSubmit = async (
+    values: AdminSignupRequest & {
+      confirmPassword: string;
+      agreement: boolean;
+    },
+  ) => {
     try {
       const { confirmPassword, agreement, ...payload } = values;
       const res = await instance.post('/auth/admin/signup', payload);

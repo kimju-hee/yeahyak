@@ -1,6 +1,5 @@
 import { Layout } from 'antd';
 import { Outlet } from 'react-router-dom';
-
 const { Content, Footer } = Layout;
 
 export default function PublicLayout() {

@@ -5,7 +5,6 @@ import HqLayout from './layouts/HqLayout';
 import PublicLayout from './layouts/PublicLayout';
 import BranchDashboardPage from './pages/branch/BranchDashboardPage';
 import BranchProfileEditPage from './pages/branch/BranchProfileEditPage';
-import BranchStockPage from './pages/branch/BranchStockPage';
 import OrderRequestPage from './pages/branch/OrderRequestPage';
 import ReturnRequestPage from './pages/branch/ReturnRequestPage';
 import HqRegisterPage from './pages/common/auth/HqRegisterPage';
@@ -85,7 +84,6 @@ export default function App() {
         <Route path="notices/:id" element={<NoticeDetailPage />} />
         <Route path="order-request" element={<OrderRequestPage />} />
         <Route path="return-request" element={<ReturnRequestPage />} />
-        <Route path="stock" element={<BranchStockPage />} />
         <Route path="products" element={<ProductListPage />} />
         <Route path="products/:id" element={<ProductDetailPage />} />
       </Route>

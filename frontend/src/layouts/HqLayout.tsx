@@ -15,9 +15,9 @@ import {
 } from '@ant-design/icons';
 import { ConfigProvider, Dropdown, Flex, Layout, Menu, Typography } from 'antd';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { useAuthStore } from '../stores/authStore';
-import type { Admin } from '../types/admin';
 import Chatbot from '../components/Chatbot';
+import { useAuthStore } from '../stores/authStore';
+import { USER_ROLE, type Admin } from '../types/profile.type';
 const { Sider, Header, Content, Footer } = Layout;
 
 // Design Token
@@ -86,7 +86,7 @@ export default function HqLayout() {
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const profile = useAuthStore((state) => state.profile);
-  const admin = user?.role === 'ADMIN' ? (profile as Admin) : null;
+  const admin = user?.role === USER_ROLE.ADMIN ? (profile as Admin) : null;
 
   // 아바타 메뉴 아이템
   const avatarMenuItems = {

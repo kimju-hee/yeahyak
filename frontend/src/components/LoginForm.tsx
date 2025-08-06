@@ -1,10 +1,10 @@
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { Button, Divider, Flex, Form, Input, Space } from 'antd';
 import { Link } from 'react-router-dom';
-import type { Role } from '../types/auth';
+import type { UserRole } from '../types/profile.type';
 
 interface LoginFormProps {
-  role: Role;
+  role: UserRole;
   form: any;
   handleSubmit: (values: { email: string; password: string }) => void;
 }
