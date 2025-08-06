@@ -28,6 +28,13 @@ public class ReturnController {
         return ResponseEntity.ok(returnService.getReturnsByPharmacy(pharmacyId, page, size, status));
     }
 
+    @GetMapping("/{returnId}")
+    public ResponseEntity<?> getReturnDetail(@PathVariable Long returnId) {
+        ReturnResponseDto response = returnService.getReturnDetail(returnId);
+        return ResponseEntity.ok(Map.of("success", true, "data", response));
+    }
+
+
     @PostMapping
     public ResponseEntity<?> requestReturn(@RequestBody ReturnRequestDto dto) {
         ReturnResponseDto response = returnService.createReturnRequest(dto);

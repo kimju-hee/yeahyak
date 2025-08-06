@@ -8,16 +8,11 @@ import com.yeahyak.backend.entity.enums.ReturnStatus;
 import com.yeahyak.backend.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -81,7 +76,9 @@ public class ReturnService {
             returnItemList.add(item);
 
             itemResponses.add(ReturnItemResponseDto.builder()
+                    .productId(product.getProductId())
                     .productName(product.getProductName())
+                    .manufacturer(product.getManufacturer())
                     .reason(dto.getReason())
                     .quantity(itemDto.getQuantity())
                     .unitPrice(itemDto.getUnitPrice())
@@ -95,6 +92,7 @@ public class ReturnService {
 
         return ReturnResponseDto.builder()
                 .returnId(returns.getReturnId())
+                .pharmacyId(pharmacy.getPharmacyId())
                 .pharmacyName(pharmacy.getPharmacyName())
                 .orderId(dto.getOrderId())
                 .createdAt(returns.getCreatedAt())
@@ -103,6 +101,7 @@ public class ReturnService {
                 .items(itemResponses)
                 .build();
     }
+
     @Transactional
     public Map<String, Object> getAllReturns(int page, int size, String status, String pharmacyName) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
@@ -143,7 +142,9 @@ public class ReturnService {
 
             List<ReturnItemResponseDto> itemDtos = items.stream().map(item ->
                     ReturnItemResponseDto.builder()
+                            .productId(item.getProduct().getProductId())
                             .productName(item.getProduct().getProductName())
+                            .manufacturer(item.getProduct().getManufacturer())
                             .reason(ret.getReason())
                             .quantity(item.getQuantity())
                             .unitPrice(item.getUnitPrice())
@@ -172,8 +173,6 @@ public class ReturnService {
         );
     }
 
-
-
     @Transactional
     public void updateStatus(Long returnId, ReturnStatus status) {
         Returns returns = returnRepository.findById(returnId)
@@ -187,4 +186,35 @@ public class ReturnService {
         returns.setUpdatedAt(LocalDateTime.now());
     }
 
+    public ReturnResponseDto getReturnDetail(Long returnId) {
+        Returns returns = returnRepository.findById(returnId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 반품이 존재하지 않습니다."));
+
+        Pharmacy pharmacy = returns.getPharmacy();
+        List<ReturnItems> items = returnItemsRepository.findByReturns(returns);
+
+        List<ReturnItemResponseDto> itemDtos = items.stream().map(item ->
+                ReturnItemResponseDto.builder()
+                        .productId(item.getProduct().getProductId())
+                        .productName(item.getProduct().getProductName())
+                        .manufacturer(item.getProduct().getManufacturer())
+                        .reason(returns.getReason())
+                        .quantity(item.getQuantity())
+                        .unitPrice(item.getUnitPrice())
+                        .subtotalPrice(item.getSubtotalPrice())
+                        .build()
+        ).toList();
+
+        return ReturnResponseDto.builder()
+                .returnId(returns.getReturnId())
+                .pharmacyId(pharmacy.getPharmacyId())
+                .pharmacyName(pharmacy.getPharmacyName())
+                .orderId(null) // Orders 필드 없으므로 null
+                .createdAt(returns.getCreatedAt())
+                .updatedAt(returns.getUpdatedAt())
+                .status(returns.getStatus().name())
+                .totalPrice(returns.getTotalPrice())
+                .items(itemDtos)
+                .build();
+    }
 }

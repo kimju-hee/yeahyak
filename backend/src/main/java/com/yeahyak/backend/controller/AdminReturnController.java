@@ -3,10 +3,7 @@ package com.yeahyak.backend.controller;
 import com.yeahyak.backend.service.ReturnService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -24,4 +21,12 @@ public class AdminReturnController {
     ) {
         return ResponseEntity.ok(returnService.getAllReturns(page, size, status, pharmacyName));
     }
+
+    @GetMapping("/{returnId}")
+    public ResponseEntity<?> getReturnDetail(@PathVariable Long returnId) {
+        return ResponseEntity.ok(
+                returnService.getReturnDetail(returnId)
+        );
+    }
+
 }

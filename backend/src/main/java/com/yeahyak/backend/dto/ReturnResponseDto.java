@@ -16,6 +16,7 @@ public class ReturnResponseDto {
     private String pharmacyName;
     private Long orderId;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private int totalPrice;
     private String status;
     private List<ReturnItemResponseDto> items;
