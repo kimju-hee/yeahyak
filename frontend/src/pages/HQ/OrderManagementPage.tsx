@@ -211,6 +211,8 @@ export default function OrderManagementPage() {
 
   // [변경] '발주 조회' 버튼 클릭 시 fetchOrders 호출 (백엔드 필터링 가정)
   // TODO: Form 옵션에 따른 필터링 검색 기능이 백엔드 API에 추가되어야 함
+  // NOTE :  현재 방식은 페이지 시작할 때, api로부터 전체 데이터를 받아와서 프론트에서 필터링한 결과를 보여주는 방식
+  // NOTE :  나중에 백엔드에서 필터링된 결과 api 호출 방식으로 변경되면 수정 예정
   const handleFilterSearch = () => {
     const { branch, date } = form.getFieldsValue(); // 폼에서 현재 값들을 가져옵니다. ( 지점명, 기간 )
     const selectedBranch =
@@ -227,7 +229,7 @@ export default function OrderManagementPage() {
       return matchBranch && matchDate;
     });
 
-    setFilteredOrders(filtered); // 필터링된 결과를 상태에 적용합니다.
+    setFilteredOrders(filtered); // 필터링된 결과를 상태에 적용합니다。
   };
 
   // 버튼 클릭 시 로딩 효과를 주는 핸들러입니다.

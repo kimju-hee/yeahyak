@@ -1,3 +1,4 @@
+// 필요한 antd 컴포넌트 및 React 훅들을 가져옵니다.
 import {
   Button,
   Card,
@@ -11,19 +12,34 @@ import {
   Table,
   Tag,
   Typography,
+  Spin,
+  Alert,
+  Pagination,
 } from 'antd';
-import React, { useState } from 'react';
-
+import React, { useState, useEffect, useCallback } from 'react';
 import type { ColumnsType } from 'antd/es/table';
-
-// 목 데이터 및 타입 임포트
-import { mockOrderItems, mockOrders } from '../../mocks/order.mock';
-import { mockProducts } from '../../mocks/product.mock';
-import type { Order, OrderItem, Product } from '../../mocks/types';
+// API 통신을 위한 axios 인스턴스를 가져옵니다.
+import { instance as api } from '../../api/api';
+// 전역 상태 관리를 위한 zustand 스토어를 가져옵니다。
+import { useAuthStore } from '../../stores/authStore';
+// 타입 정의 파일을 가져옵니다。
+import type { Pharmacy } from '../../types/profile.type';
 
 const { Text } = Typography;
 
-// 장바구니 아이템의 데이터 타입을 정의합니다.
+// --- 타입 정의 ---
+// 컴포넌트에서 사용될 데이터의 타입을 정의합니다。
+
+// 상품 정보 타입
+interface Product {
+  productId: number;
+  productName: string;
+  productCode: string;
+  manufacturer: string;
+  unitPrice: number;
+}
+
+// 장바구니 아이템 타입
 interface CartItem {
   key: React.Key;
   productId: number;
@@ -35,17 +51,28 @@ interface CartItem {
   total: number;
 }
 
-// 주문 내역의 데이터 타입을 정의합니다.
-interface OrderHistory {
-  id: number;
-  items: OrderItem[];
-  totalAmount: number;
-  date: string;
-  status: Order['status'];
+// 주문 아이템 타입
+interface OrderItem {
+  productId: number;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  subtotalPrice: number;
 }
 
-// 주문 상태에 따라 다른 색상의 태그를 반환하는 헬퍼 함수입니다.
-const getStatusTag = (status: Order['status']) => {
+// 주문 내역 타입
+interface OrderHistory {
+  orderId: number;
+  items: OrderItem[];
+  totalPrice: number;
+  createdAt: string;
+  status: 'REQUESTED' | 'APPROVED' | 'PROCESSING' | 'SHIPPING' | 'COMPLETED' | 'CANCELED';
+}
+
+// --- 헬퍼 함수 ---
+
+// 주문 상태에 따라 적절한 UI(Tag)를 반환하는 함수입니다。
+const getStatusTag = (status: OrderHistory['status']) => {
   const statusMap = {
     REQUESTED: { color: 'blue', text: '승인 대기' },
     APPROVED: { color: 'green', text: '승인 완료' },
@@ -58,80 +85,146 @@ const getStatusTag = (status: Order['status']) => {
   return <Tag color={color}>{text.toUpperCase()}</Tag>;
 };
 
-// 주문 내역 테이블의 컬럼 구성을 정의합니다.
-const orderHistoryColumns: ColumnsType<OrderHistory> = [
-  {
-    title: '주문번호',
-    dataIndex: 'id',
-    key: 'id',
-  },
-  {
-    title: '주문일자',
-    dataIndex: 'date',
-    key: 'date',
-    render: (date) => new Date(date).toLocaleDateString(),
-  },
-  {
-    title: '품목 수',
-    dataIndex: 'items',
-    key: 'items',
-    render: (items: OrderItem[]) => `${items.length}건`,
-  },
-  {
-    title: '결제 금액',
-    dataIndex: 'totalAmount',
-    key: 'totalAmount',
-    render: (val: number) => `${val.toLocaleString()}원`,
-  },
-  {
-    title: '상태',
-    dataIndex: 'status',
-    key: 'status',
-    render: (status: Order['status']) => getStatusTag(status), // getStatusTag 함수 사용
-  },
-];
+// --- 컴포넌트 ---
 
-// 지점의 발주 요청 페이지 컴포넌트입니다.
 export default function OrderRequestPage() {
-  // 현재 로그인한 약국 ID를 1로 가정합니다. (데모용)
-  const MY_PHARMACY_ID = 1;
+  // zustand 스토어의 _hasHydrated 상태를 가져와 스토어의 데이터 로딩 완료 여부를 확인합니다。
+  const hasHydrated = useAuthStore.persist.hasHydrated(); // [수정] _hasHydrated 접근 방식 변경
 
-  const [isProductModalOpen, setIsProductModalOpen] = useState(false); // 품목 검색 모달 표시 상태
-  const [cart, setCart] = useState<CartItem[]>([]); // 장바구니 상태
-  const [orders, setOrders] = useState<Order[]>(mockOrders); // 주문 데이터 상태
-  const [orderItems, setOrderItems] = useState<OrderItem[]>(mockOrderItems); // 주문 아이템 상태
+  // --- 상태 및 스토어 ---
+  // useAuthStore에서 사용자 정보와 프로필 정보를 가져옵니다。
+  const { user, profile } = useAuthStore(); // [수정] useAuth를 useAuthStore로 변경
+  // profile 타입을 Pharmacy로 단언하여 pharmacyId에 안전하게 접근합니다。
+  const pharmacyProfile = profile as Pharmacy; // [수정] profile 타입을 Pharmacy로 단언
+  // 모달 표시 여부를 관리하는 상태입니다.
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  // 장바구니 데이터를 관리하는 상태입니다.
+  const [cart, setCart] = useState<CartItem[]>([]);
+  // 주문 내역 데이터를 관리하는 상태입니다.
+  const [orders, setOrders] = useState<OrderHistory[]>([]);
+  // 상품 목록 데이터를 관리하는 상태입니다.
+  const [products, setProducts] = useState<Product[]>([]);
 
-  const [selectedOrder, setSelectedOrder] = useState<OrderHistory | null>(null); // 선택된 주문 내역
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); // 주문 상세 모달 표시 상태
+  // 사용자가 선택한 주문 내역을 관리하는 상태입니다.
+  const [selectedOrder, setSelectedOrder] = useState<OrderHistory | null>(null);
+  // 주문 상세 정보 모달 표시 여부를 관리하는 상태입니다.
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  const [currentBalance, setCurrentBalance] = useState(2500000); // 현재 보유 포인트 (데모용)
-  const [productSearchTerm, setProductSearchTerm] = useState(''); // 제품 검색어 상태
+  // 현재 보유 포인트를 관리하는 상태입니다.
+  const [currentBalance, setCurrentBalance] = useState(0);
+  // 상품 검색어를 관리하는 상태입니다.
+  const [productSearchTerm, setProductSearchTerm] = useState('');
 
+  // 데이터 로딩 및 에러 상태를 관리합니다.
+  const [loading, setLoading] = useState({
+    orders: false,
+    products: false,
+    orderAction: false,
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  // 페이지네이션 관련 상태입니다.
+  const [productPage, setProductPage] = useState(1);
+  const [productTotal, setProductTotal] = useState(0);
+  const [orderPage, setOrderPage] = useState(1);
+  const [orderTotal, setOrderTotal] = useState(0);
+
+  // --- 데이터 계산 ---
   // 장바구니의 총 주문 금액을 계산합니다.
   const totalOrderAmount = cart.reduce((sum, row) => sum + row.total, 0);
   // 주문 후 예상 잔액을 계산합니다.
   const afterOrderBalance = currentBalance - totalOrderAmount;
 
-  // 품목 검색 모달을 여는 함수입니다.
+  // --- 데이터 Fetching ---
+
+  // 서버로부터 주문 내역을 가져오는 함수입니다.
+  const fetchOrderHistory = useCallback(async (page = 1) => {
+    if (!pharmacyProfile?.pharmacyId) return; // [수정] 타입 단언된 pharmacyProfile 사용
+    setLoading((prev) => ({ ...prev, orders: true }));
+    try {
+      const response = await api.get('/orders/branch/orders', {
+        params: {
+          pharmacyId: pharmacyProfile.pharmacyId, // [수정] 타입 단언된 pharmacyProfile 사용
+          page: page - 1,
+          size: 5,
+          status: 'REQUESTED', // 예시: 요청 상태만 가져오기 (필요에 따라 변경)
+        },
+      });
+      if (response.data.success) {
+        setOrders(response.data.data);
+        setOrderTotal(response.data.totalElements);
+        setOrderPage(response.data.currentPage + 1);
+      } else {
+        throw new Error(response.data.message || '주문 내역을 불러오는데 실패했습니다.');
+      }
+    } catch (e: any) {
+      setError(e.message || '서버 오류');
+    } finally {
+      setLoading((prev) => ({ ...prev, orders: false }));
+    }
+  }, [pharmacyProfile]); // [수정] 의존성 배열에 pharmacyProfile 사용
+
+  // 서버로부터 상품 목록을 가져오는 함수입니다.
+  const fetchProducts = useCallback(async (page = 1, keyword = '') => {
+    setLoading((prev) => ({ ...prev, products: true }));
+    try {
+      const response = await api.get('/products/filter', {
+        params: { page: page - 1, size: 5, keyword },
+      });
+      if (response.data.success) {
+        const { content, totalElements, number } = response.data.data.body; // [수정] 응답 데이터 구조 변경에 따라 body 객체 추가
+        setProducts(content);
+        setProductTotal(totalElements);
+        setProductPage(number + 1);
+      } else {
+        throw new Error(response.data.message || '상품 목록을 불러오는데 실패했습니다.');
+      }
+    } catch (e: any) {
+      setError(e.message || '서버 오류');
+    } finally {
+      setLoading((prev) => ({ ...prev, products: false }));
+    }
+  }, []);
+
+  // --- useEffect 훅 ---
+
+  // 컴포넌트가 마운트되거나 사용자가 변경될 때, 포인트와 주문 내역을 가져옵니다.
+  useEffect(() => {
+    if (user) {
+      setCurrentBalance(user.point || 0);
+    }
+    fetchOrderHistory();
+  }, [user, fetchOrderHistory]);
+
+  // 상품 검색 모달이 열릴 때마다 상품 목록을 가져옵니다.
+  useEffect(() => {
+    if (isProductModalOpen) {
+      fetchProducts(1, productSearchTerm);
+    }
+  }, [isProductModalOpen, productSearchTerm, fetchProducts]);
+
+  // --- 핸들러 함수 ---
+
+  // 상품 검색 모달을 여는 함수입니다.
   const showProductModal = () => {
-    setProductSearchTerm(''); // 모달을 열 때 검색어 초기화
+    setProductSearchTerm('');
     setIsProductModalOpen(true);
   };
 
-  // 장바구니에 품목을 추가하거나 수량을 변경하는 함수입니다.
+  // 장바구니의 상품 수량을 변경하는 함수입니다.
   const handleCartChange = (product: Product, quantity: number) => {
     setCart((prevCart) => {
       const newCart = [...prevCart];
-      const existingItemIndex = newCart.findIndex((item) => item.productId === product.id);
+      const existingItemIndex = newCart.findIndex((item) => item.productId === product.productId);
 
       if (quantity <= 0) {
-        if (existingItemIndex > -1) {
-          newCart.splice(existingItemIndex, 1);
-        }
+        // 수량이 0 이하이면 장바구니에서 해당 상품을 제거합니다.
+        if (existingItemIndex > -1) newCart.splice(existingItemIndex, 1);
       } else {
+        // 수량이 0보다 크면, 상품을 추가하거나 기존 상품의 수량을 업데이트합니다.
         const newItem: CartItem = {
-          key: product.id,
-          productId: product.id,
+          key: product.productId,
+          productId: product.productId,
           image: `/images/Taron.jpg`, // 임시 이미지
           code: product.productCode,
           name: product.productName,
@@ -149,127 +242,132 @@ export default function OrderRequestPage() {
     });
   };
 
-  // 발주 요청을 처리하는 함수입니다.
-  const handleOrder = () => {
+  // 장바구니에 담긴 상품들을 주문하는 함수입니다.
+  const handleOrder = async () => {
     if (cart.length === 0) {
       Modal.warning({ title: '주문할 항목이 없습니다.' });
       return;
     }
+    if (!pharmacyProfile?.pharmacyId) { // [수정] 타입 단언된 pharmacyProfile 사용
+      Modal.error({ title: '오류', content: '약국 정보를 찾을 수 없습니다.' });
+      return;
+    }
 
-    const newOrderId = (orders.length > 0 ? Math.max(...orders.map((o) => o.id)) : 0) + 1;
-    const newOrderItems: OrderItem[] = cart.map((item, index) => ({
-      id: (orderItems.length > 0 ? Math.max(...orderItems.map((oi) => oi.id)) : 0) + 1 + index,
-      orderId: newOrderId,
-      productId: item.productId,
-      quantity: item.quantity,
-      unitPrice: item.price,
-      subtotalPrice: item.total,
-    }));
+    setLoading((prev) => ({ ...prev, orderAction: true }));
 
-    const newOrder: Order = {
-      id: newOrderId,
-      pharmacyId: MY_PHARMACY_ID,
-      createdAt: new Date().toISOString(),
-      totalPrice: totalOrderAmount,
-      status: 'REQUESTED',
+    const orderData = {
+      pharmacyId: pharmacyProfile.pharmacyId, // [수정] 타입 단언된 pharmacyProfile 사용
+      items: cart.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.price,
+      })),
     };
 
-    setOrders((prev) => [...prev, newOrder]);
-    setOrderItems((prev) => [...prev, ...newOrderItems]);
-    setCurrentBalance((prev) => prev - totalOrderAmount);
-    setCart([]);
-
-    Modal.success({ title: '발주 요청이 완료되었습니다.' });
+    try {
+      const response = await api.post('/orders', orderData);
+      if (response.data.success) {
+        Modal.success({ title: '발주 요청이 완료되었습니다.' });
+        setCart([]);
+        fetchOrderHistory(); // 주문 완료 후 주문 내역을 다시 불러옵니다.
+        // TODO: 포인트 갱신 로직 추가 필요 (예: fetchUser())
+      } else {
+        throw new Error(response.data.message || '알 수 없는 오류가 발생했습니다.');
+      }
+    } catch (e: any) {
+      Modal.error({ title: '발주 요청 중 오류 발생', content: e.message });
+    } finally {
+      setLoading((prev) => ({ ...prev, orderAction: false }));
+    }
   };
 
-  // 장바구니 테이블 컬럼 정의
+  // 상품 검색을 처리하는 함수입니다.
+  const handleProductSearch = (value: string) => {
+    setProductSearchTerm(value);
+    fetchProducts(1, value);
+  };
+
+  // --- 테이블 컬럼 정의 ---
+
+  // 장바구니 테이블의 컬럼을 정의합니다.
   const cartColumns: ColumnsType<CartItem> = [
     {
       title: '이미지',
       dataIndex: 'image',
-      key: 'image',
-      render: (src: string) => (
-        <img
-          src={src}
-          alt="제품 이미지"
-          width={50}
-          onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/50')}
-        />
-      ),
+      render: (src: string) => <img src={src} alt="제품" width={50} />,
     },
-    { title: '품목코드', dataIndex: 'code', key: 'code' },
-    { title: '품명', dataIndex: 'name', key: 'name', ellipsis: true },
-    {
-      title: '단가',
-      dataIndex: 'price',
-      key: 'price',
-      render: (value: number) => `${value.toLocaleString()}원`,
-    },
+    { title: '품목코드', dataIndex: 'code' },
+    { title: '품명', dataIndex: 'name', ellipsis: true },
+    { title: '단가', dataIndex: 'price', render: (v) => `${v.toLocaleString()}원` },
     {
       title: '수량',
       dataIndex: 'quantity',
-      key: 'quantity',
       width: 120,
-      render: (quantity: number, record: CartItem) => {
-        const product = mockProducts.find((p) => p.id === record.productId);
-        return (
-          <InputNumber
-            min={0}
-            value={quantity}
-            onChange={(value) => {
-              if (product && value !== null) {
-                handleCartChange(product, value);
-              }
-            }}
-            style={{ width: 70 }}
-          />
-        );
-      },
+      render: (qty: number, record: CartItem) => (
+        <InputNumber
+          min={0}
+          value={qty}
+          onChange={(value) => {
+            const product = products.find((p) => p.productId === record.productId);
+            if (product && value !== null) handleCartChange(product, value);
+          }}
+          style={{ width: 70 }}
+        />
+      ),
     },
-    {
-      title: '합계 금액',
-      dataIndex: 'total',
-      key: 'total',
-      render: (value: number) => `${value.toLocaleString()}원`,
-    },
+    { title: '합계', dataIndex: 'total', render: (v) => `${v.toLocaleString()}원` },
     {
       title: '삭제',
-      key: 'action',
-      render: (_, record: CartItem) => {
-        const product = mockProducts.find((p) => p.id === record.productId);
-        return (
-          <Button
-            type="link"
-            danger
-            onClick={() => {
-              if (product) {
-                handleCartChange(product, 0);
-              }
-            }}
-          >
-            삭제
-          </Button>
-        );
-      },
+      render: (_, record: CartItem) => (
+        <Button
+          type="link"
+          danger
+          onClick={() => {
+            const product = products.find((p) => p.productId === record.productId);
+            if (product) handleCartChange(product, 0);
+          }}
+        >
+          삭제
+        </Button>
+      ),
     },
   ];
 
-  // 현재 로그인한 약국의 주문 내역만 필터링하여 가져옵니다.
-  const myOrderHistory: OrderHistory[] = orders
-    .filter((order) => order.pharmacyId === MY_PHARMACY_ID)
-    .map((order) => ({
-      id: order.id,
-      items: orderItems.filter((item) => item.orderId === order.id),
-      totalAmount: order.totalPrice,
-      date: order.createdAt,
-      status: order.status,
-    }))
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  // 주문 내역 테이블의 컬럼을 정의합니다.
+  const orderHistoryColumns: ColumnsType<OrderHistory> = [
+    { title: '주문번호', dataIndex: 'orderId' },
+    { title: '주문일자', dataIndex: 'createdAt', render: (d) => new Date(d).toLocaleDateString() },
+    { title: '품목 수', dataIndex: 'items', render: (items: OrderItem[]) => `${items.length}건` },
+    { title: '결제 금액', dataIndex: 'totalPrice', render: (v) => `${v.toLocaleString()}원` },
+    { title: '상태', dataIndex: 'status', render: getStatusTag },
+  ];
 
-  // 검색어에 따라 제품 목록을 필터링합니다.
-  const filteredProducts = mockProducts.filter((product) =>
-    product.productName.toLowerCase().includes(productSearchTerm.toLowerCase()),
-  );
+  // --- 렌더링 ---
+
+  // 에러가 발생한 경우 에러 메시지를 표시합니다.
+  // 스토어의 상태가 아직 로드되지 않았다면 로딩 스피너를 표시합니다.
+  if (!hasHydrated) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Spin size="large" tip="데이터 로딩 중..." />
+      </div>
+    );
+  }
+
+  // 에러가 발생한 경우 에러 메시지를 표시합니다。
+  // 스토어의 상태가 아직 로드되지 않았다면 로딩 스피너를 표시합니다。
+  if (!hasHydrated) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Spin size="large" tip="데이터 로딩 중..." />
+      </div>
+    );
+  }
+
+  // 에러가 발생한 경우 에러 메시지를 표시합니다。
+  if (error) {
+    return <Alert message="오류" description={error} type="error" showIcon />;
+  }
 
   return (
     <div style={{ padding: '24px', minHeight: '100vh' }}>
@@ -284,59 +382,46 @@ export default function OrderRequestPage() {
       <Row justify="center">
         <Col span={22}>
           <Row gutter={[0, 32]}>
-            {/* 주문 정보 (포인트 잔액 등) */}
+            {/* 주문 정보 섹션 */}
             <Col span={24}>
               <Row>
                 <Text strong style={{ fontSize: 20, marginBottom: '20px' }}>
                   주문 정보
                 </Text>
               </Row>
-              <Row gutter={20}>
+              <Row gutter={20} align="middle">
                 <Col span={5}>
                   <Card variant="borderless">
-                    <Statistic
-                      title="현재 포인트 잔액"
-                      value={currentBalance}
-                      formatter={(value) => `${Number(value).toLocaleString()}원`}
-                      valueStyle={{ color: '#3f8600' }}
-                    />
+                    <Statistic title="현재 포인트 잔액" value={currentBalance} suffix="원" />
                   </Card>
                 </Col>
                 <Col>
-                  <div
-                    style={{ height: '100%', display: 'flex', alignItems: 'center', fontSize: 40 }}
-                  >
-                    -
-                  </div>
+                  <Text style={{ fontSize: 40 }}>-</Text>
                 </Col>
                 <Col span={6}>
                   <Card variant="borderless">
                     <Statistic
                       title="품목 수 / 결제 금액"
                       value={`${cart.length}건 / ${totalOrderAmount.toLocaleString()}원`}
-                      valueStyle={{ color: '#3f8600' }}
                     />
                   </Card>
                 </Col>
                 <Col>
-                  <div
-                    style={{ height: '100%', display: 'flex', alignItems: 'center', fontSize: 40 }}
-                  >
-                    =
-                  </div>
+                  <Text style={{ fontSize: 40 }}>=</Text>
                 </Col>
                 <Col span={5}>
                   <Card variant="borderless">
                     <Statistic
                       title="주문 후 잔액"
                       value={afterOrderBalance}
-                      formatter={(value) => `${Number(value).toLocaleString()}원`}
-                      valueStyle={{ color: '#da4040ff' }}
+                      suffix="원"
+                      valueStyle={{ color: afterOrderBalance < 0 ? '#da4040ff' : '#3f8600' }}
                     />
                   </Card>
                 </Col>
               </Row>
             </Col>
+
             {/* 장바구니 섹션 */}
             <Col span={24}>
               <Row justify="space-between" align="middle" style={{ marginBottom: 12 }}>
@@ -354,7 +439,8 @@ export default function OrderRequestPage() {
                     size="large"
                     danger
                     onClick={handleOrder}
-                    disabled={cart.length === 0}
+                    disabled={cart.length === 0 || loading.orderAction}
+                    loading={loading.orderAction}
                   >
                     선택 항목 발주
                   </Button>
@@ -368,24 +454,34 @@ export default function OrderRequestPage() {
               />
             </Col>
           </Row>
+
           {/* 주문 내역 섹션 */}
           <Row style={{ marginTop: 40, marginBottom: 100 }}>
             <Col span={24}>
               <Text strong style={{ fontSize: 20, marginBottom: 12, display: 'block' }}>
                 주문 내역
               </Text>
-              <Table<OrderHistory>
-                columns={orderHistoryColumns}
-                dataSource={myOrderHistory}
-                rowKey="id"
-                pagination={{ pageSize: 5, position: ['bottomCenter'] }}
-                onRow={(record) => ({
-                  onClick: () => {
-                    setSelectedOrder(record);
-                    setIsDetailModalOpen(true);
-                  },
-                })}
-              />
+              <Spin spinning={loading.orders}>
+                <Table<OrderHistory>
+                  columns={orderHistoryColumns}
+                  dataSource={orders}
+                  rowKey="orderId"
+                  pagination={false}
+                  onRow={(record) => ({
+                    onClick: () => {
+                      setSelectedOrder(record);
+                      setIsDetailModalOpen(true);
+                    },
+                  })}
+                />
+                <Pagination
+                  current={orderPage}
+                  total={orderTotal}
+                  pageSize={5}
+                  onChange={(page) => fetchOrderHistory(page)}
+                  style={{ textAlign: 'center', marginTop: 16 }}
+                />
+              </Spin>
             </Col>
           </Row>
         </Col>
@@ -400,43 +496,46 @@ export default function OrderRequestPage() {
         width={800}
       >
         <Input.Search
-          placeholder="제품명으로 검색하세요"
+          placeholder="제품명으로 검색"
           allowClear
-          onSearch={setProductSearchTerm}
-          onChange={(e) => setProductSearchTerm(e.target.value)}
+          enterButton
+          onSearch={handleProductSearch}
           style={{ marginBottom: 16 }}
         />
-        <Table<Product>
-          columns={[
-            { title: '품명', dataIndex: 'productName', key: 'productName' },
-            { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer' },
-            {
-              title: '단가',
-              dataIndex: 'unitPrice',
-              key: 'unitPrice',
-              render: (v) => `${v.toLocaleString()}원`,
-            },
-            {
-              title: '수량',
-              key: 'quantity',
-              width: 120,
-              render: (_, record) => (
-                <InputNumber
-                  min={0}
-                  value={cart.find((item) => item.productId === record.id)?.quantity || 0}
-                  onChange={(value) => handleCartChange(record, value!)}
-                  style={{ width: 70 }}
-                />
-              ),
-            },
-          ]}
-          dataSource={filteredProducts} // 필터링된 제품 목록을 사용합니다.
-          rowKey="id"
-          pagination={{ pageSize: 5 }}
-        />
+        <Spin spinning={loading.products}>
+          <Table<Product>
+            columns={[
+              { title: '품명', dataIndex: 'productName' },
+              { title: '제조사', dataIndex: 'manufacturer' },
+              { title: '단가', dataIndex: 'unitPrice', render: (v) => `${v.toLocaleString()}원` },
+              {
+                title: '수량',
+                width: 120,
+                render: (_, record) => (
+                  <InputNumber
+                    min={0}
+                    value={cart.find((item) => item.productId === record.productId)?.quantity || 0}
+                    onChange={(value) => handleCartChange(record, value!)}
+                    style={{ width: 70 }}
+                  />
+                ),
+              },
+            ]}
+            dataSource={products}
+            rowKey="productId"
+            pagination={false}
+          />
+          <Pagination
+            current={productPage}
+            total={productTotal}
+            pageSize={5}
+            onChange={(page) => fetchProducts(page, productSearchTerm)}
+            style={{ textAlign: 'center', marginTop: 16 }}
+          />
+        </Spin>
       </Modal>
 
-      {/* 주문 상세 내역 모달 */}
+      {/* 주문 상세 모달 */}
       <Modal
         open={isDetailModalOpen}
         title="주문 상세 내역"
@@ -445,25 +544,24 @@ export default function OrderRequestPage() {
       >
         {selectedOrder && (
           <Descriptions bordered column={1}>
-            <Descriptions.Item label="주문번호">{selectedOrder.id}</Descriptions.Item>
+            <Descriptions.Item label="주문번호">{selectedOrder.orderId}</Descriptions.Item>
             <Descriptions.Item label="주문일자">
-              {new Date(selectedOrder.date).toLocaleString()}
+              {new Date(selectedOrder.createdAt).toLocaleString()}
             </Descriptions.Item>
             <Descriptions.Item label="총 금액">
-              {selectedOrder.totalAmount.toLocaleString()}원
+              {selectedOrder.totalPrice.toLocaleString()}원
             </Descriptions.Item>
-            <Descriptions.Item label="상태">{getStatusTag(selectedOrder.status)}</Descriptions.Item>
+            <Descriptions.Item label="상태">
+              {getStatusTag(selectedOrder.status)}
+            </Descriptions.Item>
             <Descriptions.Item label="품목 목록">
               <ul style={{ margin: 0, paddingLeft: 16 }}>
-                {selectedOrder.items.map((item) => {
-                  const product = mockProducts.find((p) => p.id === item.productId);
-                  return (
-                    <li key={item.id}>
-                      {product?.productName} - {item.quantity}개 (
-                      {item.subtotalPrice.toLocaleString()}원)
-                    </li>
-                  );
-                })}
+                {selectedOrder.items.map((item) => (
+                  <li key={item.productId}>
+                    {item.productName} - {item.quantity}개 ({item.subtotalPrice.toLocaleString()}
+                    원)
+                  </li>
+                ))}
               </ul>
             </Descriptions.Item>
           </Descriptions>
