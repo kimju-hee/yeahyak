@@ -8,6 +8,7 @@ import java.util.List;
 @Setter
 public class ReturnRequestDto {
     private Long pharmacyId;
+    private Long orderId;
     private String reason;
     private List<ReturnItemDto> items;
 

@@ -44,7 +44,8 @@ public class SecurityConfig {
                 }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/**").permitAll()  // 테스트 용으로 전체 허용
-                        .anyRequest().permitAll()            
+                        .anyRequest().permitAll()
+
 //                        .requestMatchers("/api/auth/**").permitAll()
 //                        .requestMatchers(HttpMethod.GET, "/api/announcements/**").permitAll() // 조회 모두 허용 - 추가자 최진호
 //                        .requestMatchers(HttpMethod.POST, "/api/announcements").hasRole("ADMIN")  // 등록 관리자만 - 추가자 최진호

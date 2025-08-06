@@ -1,11 +1,14 @@
 package com.yeahyak.backend.controller;
 
 import com.yeahyak.backend.dto.ReturnRequestDto;
+import com.yeahyak.backend.dto.ReturnResponseDto;
 import com.yeahyak.backend.entity.enums.ReturnStatus;
 import com.yeahyak.backend.service.ReturnService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 
 @RestController
@@ -15,10 +18,20 @@ public class ReturnController {
 
     private final ReturnService returnService;
 
+    @GetMapping
+    public ResponseEntity<?> getReturnsByPharmacy(
+            @RequestParam Long pharmacyId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String status
+    ) {
+        return ResponseEntity.ok(returnService.getReturnsByPharmacy(pharmacyId, page, size, status));
+    }
+
     @PostMapping
     public ResponseEntity<?> requestReturn(@RequestBody ReturnRequestDto dto) {
-        returnService.createReturnRequest(dto);
-        return ResponseEntity.ok("반품 요청이 접수되었습니다.");
+        ReturnResponseDto response = returnService.createReturnRequest(dto);
+        return ResponseEntity.ok(Map.of("success", true, "data", response));
     }
 
     @PostMapping("/approve/{returnId}")
