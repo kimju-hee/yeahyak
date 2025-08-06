@@ -53,4 +53,39 @@ public class OrderController {
         ));
     }
 
+    @PostMapping("/{orderId}/approve")
+    public ResponseEntity<?> approveOrder(@PathVariable Long orderId) {
+        orderService.approveOrder(orderId);
+        return ResponseEntity.ok(Map.of("success", true, "data", ""));
+    }
+
+    @PostMapping("/{orderId}/reject")
+    public ResponseEntity<?> rejectOrder(@PathVariable Long orderId) {
+        orderService.rejectOrder(orderId);
+        return ResponseEntity.ok(Map.of("success", true, "data", ""));
+    }
+
+    @PutMapping("/{orderId}")
+    public ResponseEntity<?> updateOrderStatus(
+            @PathVariable Long orderId,
+            @RequestBody Map<String, String> request
+    ) {
+        String status = request.get("status");
+        orderService.updateOrderStatus(orderId, status);
+        return ResponseEntity.ok(Map.of("success", true, "data", ""));
+    }
+
+    @PatchMapping("/{orderId}")
+    public ResponseEntity<?> patchOrderStatus(@PathVariable Long orderId, @RequestBody Map<String, String> request) {
+        String status = request.get("status");
+        orderService.updateOrderStatus(orderId, status);
+        return ResponseEntity.ok(Map.of("success", true, "data", ""));
+    }
+
+    @DeleteMapping("/{orderId}")
+    public ResponseEntity<?> deleteOrder(@PathVariable Long orderId) {
+        orderService.deleteOrder(orderId);
+        return ResponseEntity.ok(Map.of("success", true, "data", ""));
+    }
+
 }

@@ -202,4 +202,46 @@ public class OrderService {
                 .items(itemResponses)
                 .build();
     }
+
+    @Transactional
+    public void approveOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 주문이 존재하지 않습니다."));
+        order.setStatus(OrderStatus.APPROVED);
+        order.setUpdatedAt(LocalDateTime.now());
+    }
+
+    @Transactional
+    public void rejectOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 주문이 존재하지 않습니다."));
+        order.setStatus(OrderStatus.REJECTED);
+        order.setUpdatedAt(LocalDateTime.now());
+    }
+
+    @Transactional
+    public void updateOrderStatus(Long orderId, String status) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 주문이 존재하지 않습니다."));
+
+        try {
+            OrderStatus newStatus = OrderStatus.valueOf(status.toUpperCase());
+            order.setStatus(newStatus);
+            order.setUpdatedAt(LocalDateTime.now());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("올바르지 않은 상태값입니다: " + status);
+        }
+    }
+
+    @Transactional
+    public void deleteOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 주문이 존재하지 않습니다."));
+
+        List<OrderItems> items = orderItemRepository.findByOrders(order);
+        orderItemRepository.deleteAll(items);
+
+        orderRepository.delete(order);
+    }
+
 }
