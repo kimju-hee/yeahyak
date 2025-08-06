@@ -1,13 +1,20 @@
 package com.yeahyak.backend.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Getter
-@Setter
+@Data
+@NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class ApiResponse<T> {
     private boolean success;
     private T data;
+    private String error;
+
+    public ApiResponse(boolean success, T data) {
+        this(success, data, null);
+    }
 }
