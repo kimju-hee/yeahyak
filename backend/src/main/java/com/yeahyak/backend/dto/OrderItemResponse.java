@@ -11,6 +11,7 @@ public class OrderItemResponse {
     private Integer quantity;
     private Integer unitPrice;
     private String manufacturer;
-    private String category;
+    private String mainCategory;
+    private String subCategory;
     private Integer subtotalPrice;
 }
