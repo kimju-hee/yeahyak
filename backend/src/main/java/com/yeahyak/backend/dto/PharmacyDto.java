@@ -3,7 +3,7 @@ package com.yeahyak.backend.dto;
 import com.yeahyak.backend.entity.enums.Status;
 
 public record PharmacyDto(
-        Long id,
+        Long pharmacyId,
         Long userId,
         String pharmacyName,
         String bizRegNo,
