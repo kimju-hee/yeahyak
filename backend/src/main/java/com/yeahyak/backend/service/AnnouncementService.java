@@ -43,8 +43,6 @@ public class AnnouncementService {
         }
     }
 
-
-
     public Announcement findById(Long id) {
         return announcementRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 ID의 공지사항이 없습니다."));
@@ -67,4 +65,9 @@ public class AnnouncementService {
         original.setUpdatedAt(LocalDateTime.now());
         return announcementRepository.save(original);
     }
+    public Page<Announcement> searchAnnouncements(String keyword, Pageable pageable) {
+        return announcementRepository
+                .findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(keyword, keyword, pageable);
+    }
+
 }

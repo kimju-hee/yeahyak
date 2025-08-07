@@ -8,4 +8,5 @@ public class AnnouncementRequestDTO {
     private AnnouncementType type;
     private String title;
     private String content;
+    private String attachmentUrl;
 }

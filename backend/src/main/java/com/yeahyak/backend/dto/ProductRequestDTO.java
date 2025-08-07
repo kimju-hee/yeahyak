@@ -21,5 +21,7 @@ public class ProductRequestDTO {
     private BigDecimal unitPrice;
     private Boolean isNarcotic;
     private String pdfPath;
+    private String details;
+    private String productImgUrl;
 }
 

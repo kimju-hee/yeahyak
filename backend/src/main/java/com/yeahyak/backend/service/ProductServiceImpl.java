@@ -8,10 +8,7 @@ import com.yeahyak.backend.entity.enums.SubCategory;
 import com.yeahyak.backend.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,9 +28,10 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Long registerProduct(ProductRequestDTO dto) {
-        if (dto.getSubCategory().getMainCategory() != dto.getMainCategory()){
+        if (dto.getSubCategory().getMainCategory() != dto.getMainCategory()) {
             throw new IllegalArgumentException("메인 카테고리와 서브 카테고리가 일치하지 않습니다.");
         }
+
         String summary = callFlaskSummary(dto.getPdfPath());
 
         Product product = Product.builder()
@@ -46,6 +44,7 @@ public class ProductServiceImpl implements ProductService {
                 .unit(dto.getUnit())
                 .unitPrice(dto.getUnitPrice())
                 .isNarcotic(dto.getIsNarcotic())
+                .productImgUrl(dto.getProductImgUrl())
                 .build();
 
         return productRepository.save(product).getProductId();
@@ -78,6 +77,8 @@ public class ProductServiceImpl implements ProductService {
         product.setUnit(dto.getUnit());
         product.setUnitPrice(dto.getUnitPrice());
         product.setIsNarcotic(dto.getIsNarcotic());
+        product.setProductImgUrl(dto.getProductImgUrl());
+
         return productRepository.save(product);
     }
 
@@ -102,10 +103,8 @@ public class ProductServiceImpl implements ProductService {
                 }
             }
         } catch (Exception e) {
-            // 로깅용 예외는 남겨도 저장은 하지 않음
             System.err.println("Flask 요약 실패: " + e.getMessage());
         }
-        // 실패 시 null 반환
         return null;
     }
 
@@ -125,10 +124,8 @@ public class ProductServiceImpl implements ProductService {
                 .unit(product.getUnit())
                 .unitPrice(product.getUnitPrice())
                 .isNarcotic(product.getIsNarcotic())
+                .productImgUrl(product.getProductImgUrl())
                 .createdAt(product.getCreatedAt())
                 .build());
     }
-
-
 }
-
