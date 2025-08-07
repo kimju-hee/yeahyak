@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface ReturnItemsRepository extends JpaRepository<ReturnItems, Long> {
     List<ReturnItems> findByReturns(Returns returns);
+    void deleteAllByReturns(Returns returns);
 }

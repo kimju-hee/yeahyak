@@ -209,7 +209,7 @@ public class ReturnService {
                 .returnId(returns.getReturnId())
                 .pharmacyId(pharmacy.getPharmacyId())
                 .pharmacyName(pharmacy.getPharmacyName())
-                .orderId(null) // Orders 필드 없으므로 null
+                .orderId(null)
                 .createdAt(returns.getCreatedAt())
                 .updatedAt(returns.getUpdatedAt())
                 .status(returns.getStatus().name())
@@ -217,4 +217,15 @@ public class ReturnService {
                 .items(itemDtos)
                 .build();
     }
+
+    @Transactional
+    public void deleteReturn(Long returnId) {
+        Returns returns = returnRepository.findById(returnId)
+                .orElseThrow(() -> new RuntimeException("반품 내역을 찾을 수 없습니다."));
+
+        returnItemsRepository.deleteAllByReturns(returns);
+
+        returnRepository.delete(returns);
+    }
+
 }
