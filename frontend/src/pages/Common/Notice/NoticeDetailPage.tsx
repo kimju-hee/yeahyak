@@ -3,6 +3,7 @@ import { Button, Card, Descriptions, Flex, message, Space, Typography } from 'an
 import { useNavigate, useParams } from 'react-router-dom';
 import { mockNotices } from '../../../mocks/notice.mock';
 import { useAuthStore } from '../../../stores/authStore';
+import { USER_ROLE } from '../../../types/profile.type';
 
 export default function NoticeDetailPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -91,21 +92,22 @@ export default function NoticeDetailPage() {
         <Button
           type="default"
           onClick={() => {
-            const basePath = user?.role === 'HQ' ? '/hq' : '/branch';
+            const basePath = user?.role === USER_ROLE.BRANCH ? '/branch' : '/hq';
             navigate(`${basePath}/notices`);
           }}
         >
           목록
         </Button>
-        {/* TODO: 로그인 API 연동 후 주석 해제 {user.role === 'HQ' && ( */}
-        <Space wrap>
-          <Button type="text" danger onClick={handleDelete}>
-            삭제
-          </Button>
-          <Button type="primary" onClick={() => navigate(`/hq/notices/${id}/edit`)}>
-            수정
-          </Button>
-        </Space>
+        {user?.role === USER_ROLE.ADMIN && (
+          <Space wrap>
+            <Button type="text" danger onClick={handleDelete}>
+              삭제
+            </Button>
+            <Button type="primary" onClick={() => navigate(`/hq/notices/${id}/edit`)}>
+              수정
+            </Button>
+          </Space>
+        )}
       </Flex>
     </>
   );
