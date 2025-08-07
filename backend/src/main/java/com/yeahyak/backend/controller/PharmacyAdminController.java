@@ -11,6 +11,7 @@ import com.yeahyak.backend.entity.enums.UserRole;
 import com.yeahyak.backend.repository.PharmacyRegistrationRequestRepository;
 import com.yeahyak.backend.repository.PharmacyRepository;
 import com.yeahyak.backend.repository.UserRepository;
+import com.yeahyak.backend.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,48 +30,23 @@ import java.util.Map;
 public class PharmacyAdminController {
 
     private final PharmacyRepository pharmacyRepository;
-    private final UserRepository userRepository;
     private final PharmacyRegistrationRequestRepository registrationRequestRepository;
+    private final AuthService authService;
 
     @GetMapping("/requests")
-    public ResponseEntity<?> getPharmacyRequests(
+    public ResponseEntity<?> getBranchPharmacyRequests(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("requestedAt").descending());
-        Page<PharmacyRegistrationRequest> requests = registrationRequestRepository.findByStatus(Status.PENDING, pageable);
-
-        List<PharmacyApprovalResponse> result = requests.stream().map(req -> {
-            Pharmacy pharmacy = req.getPharmacy();
-            return new PharmacyApprovalResponse(
-                    new PharmacyRequestDto(
-                            req.getRegRequestId(),
-                            pharmacy.getPharmacyId(),
-                            req.getRequestedAt(),
-                            req.getStatus(),
-                            req.getReviewedAt()
-                    ),
-                    new PharmacyDto(
-                            pharmacy.getPharmacyId(),
-                            pharmacy.getUser().getUserId(),
-                            pharmacy.getPharmacyName(),
-                            pharmacy.getBizRegNo(),
-                            pharmacy.getRepresentativeName(),
-                            pharmacy.getPostcode(),
-                            pharmacy.getAddress(),
-                            pharmacy.getDetailAddress(),
-                            pharmacy.getPhoneNumber(),
-                            pharmacy.getStatus()
-                    )
-            );
-        }).toList();
+        Page<PharmacyApprovalResponse> result = authService.getBranchRequests(pageable);
 
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "data", result,
-                "totalPages", requests.getTotalPages(),
-                "totalElements", requests.getTotalElements(),
-                "currentPage", requests.getNumber()
+                "data", result.getContent(),
+                "totalPages", result.getTotalPages(),
+                "totalElements", result.getTotalElements(),
+                "currentPage", result.getNumber()
         ));
     }
 
@@ -82,45 +58,14 @@ public class PharmacyAdminController {
 
     @PostMapping("/{id}/approve")
     public ResponseEntity<?> approvePharmacy(@PathVariable Long id) {
-        Pharmacy pharmacy = pharmacyRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("해당 약국이 존재하지 않습니다"));
-
-        pharmacy.setStatus(Status.ACTIVE);
-        pharmacyRepository.save(pharmacy);
-
-        User user = pharmacy.getUser();
-        user.setUserRole(UserRole.PHARMACIST);
-        userRepository.save(user);
-
-        PharmacyRegistrationRequest request = registrationRequestRepository.findByPharmacy(pharmacy)
-                .orElseThrow(() -> new IllegalArgumentException("등록 요청이 존재하지 않습니다."));
-        request.setStatus(Status.ACTIVE);
-        request.setReviewedAt(LocalDateTime.now());
-        registrationRequestRepository.save(request);
-
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "data", ""
-        ));
+        authService.approvePharmacy(id);
+        return ResponseEntity.ok(Map.of("success", true, "data", ""));
     }
 
     @PostMapping("/{id}/reject")
     public ResponseEntity<?> rejectPharmacy(@PathVariable Long id) {
-        Pharmacy pharmacy = pharmacyRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("해당 약국이 존재하지 않습니다."));
-
-        pharmacy.setStatus(Status.REJECTED);
-        pharmacyRepository.save(pharmacy);
-
-        PharmacyRegistrationRequest request = registrationRequestRepository.findByPharmacy(pharmacy)
-                .orElseThrow(() -> new IllegalArgumentException("등록 요청이 존재하지 않습니다."));
-        request.setStatus(Status.REJECTED);
-        request.setReviewedAt(LocalDateTime.now());
-        registrationRequestRepository.save(request);
-
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "data", ""
-        ));
+        authService.rejectPharmacy(id);
+        return ResponseEntity.ok(Map.of("success", true, "data", ""));
     }
+
 }

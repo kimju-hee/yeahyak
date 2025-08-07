@@ -11,6 +11,8 @@ import com.yeahyak.backend.repository.PharmacyRepository;
 import com.yeahyak.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -31,6 +33,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final AdminRepository adminRepository;
     private final PharmacyRegistrationRequestRepository registrationRequestRepository;
+
 
     @Transactional
     public void register(SignupRequest request) {
@@ -240,4 +243,66 @@ public class AuthService {
                 admin.getDepartment().name()
         );
     }
+
+    public Page<PharmacyApprovalResponse> getBranchRequests(Pageable pageable) {
+        Page<PharmacyRegistrationRequest> requests = registrationRequestRepository.findByUserRole(UserRole.BRANCH, pageable);
+
+        return requests.map(req -> {
+            Pharmacy pharmacy = req.getPharmacy();
+            return new PharmacyApprovalResponse(
+                    new PharmacyRequestDto(
+                            req.getRegRequestId(),
+                            pharmacy.getPharmacyId(),
+                            req.getRequestedAt(),
+                            req.getStatus(),
+                            req.getReviewedAt()
+                    ),
+                    new PharmacyDto(
+                            pharmacy.getPharmacyId(),
+                            pharmacy.getUser().getUserId(),
+                            pharmacy.getPharmacyName(),
+                            pharmacy.getBizRegNo(),
+                            pharmacy.getRepresentativeName(),
+                            pharmacy.getPostcode(),
+                            pharmacy.getAddress(),
+                            pharmacy.getDetailAddress(),
+                            pharmacy.getPhoneNumber(),
+                            pharmacy.getStatus()
+                    )
+            );
+        });
+    }
+
+    @Transactional
+    public void approvePharmacy(Long id) {
+        Pharmacy pharmacy = pharmacyRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("해당 약국이 존재하지 않습니다."));
+        pharmacy.setStatus(Status.ACTIVE);
+        pharmacyRepository.save(pharmacy);
+
+        User user = pharmacy.getUser();
+        user.setUserRole(UserRole.BRANCH);
+        userRepository.save(user);
+
+        PharmacyRegistrationRequest request = registrationRequestRepository.findByPharmacy(pharmacy)
+                .orElseThrow(() -> new IllegalArgumentException("등록 요청이 존재하지 않습니다."));
+        request.setStatus(Status.ACTIVE);
+        request.setReviewedAt(LocalDateTime.now());
+        registrationRequestRepository.save(request);
+    }
+
+    @Transactional
+    public void rejectPharmacy(Long id) {
+        Pharmacy pharmacy = pharmacyRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("해당 약국이 존재하지 않습니다."));
+        pharmacy.setStatus(Status.REJECTED);
+        pharmacyRepository.save(pharmacy);
+
+        PharmacyRegistrationRequest request = registrationRequestRepository.findByPharmacy(pharmacy)
+                .orElseThrow(() -> new IllegalArgumentException("등록 요청이 존재하지 않습니다."));
+        request.setStatus(Status.REJECTED);
+        request.setReviewedAt(LocalDateTime.now());
+        registrationRequestRepository.save(request);
+    }
+
 }
