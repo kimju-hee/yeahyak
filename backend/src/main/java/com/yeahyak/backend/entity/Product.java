@@ -41,6 +41,6 @@ public class Product {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
-    @Column(length = 1024)
+    @Lob
     private String productImgUrl; //약품 이미지 URL
 }
