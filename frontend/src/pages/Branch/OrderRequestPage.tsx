@@ -93,7 +93,7 @@ export default function OrderRequestPage() {
 
   // --- 상태 및 스토어 ---
   // useAuthStore에서 사용자 정보와 프로필 정보를 가져옵니다。
-  const { user, profile } = useAuthStore(); // [수정] useAuth를 useAuthStore로 변경
+  const { user, profile, updateUser } = useAuthStore(); // [수정] useAuth를 useAuthStore로 변경
   // profile 타입을 Pharmacy로 단언하여 pharmacyId에 안전하게 접근합니다。
   const pharmacyProfile = profile as Pharmacy; // [수정] profile 타입을 Pharmacy로 단언
   // 모달 표시 여부를 관리하는 상태입니다.
@@ -269,8 +269,10 @@ export default function OrderRequestPage() {
       if (response.data.success) {
         Modal.success({ title: '발주 요청이 완료되었습니다.' });
         setCart([]);
-        fetchOrderHistory(); // 주문 완료 후 주문 내역을 다시 불러옵니다.
-        // TODO: 포인트 갱신 로직 추가 필요 (예: fetchUser())
+        fetchOrderHistory(); // 주문 완료 후 주문 내역을 다시 불러옵니다。
+
+        // [임시] 발주 성공 후 포인트 직접 감소 (백엔드 연동 필요)
+        updateUser({ point: user.point - totalOrderAmount });
       } else {
         throw new Error(response.data.message || '알 수 없는 오류가 발생했습니다.');
       }
