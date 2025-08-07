@@ -4,17 +4,17 @@ import type { MenuProps } from 'antd';
 import { MessageOutlined } from '@ant-design/icons';
 import { Bubble } from '@ant-design/x';
 import { Rnd } from 'react-rnd';
- 
+
 const { TextArea } = Input;
 const { Title } = Typography;
- 
+
 type ChatRole = 'user' | 'bot';
- 
+
 interface ChatMessage {
   role: ChatRole;
   content: string;
 }
- 
+
 export default function Chatbot() {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'FAQ' | 'Q&A' | null>(null);
@@ -22,7 +22,7 @@ export default function Chatbot() {
   const [input, setInput] = useState('');
   const messageEndRef = useRef<HTMLDivElement>(null);
   const chatbotRef = useRef<HTMLDivElement>(null);
- 
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -34,36 +34,75 @@ export default function Chatbot() {
         setMessages([]);
       }
     };
- 
+
     const handleEscKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && mode) {
         setMode(null);
         setMessages([]);
       }
     };
- 
+
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleEscKey);
- 
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscKey);
     };
   }, [mode]);
- 
+
   useEffect(() => {
     if (messageEndRef.current) {
       messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
- 
-  const handleSend = () => {
-    if (!input.trim()) return;
+
+  const handleSend = async () => {
+    if (!input.trim() || !mode) return;
+
     const userMessage: ChatMessage = { role: 'user', content: input };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
+
+    // ✅ mode에 따라 API 경로 결정
+    const endpoint =
+      mode === 'FAQ'
+        ? 'http://localhost:8080/api/chat/faq'
+        : 'http://localhost:8080/api/chat/qna';
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: 1,
+          question: input,
+          history: messages.map((msg) => ({
+            type: msg.role === 'user' ? 'human' : 'ai',
+            content: msg.content,
+          })),
+        }),
+      });
+
+      const result = await response.json();
+      const reply = result?.data?.reply || '응답이 없습니다.';
+
+      const botMessage: ChatMessage = {
+        role: 'bot',
+        content: reply,
+      };
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      const errorMessage: ChatMessage = {
+        role: 'bot',
+        content: '서버 오류가 발생했습니다.',
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    }
   };
- 
+
   const handleSelect = (key: 'faq' | 'qna') => {
     const selectedMode = key === 'faq' ? 'FAQ' : 'Q&A';
     setMode(selectedMode);
@@ -78,7 +117,7 @@ export default function Chatbot() {
     setMessages([initialBotMessage]);
     setOpen(false);
   };
- 
+
   const dropdownItems: MenuProps['items'] = [
     {
       key: 'faq',
@@ -91,7 +130,7 @@ export default function Chatbot() {
       onClick: () => handleSelect('qna'),
     },
   ];
- 
+
   return (
     <div
       id="chatbot-wrapper"
@@ -122,7 +161,7 @@ export default function Chatbot() {
           />
         </Dropdown>
       </aside>
- 
+
       {/* 챗봇 */}
       {mode && (
         <Rnd
@@ -150,14 +189,17 @@ export default function Chatbot() {
                 display: 'flex',
                 flexDirection: 'column',
               }}
-              bodyStyle={{
-                display: 'flex',
-                flexDirection: 'column',
-                flex: 1,
-                padding: 0,
-                overflow: 'hidden',
+              styles={{ // ✅ 변경된 부분
+                body: {
+                  display: 'flex',
+                  flexDirection: 'column',
+                  flex: 1,
+                  padding: 0,
+                  overflow: 'hidden',
+                },
               }}
             >
+
               {/* 메시지 영역 */}
               <main
                 style={{
@@ -194,9 +236,9 @@ export default function Chatbot() {
                     />
                   </article>
                 ))}
-                <div ref={messageEndRef} />
+                <span ref={messageEndRef} />
               </main>
- 
+
               {/* 입력창 */}
               <footer style={{ padding: 12, borderTop: '1px solid #eee' }}>
                 <Space.Compact style={{ width: '100%' }}>

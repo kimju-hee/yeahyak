@@ -1,7 +1,7 @@
 import { Button, Input, Modal, Space, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import React, { useState } from 'react';
- 
+import { Card } from 'antd';
 import { mockOrders } from '../../mocks/order.mock';
 import { mockPharmacies } from '../../mocks/pharmacy.mock';
 import { mockProducts } from '../../mocks/product.mock';
@@ -41,13 +41,7 @@ const buildStockData = (): StockItem[] => {
 };
  
 const StockTransactionTable: React.FC<{ data: any[] }> = ({ data }) => (
-  <div
-    style={{
-      maxHeight: 400,
-      overflowY: 'auto',
-      paddingRight: 8, // 스크롤 여백
-    }}
-  >
+  <Card styles={{ body: { maxHeight: 400, overflowY: 'auto', paddingRight: 8 } }}>
     <Table
       size="small"
       pagination={false}
@@ -60,9 +54,9 @@ const StockTransactionTable: React.FC<{ data: any[] }> = ({ data }) => (
       ]}
       dataSource={data}
       rowKey="id"
-      scroll={{ y: 360 }} // 추가적으로 Ant Design 테이블 자체 스크롤도 지정
+      scroll={{ y: 360 }}
     />
-  </div>
+  </Card>
 );
  
  
@@ -230,9 +224,10 @@ export default function HqStockPage() {
         open={isModalOpen}
         footer={null}
         onCancel={handleCancel}
-        destroyOnClose
+        destroyOnHidden // ✅ 변경된 부분
         width={700}
       >
+
         {selectedItem && <StockTransactionTable data={getModalData()} />}
       </Modal>
     </>
