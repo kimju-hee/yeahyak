@@ -19,7 +19,6 @@ public class ProductRequestDTO {
     private String manufacturer;
     private String unit;
     private BigDecimal unitPrice;
-    private Boolean isNarcotic;
     private String pdfPath;
     private String details;
     private String productImgUrl;

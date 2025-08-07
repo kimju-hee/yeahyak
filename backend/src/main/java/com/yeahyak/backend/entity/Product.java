@@ -37,7 +37,6 @@ public class Product {
     private String details;
     private String unit;
     private BigDecimal unitPrice;
-    private Boolean isNarcotic;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

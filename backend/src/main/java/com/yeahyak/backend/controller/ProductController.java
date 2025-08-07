@@ -53,7 +53,6 @@ public class ProductController {
                         .productImgUrl(product.getProductImgUrl())
                         .unit(product.getUnit())
                         .unitPrice(product.getUnitPrice())
-                        .isNarcotic(product.getIsNarcotic())
                         .createdAt(product.getCreatedAt())
                         .build())
                 .toList();

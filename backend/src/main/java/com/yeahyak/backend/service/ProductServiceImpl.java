@@ -43,7 +43,6 @@ public class ProductServiceImpl implements ProductService {
                 .details(summary)
                 .unit(dto.getUnit())
                 .unitPrice(dto.getUnitPrice())
-                .isNarcotic(dto.getIsNarcotic())
                 .productImgUrl(dto.getProductImgUrl())
                 .build();
 
@@ -76,7 +75,6 @@ public class ProductServiceImpl implements ProductService {
         product.setManufacturer(dto.getManufacturer());
         product.setUnit(dto.getUnit());
         product.setUnitPrice(dto.getUnitPrice());
-        product.setIsNarcotic(dto.getIsNarcotic());
         product.setProductImgUrl(dto.getProductImgUrl());
 
         return productRepository.save(product);
@@ -123,7 +121,6 @@ public class ProductServiceImpl implements ProductService {
                 .details(product.getDetails())
                 .unit(product.getUnit())
                 .unitPrice(product.getUnitPrice())
-                .isNarcotic(product.getIsNarcotic())
                 .productImgUrl(product.getProductImgUrl())
                 .createdAt(product.getCreatedAt())
                 .build());

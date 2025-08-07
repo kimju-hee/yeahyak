@@ -22,7 +22,6 @@ public class ProductResponseDTO {
     private String details;
     private String unit;
     private BigDecimal unitPrice;
-    private Boolean isNarcotic;
     private LocalDateTime createdAt;
     private String productImgUrl;
 }
