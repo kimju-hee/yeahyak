@@ -1,12 +1,45 @@
-import { Button, Card, Checkbox, Flex, Form, Input, message, Typography } from 'antd';
+import { Button, Card, Flex, Form, Input, message, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { instance } from '../../../api/api';
 import AddressInput from '../../../components/AddressInput';
+import TermsAndPrivacyCheckbox from '../../../components/TermsAndPolicyCheckbox';
 import type { SignupRequest } from '../../../types/auth.type';
 
 export default function RegisterPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
+  const [form] = Form.useForm();
+
+  // 연락처 포맷터
+  const formatContact = (value: number | string | undefined) => {
+    if (!value) return '';
+    const num = value.toString().replace(/\D/g, '');
+
+    // 02-000-0000 또는 02-0000-0000
+    if (num.startsWith('02')) {
+      if (num.length <= 2) return num;
+      if (num.length <= 6) return `${num.slice(0, 2)}-${num.slice(2)}`;
+      return num.length === 10
+        ? `${num.slice(0, 2)}-${num.slice(2, 6)}-${num.slice(6)}`
+        : `${num.slice(0, 2)}-${num.slice(2, 5)}-${num.slice(5)}`;
+    }
+
+    // 000-000-0000 또는 000-0000-0000
+    if (num.length <= 3) return num;
+    if (num.length <= 6) return `${num.slice(0, 3)}-${num.slice(3)}`;
+    return num.length === 11
+      ? `${num.slice(0, 3)}-${num.slice(3, 7)}-${num.slice(7)}`
+      : `${num.slice(0, 3)}-${num.slice(3, 6)}-${num.slice(6)}`;
+  };
+
+  // 사업자등록번호 포맷터 (000-00-00000)
+  const formatBizRegNo = (value: number | string | undefined) => {
+    if (!value) return '';
+    const num = value.toString().replace(/\D/g, '');
+    if (num.length <= 3) return num;
+    if (num.length <= 5) return `${num.slice(0, 3)}-${num.slice(3)}`;
+    return `${num.slice(0, 3)}-${num.slice(3, 5)}-${num.slice(5)}`;
+  };
 
   const handleSubmit = async (
     values: SignupRequest & {
@@ -17,12 +50,12 @@ export default function RegisterPage() {
     try {
       const { confirmPassword, agreement, ...payload } = values;
       const res = await instance.post('/auth/signup', payload);
-      // LOG:  테스트용 로그
+      // LOG: 테스트용 로그
       console.log('🧪 회원가입 응답:', res.data);
       navigate('/login', { replace: true });
     } catch (e: any) {
       console.error('회원가입 실패:', e);
-      messageApi.error(e.response?.data?.message || '회원가입 중 오류가 발생했습니다.');
+      messageApi.error(e.message || '회원가입 중 오류가 발생했습니다.');
     }
   };
 
@@ -36,6 +69,7 @@ export default function RegisterPage() {
 
         <Card style={{ padding: '24px' }}>
           <Form
+            form={form}
             name="register"
             onFinish={handleSubmit}
             scrollToFirstError
@@ -82,7 +116,7 @@ export default function RegisterPage() {
                 ]}
                 hasFeedback
               >
-                <Input.Password />
+                <Input.Password placeholder="영문, 숫자, 특수문자 조합 (8자리 이상)" />
               </Form.Item>
               <Form.Item
                 name="confirmPassword"
@@ -114,8 +148,35 @@ export default function RegisterPage() {
                 name="bizRegNo"
                 label="사업자등록번호"
                 rules={[{ required: true, message: '사업자등록번호를 입력해주세요.' }]}
+                normalize={(value) => {
+                  if (!value) return '';
+                  return value.replace(/\D/g, '');
+                }}
               >
-                <Input />
+                <Input
+                  maxLength={12}
+                  onChange={(e) => {
+                    const formattedValue = formatBizRegNo(e.target.value);
+                    form.setFieldValue('bizRegNo', formattedValue);
+                  }}
+                  onKeyDown={(e) => {
+                    // 숫자, 백스페이스, 삭제, 탭, 화살표 키만 허용
+                    if (
+                      !/[0-9]/.test(e.key) &&
+                      ![
+                        'Backspace',
+                        'Delete',
+                        'Tab',
+                        'ArrowLeft',
+                        'ArrowRight',
+                        'ArrowUp',
+                        'ArrowDown',
+                      ].includes(e.key)
+                    ) {
+                      e.preventDefault();
+                    }
+                  }}
+                />
               </Form.Item>
               <Form.Item
                 name="representativeName"
@@ -135,26 +196,37 @@ export default function RegisterPage() {
                 name="contact"
                 label="연락처"
                 rules={[{ required: true, message: '연락처를 입력해주세요.' }]}
+                normalize={(value) => {
+                  if (!value) return '';
+                  return value.replace(/\D/g, '');
+                }}
               >
-                <Input />
+                <Input
+                  maxLength={13}
+                  onChange={(e) => {
+                    const formattedValue = formatContact(e.target.value);
+                    form.setFieldValue('contact', formattedValue);
+                  }}
+                  onKeyDown={(e) => {
+                    // 숫자, 백스페이스, 삭제, 탭, 화살표 키만 허용
+                    if (
+                      !/[0-9]/.test(e.key) &&
+                      ![
+                        'Backspace',
+                        'Delete',
+                        'Tab',
+                        'ArrowLeft',
+                        'ArrowRight',
+                        'ArrowUp',
+                        'ArrowDown',
+                      ].includes(e.key)
+                    ) {
+                      e.preventDefault();
+                    }
+                  }}
+                />
               </Form.Item>
-              <Form.Item
-                name="agreement"
-                valuePropName="checked"
-                rules={[
-                  {
-                    validator: (_, value) =>
-                      value
-                        ? Promise.resolve()
-                        : Promise.reject(
-                            new Error('이용약관 및 개인정보 처리방침에 동의해주세요.'),
-                          ),
-                  },
-                ]}
-                validateTrigger="onSubmit"
-              >
-                <Checkbox>이용약관 및 개인정보 처리방침에 동의합니다.</Checkbox>
-              </Form.Item>
+              <TermsAndPrivacyCheckbox />
 
               <Button type="primary" htmlType="submit" block>
                 회원가입

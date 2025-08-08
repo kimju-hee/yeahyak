@@ -1,6 +1,7 @@
-import { Button, Card, Checkbox, Flex, Form, Input, message, Select, Typography } from 'antd';
+import { Button, Card, Flex, Form, Input, message, Select, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { instance } from '../../../api/api';
+import TermsAndPrivacyCheckbox from '../../../components/TermsAndPolicyCheckbox';
 import type { AdminSignupRequest } from '../../../types/auth.type';
 import { ADMIN_DEPARTMENT } from '../../../types/profile.type';
 
@@ -27,7 +28,7 @@ export default function HqRegisterPage() {
       navigate('/login', { replace: true });
     } catch (e: any) {
       console.error('회원가입 실패:', e);
-      messageApi.error(e.response?.data?.message || '회원가입 중 오류가 발생했습니다.');
+      messageApi.error(e.message || '회원가입 중 오류가 발생했습니다.');
     }
   };
 
@@ -87,7 +88,7 @@ export default function HqRegisterPage() {
                 ]}
                 hasFeedback
               >
-                <Input.Password />
+                <Input.Password placeholder="영문, 숫자, 특수문자 조합 (8자리 이상)" />
               </Form.Item>
               <Form.Item
                 name="confirmPassword"
@@ -122,23 +123,8 @@ export default function HqRegisterPage() {
               >
                 <Select placeholder="소속 부서를 선택하세요" options={departmentOptions} />
               </Form.Item>
-              <Form.Item
-                name="agreement"
-                valuePropName="checked"
-                rules={[
-                  {
-                    validator: (_, value) =>
-                      value
-                        ? Promise.resolve()
-                        : Promise.reject(
-                            new Error('이용약관 및 개인정보 처리방침에 동의해주세요.'),
-                          ),
-                  },
-                ]}
-                validateTrigger="onSubmit"
-              >
-                <Checkbox>이용약관 및 개인정보 처리방침에 동의합니다.</Checkbox>
-              </Form.Item>
+
+              <TermsAndPrivacyCheckbox />
 
               <Button type="primary" htmlType="submit" block>
                 관리자 회원가입
