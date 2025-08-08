@@ -7,8 +7,8 @@ import type { SignupRequest } from '../../../types/auth.type';
 
 export default function RegisterPage() {
   const [messageApi, contextHolder] = message.useMessage();
-  const navigate = useNavigate();
   const [form] = Form.useForm();
+  const navigate = useNavigate();
 
   // 연락처 포맷터
   const formatContact = (value: number | string | undefined) => {
@@ -52,7 +52,9 @@ export default function RegisterPage() {
       const res = await instance.post('/auth/signup', payload);
       // LOG: 테스트용 로그
       console.log('🧪 회원가입 응답:', res.data);
-      navigate('/login', { replace: true });
+      if (res.data.success) {
+        navigate('/login', { replace: true });
+      }
     } catch (e: any) {
       console.error('회원가입 실패:', e);
       messageApi.error(e.message || '회원가입 중 오류가 발생했습니다.');

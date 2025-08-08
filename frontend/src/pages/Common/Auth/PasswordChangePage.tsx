@@ -3,16 +3,17 @@ import { useEffect } from 'react';
 import { instance } from '../../../api/api';
 import { useAuthStore } from '../../../stores/authStore';
 import type { PasswordChangeRequest } from '../../../types/auth.type';
+import type { User } from '../../../types/profile.type';
 
 export default function PasswordChangePage() {
-  const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
+  const [form] = Form.useForm();
 
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.user) as User;
 
   useEffect(() => {
     form.setFieldsValue({
-      email: user?.email,
+      email: user.email,
       currentPassword: '',
       newPassword: '',
       confirmNewPassword: '',
@@ -21,16 +22,20 @@ export default function PasswordChangePage() {
 
   const handleSubmit = async (values: PasswordChangeRequest & { confirmNewPassword: string }) => {
     try {
-      const { currentPassword, newPassword } = values;
-      const payload: PasswordChangeRequest = { currentPassword, newPassword };
+      const payload: PasswordChangeRequest = {
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+      };
       const res = await instance.put('/auth/password', payload);
       // LOG: 테스트용 로그
       console.log('🧪 비밀번호 변경 응답:', res.data);
-      messageApi.success('비밀번호가 변경되었습니다!');
-      form.resetFields(['currentPassword', 'newPassword', 'confirmNewPassword']);
+      if (res.data.success) {
+        messageApi.success('비밀번호가 변경되었습니다!');
+        form.resetFields(['currentPassword', 'newPassword', 'confirmNewPassword']);
+      }
     } catch (e: any) {
       console.error('비밀번호 변경 실패:', e);
-      messageApi.error(e.response?.data?.message || '비밀번호 변경 중 오류가 발생했습니다.');
+      messageApi.error(e.message || '비밀번호 변경 중 오류가 발생했습니다.');
     }
   };
 
@@ -76,16 +81,14 @@ export default function PasswordChangePage() {
                   if (typeCount >= 3 && length >= 8) return Promise.resolve();
 
                   return Promise.reject(
-                    new Error(
-                      '영대문자, 영소문자, 숫자, 특수문자 중 3종류 이상을 조합하여 8자리 이상으로 입력해주세요.',
-                    ),
+                    new Error('영문, 숫자, 특수문자를 조합하여 8자리 이상으로 입력해주세요.'),
                   );
                 },
               },
             ]}
             hasFeedback
           >
-            <Input.Password />
+            <Input.Password placeholder="영문, 숫자, 특수문자 조합 (8자리 이상)" />
           </Form.Item>
           <Form.Item
             name="confirmNewPassword"
