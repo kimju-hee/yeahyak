@@ -74,18 +74,15 @@ def summarize_text(content: str) -> str:
 
 @app.route("/summarize-law", methods=["POST"])
 def summarize_law():
-    data = request.get_json()
-    file_path = data.get("path")
-
-    if not file_path or not os.path.exists(file_path):
-        error = {"error": "유효한 'path'가 필요합니다."}
+    file = request.files.get("file")
+    if not file:
+        error = {"error": "파일이 없습니다."}
         return Response(json.dumps(error, ensure_ascii=False), content_type="application/json; charset=utf-8", status=400)
 
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
+        content = file.read().decode("utf-8")
     except Exception as e:
-        error = {"error": f"파일 열기 오류: {str(e)}"}
+        error = {"error": f"파일 읽기 실패: {str(e)}"}
         return Response(json.dumps(error, ensure_ascii=False), content_type="application/json; charset=utf-8", status=500)
 
     try:
@@ -94,11 +91,7 @@ def summarize_law():
         error = {"error": str(e)}
         return Response(json.dumps(error, ensure_ascii=False), content_type="application/json; charset=utf-8", status=500)
 
-    # ✅ 모든 경우 charset=utf-8 적용
-    if request.headers.get("Accept") == "text/plain":
-        return Response(summary, content_type="text/plain; charset=utf-8")
-    else:
-        return Response(json.dumps({"summary": summary}, ensure_ascii=False), content_type="application/json; charset=utf-8")
+    return Response(json.dumps({"summary": summary}, ensure_ascii=False), content_type="application/json; charset=utf-8")
 
 if __name__ == "__main__":
     app.run(debug=True)
