@@ -76,7 +76,6 @@ const ReturnDetailModal: React.FC<ReturnDetailModalProps> = ({ open, onClose, re
       <Descriptions bordered column={2} size="small">
         <Descriptions.Item label="반품 ID">{returnDetail.returnId}</Descriptions.Item>
         <Descriptions.Item label="약국명">{returnDetail.pharmacyName}</Descriptions.Item>
-        <Descriptions.Item label="주문 ID">{returnDetail.orderId || 'N/A'}</Descriptions.Item>
         <Descriptions.Item label="신청일">{new Date(returnDetail.createdAt).toLocaleString()}</Descriptions.Item>
         <Descriptions.Item label="처리일">{returnDetail.updatedAt ? new Date(returnDetail.updatedAt).toLocaleString() : '-'}</Descriptions.Item>
         <Descriptions.Item label="총 반품 금액">{returnDetail.totalPrice.toLocaleString()}원</Descriptions.Item>
@@ -94,12 +93,15 @@ const ReturnDetailModal: React.FC<ReturnDetailModalProps> = ({ open, onClose, re
           { title: '수량', dataIndex: 'quantity', key: 'quantity' },
           { title: '단가', dataIndex: 'unitPrice', key: 'unitPrice', render: (val) => `${val.toLocaleString()}원` },
           { title: '소계', dataIndex: 'subtotalPrice', key: 'subtotalPrice', render: (val) => `${val.toLocaleString()}원` },
-          { title: '반품 사유', dataIndex: 'reason', key: 'reason' },
         ]}
         pagination={false}
         rowKey="productId"
         size="small"
       />
+      <Typography.Title level={4} style={{ marginTop: 24, marginBottom: 16 }}>반품 사유</Typography.Title>
+      <Card style={{ marginBottom: 24 }}>
+        <Typography.Paragraph>{returnDetail.items[0]?.reason || '사유 없음'}</Typography.Paragraph>
+      </Card>
     </Modal>
   );
 };
@@ -149,10 +151,11 @@ export default function ReturnManagementPage() {
   }, [fetchReturns]);
 
   // [수정] 반품 승인 처리 (API 연동)
+  // NOTE: 백엔드 AdminReturnController의 @RequestMapping이 /api/admin/returns로 변경됨
+  // NOTE: 이에 따라 api.patch의 경로도 수정됨
   const handleApprove = async (returnId: number) => {
     try {
-      // 백엔드 관리자용 API가 명확하지 않아 지점용 API 사용. 필요시 백엔드 수정 필요.
-      await api.post(`/branch/returns/approve/${returnId}`);
+      await api.patch(`/admin/returns/${returnId}/approve`);
       alert('반품이 승인되었습니다.');
       fetchReturns(); // 목록 새로고침
     } catch (error) {
@@ -168,14 +171,12 @@ export default function ReturnManagementPage() {
   };
 
   // [수정] 반품 거절 처리 (API 연동)
+  // NOTE: 백엔드 AdminReturnController의 @RequestMapping이 /api/admin/returns로 변경됨
+  // NOTE: 이에 따라 api.patch의 경로도 수정됨
   const handleRejectConfirm = async () => {
     if (!rejectTargetReturnId || !rejectReason) return;
     try {
-      // 백엔드에 거절 사유를 전달하는 API가 필요합니다. 현재는 updateStatus만 있으므로,
-      // 거절 사유를 업데이트하는 별도의 API가 없으면 백엔드 수정이 필요합니다.
-      // 여기서는 임시로 updateStatus를 사용하고, 실제 구현에서는 백엔드 API에 맞춰야 합니다.
-      // 백엔드 관리자용 API가 명확하지 않아 지점용 API 사용. 필요시 백엔드 수정 필요.
-      await api.post(`/branch/returns/reject/${rejectTargetReturnId}`, { reason: rejectReason });
+      await api.patch(`/admin/returns/${rejectTargetReturnId}/reject`, { reason: rejectReason });
       alert('반품이 거절되었습니다.');
       setRejectModalOpen(false);
       setRejectReason('');
@@ -212,7 +213,7 @@ export default function ReturnManagementPage() {
   const columns: ColumnsType<ReturnResponseDto> = [
     { title: '신청일', dataIndex: 'createdAt', render: (text) => new Date(text).toLocaleDateString(), sorter: (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() },
     { title: '가맹점명', dataIndex: 'pharmacyName' },
-    { title: '주문번호', dataIndex: 'orderId', render: (text) => text || 'N/A' },
+    { title: '반품번호', dataIndex: 'returnId' },
     { title: '총 반품 금액', dataIndex: 'totalPrice', render: (val) => `${val.toLocaleString()}원` },
     {
       title: '상태',

@@ -147,7 +147,6 @@ export default function OrderRequestPage() {
           pharmacyId: pharmacyProfile.pharmacyId, // [수정] 타입 단언된 pharmacyProfile 사용
           page: page - 1,
           size: 5,
-          status: 'REQUESTED', // 예시: 요청 상태만 가져오기 (필요에 따라 변경)
         },
       });
       if (response.data.success) {
@@ -172,7 +171,7 @@ export default function OrderRequestPage() {
         params: { page: page - 1, size: 5, keyword },
       });
       if (response.data.success) {
-        const { content, totalElements, number } = response.data.data.body; // [수정] 응답 데이터 구조 변경에 따라 body 객체 추가
+        const { data: content, totalElements, currentPage: number } = response.data; // [수정] 응답 데이터 구조 변경에 따라 body 객체 제거 및 필드명 수정
         setProducts(content);
         setProductTotal(totalElements);
         setProductPage(number + 1);

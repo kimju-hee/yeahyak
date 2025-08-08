@@ -178,7 +178,7 @@ export default function OrderManagementPage() {
     try {
       // [변경] API 엔드포인트에 따라 조건부 호출
       if (newStatus === 'APPROVED') {
-        await instance.patch(`/orders/${orderId}/approve`);
+        await instance.post(`/orders/${orderId}/approve`);
       } else if (newStatus === 'CANCELED') {
         await instance.patch(`/orders/${orderId}/reject`);
       } else {

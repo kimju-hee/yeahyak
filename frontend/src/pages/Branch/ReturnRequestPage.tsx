@@ -124,7 +124,6 @@ const ReturnDetailModal: React.FC<ReturnDetailModalProps> = ({ open, onClose, re
       <Descriptions bordered column={2} size="small">
         <Descriptions.Item label="반품 ID">{returnDetail.returnId}</Descriptions.Item>
         <Descriptions.Item label="약국명">{returnDetail.pharmacyName}</Descriptions.Item>
-        <Descriptions.Item label="주문 ID">{returnDetail.orderId || 'N/A'}</Descriptions.Item>
         <Descriptions.Item label="신청일">{new Date(returnDetail.createdAt).toLocaleString()}</Descriptions.Item>
         <Descriptions.Item label="처리일">{returnDetail.updatedAt ? new Date(returnDetail.updatedAt).toLocaleString() : '-'}</Descriptions.Item>
         <Descriptions.Item label="총 반품 금액">{returnDetail.totalPrice.toLocaleString()}원</Descriptions.Item>
@@ -142,12 +141,15 @@ const ReturnDetailModal: React.FC<ReturnDetailModalProps> = ({ open, onClose, re
           { title: '수량', dataIndex: 'quantity', key: 'quantity' },
           { title: '단가', dataIndex: 'unitPrice', key: 'unitPrice', render: (val) => `${val.toLocaleString()}원` },
           { title: '소계', dataIndex: 'subtotalPrice', key: 'subtotalPrice', render: (val) => `${val.toLocaleString()}원` },
-          { title: '반품 사유', dataIndex: 'reason', key: 'reason' },
         ]}
         pagination={false}
         rowKey="productId"
         size="small"
       />
+      <Typography.Title level={4} style={{ marginTop: 24, marginBottom: 16 }}>반품 사유</Typography.Title>
+      <Card style={{ marginBottom: 24 }}>
+        <Typography.Paragraph>{returnDetail.items[0]?.reason || '사유 없음'}</Typography.Paragraph>
+      </Card>
     </Modal>
   );
 };
@@ -189,13 +191,17 @@ export default function ReturnRequestPage() {
 
 
   // [수정] 반품 내역을 가져오는 함수 (API 연동 및 응답 구조 변경 반영)
+
+  // NOTE: 현재 백엔드에서 승인 거부 할 경우 사유를 입력하는데, 백엔드에서 해당 사유를 저장하는 로직이 없음
+  // NOTE: 추후 API 기능 추가되면 구현 예정
+  
   const fetchReturnHistory = useCallback(async () => {
     if (!pharmacyProfile?.pharmacyId) {
       return;
     }
     try {
       // /api/branch/returns 엔드포인트 사용
-      const response = await api.get(`/branch/returns?pharmacyId=${pharmacyProfile.pharmacyId}`);
+      const response = await api.get(`/branch/returns?pharmacyId=${pharmacyProfile.pharmacyId}&status=APPROVED`);
       if (response.data.success) {
         // 백엔드 응답 구조에 맞춰 response.data.data를 직접 사용
         if (response.data.data) { // data 필드가 존재하는지 확인
@@ -214,6 +220,9 @@ export default function ReturnRequestPage() {
 
   
   // [수정] 주문 목록을 가져오는 함수 (API 연동 및 응답 구조 변경 반영)
+  // NOTE: 백엔드 OrderService의 getOrdersByPharmacy 메소드가 status 파라미터를 필수가 아닌 선택적으로 받도록 변경됨
+  // NOTE: 이에 따라 status 파라미터 없이 API를 호출하여 모든 상태의 주문을 가져오도록 함
+  
   const fetchOrders = useCallback(async () => {
     if (!pharmacyProfile?.pharmacyId) {
       return;
@@ -235,12 +244,6 @@ export default function ReturnRequestPage() {
   }, [pharmacyProfile]);
 
   const [ordersForModal, setOrdersForModal] = useState<Order[]>([]);
-
-  // [정리] 불필요한 useEffect 제거 (ordersForModal 상태 변화 감지)
-  // useEffect(() => {
-  //   if (modalVisible) {
-  //   }
-  // }, [ordersForModal, modalVisible]);
 
   // [수정] 컴포넌트 마운트 시 주문 및 반품 내역 조회
   useEffect(() => {
@@ -443,9 +446,15 @@ export default function ReturnRequestPage() {
       render: (status) => <Tag color={getStatusColor(status)}>{statusTranslations[status] || status}</Tag>,
     },
     {
-      title: '처리일',
-      dataIndex: 'updatedAt',
-      render: (text) => (text ? new Date(text).toLocaleDateString() : '-'),
+      title: '반품 품목',
+      dataIndex: 'items',
+      render: (items: ReturnItemResponse[]) => (
+        <ul style={{ padding: 0, margin: 0, listStyle: 'none' }}>
+          {items.map((item, index) => (
+            <li key={index}>{item.productName} ({item.quantity}개)</li>
+          ))}
+        </ul>
+      ),
     },
   ];
 
@@ -577,6 +586,7 @@ export default function ReturnRequestPage() {
           onRow={(record) => {
             return {
               onClick: () => {
+
                 handleReturnHistoryRowClick(record);
               },
             };
