@@ -11,11 +11,13 @@ import {
   type TableProps,
   type TabsProps,
 } from 'antd';
+import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { mockNotices } from '../../../mocks/notice.mock';
+import { instance } from '../../../api/api';
 import { useAuthStore } from '../../../stores/authStore';
-import type { Category, Notice } from '../../../types/notice';
+import { type Announcement, type AnnouncementType } from '../../../types/announcement.type';
+import { USER_ROLE } from '../../../types/profile.type';
 
 const PAGE_SIZE = 10;
 
@@ -24,7 +26,7 @@ export default function NoticeListPage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
 
-  const [activeTab, setActiveTab] = useState<Category>('NOTICE');
+  const [activeTab, setActiveTab] = useState<AnnouncementType>('NOTICE');
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   const [search, setSearch] = useState({
@@ -34,60 +36,48 @@ export default function NoticeListPage() {
     appliedKeyword: '',
   });
 
-  const [notices, setNotices] = useState<Notice[]>([]);
+  const [notices, setNotices] = useState<Announcement[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const fetchNotices = async () => {
-    setLoading(true);
-    try {
-      // TODO: 공지사항 목록 로드 API 호출 로직 추가 + mockNotices 제거
-      // const params: {
-      //   category: Category;
-      //   page: number;
-      //   pageSize: number;
-      //   searchField?: string;
-      //   searchKeyword?: string;
-      // } = {
-      //   category: activeTab,
-      //   page: currentPage,
-      //   pageSize: PAGE_SIZE,
-      // };
-      //
-      // const res = await instance.get('/announcements', { params });
-      //
-      // if (res.data.success) {
-      //   setNotices(res.data.data);
-      //   setTotal(res.data.total);
-      // }
+  setLoading(true);
+  try {
+    const res = await instance.get('/announcements', {
+      params: {
+        type: activeTab,
+        page: currentPage - 1,
+        size: PAGE_SIZE,
+      },
+    });
 
-      let filtered = mockNotices.filter((n) => n.category === activeTab);
+    console.log('✨ 공지사항 목록 로딩:', res.data);
 
-      if (search.field === 'title') {
-        filtered = filtered.filter((n) => n.title.includes(search.keyword));
-      } else {
-        filtered = filtered.filter((n) => n.content.includes(search.keyword));
-      }
-
-      const startIndex = (currentPage - 1) * PAGE_SIZE;
-      const paginated = filtered.slice(startIndex, startIndex + PAGE_SIZE);
-
-      setNotices(paginated);
-      setTotal(filtered.length);
-    } catch (e: any) {
-      console.error('공지사항 목록 로딩 실패:', e);
-      messageApi.error(e.message || '공지사항 목록 로딩 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
+    if (res.data.success && res.data.data) {
+      const { content, total } = res.data.data;
+      setNotices(content || []);
+      setTotal(total || 0);
+    } else {
+      setNotices([]);
+      setTotal(0);
     }
-  };
+  } catch (e: any) {
+    console.error('공지사항 목록 로딩 실패:', e);
+    messageApi.error(e.response?.data?.message || '공지사항 목록 로딩 중 오류가 발생했습니다.');
+    setNotices([]);
+    setTotal(0);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   useEffect(() => {
     fetchNotices();
   }, [activeTab, currentPage, search.appliedField, search.appliedKeyword]);
 
   const handleTabChange = (key: string) => {
-    setActiveTab(key as Category);
+    setActiveTab(key as AnnouncementType);
     setCurrentPage(1);
     setSearch({
       field: 'title',
@@ -101,16 +91,16 @@ export default function NoticeListPage() {
     setSearch((prev) => ({
       ...prev,
       appliedField: prev.field,
-      appliedKeyword: prev.keyword,
+      appliedKeyword: prev.keyword.trim(),
     }));
     setCurrentPage(1);
   };
 
-  const tableColumns: TableProps<Notice>['columns'] = [
+  const tableColumns: TableProps<Announcement>['columns'] = [
     {
       title: '번호',
-      dataIndex: 'id',
-      key: 'id',
+      dataIndex: 'announcementId',
+      key: 'announcementId',
       width: '80px',
     },
     {
@@ -122,7 +112,7 @@ export default function NoticeListPage() {
       title: '작성일',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date: string) => new Date(date).toLocaleDateString(),
+      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
       width: '240px',
     },
   ];
@@ -134,11 +124,11 @@ export default function NoticeListPage() {
         columns={tableColumns}
         dataSource={notices}
         loading={loading}
-        rowKey="id"
+        rowKey="announcementId"
         onRow={(record) => ({
           onClick: () => {
-            const basePath = user?.role === 'BRANCH' ? '/branch' : '/hq';
-            navigate(`${basePath}/notices/${record.id}`);
+            const basePath = user?.role === USER_ROLE.BRANCH ? '/branch' : '/hq';
+            navigate(`${basePath}/notices/${record.announcementId}`);
           },
           style: { cursor: 'pointer' },
         })}
@@ -170,8 +160,8 @@ export default function NoticeListPage() {
       children: renderTable(),
     },
     {
-      key: 'NEW_DRUG',
-      label: '신약',
+      key: 'NEW_PRODUCT',
+      label: '신제품',
       children: renderTable(),
     },
   ];
@@ -206,10 +196,11 @@ export default function NoticeListPage() {
           />
         </Space.Compact>
 
-        {/* TODO: 로그인 API 연동 후 주석 해제 {user.role === 'HQ' && ( */}
-        <Button type="primary" onClick={() => navigate('/hq/notices/new')}>
-          작성
-        </Button>
+        {user?.role === USER_ROLE.ADMIN && (
+          <Button type="primary" onClick={() => navigate('/hq/notices/new')}>
+            작성
+          </Button>
+        )}
       </Flex>
     </>
   );
