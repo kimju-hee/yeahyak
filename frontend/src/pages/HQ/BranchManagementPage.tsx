@@ -2,6 +2,7 @@ import {
   Button,
   Descriptions,
   Drawer,
+  Flex,
   Input,
   Select,
   Space,
@@ -24,7 +25,7 @@ export default function BranchManagementPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
 
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [requests, setRequests] = useState<RegRequestResponse[]>([]);
   const [search, setSearch] = useState({
     field: 'pharmacyId' as 'pharmacyId' | 'pharmacyName',
     keyword: '',
@@ -33,7 +34,8 @@ export default function BranchManagementPage() {
   });
   const [selectedBranch, setSelectedBranch] = useState<RegRequestResponse>();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [requests, setRequests] = useState<RegRequestResponse[]>([]);
+
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -43,7 +45,7 @@ export default function BranchManagementPage() {
       const res = await instance.get('/admin/pharmacies/requests', {
         params: {
           page: currentPage - 1,
-          pageSize: PAGE_SIZE,
+          size: PAGE_SIZE,
         },
       });
 
@@ -52,14 +54,12 @@ export default function BranchManagementPage() {
 
       if (res.data.success) {
         const { data, totalElements } = res.data;
-        setRequests(data || []);
-        setTotal(totalElements || 0);
+        setRequests(data);
+        setTotal(totalElements);
       }
     } catch (e: any) {
       console.error('약국 등록 요청 목록 로딩 실패:', e);
-      messageApi.error(
-        e.response?.data?.message || '약국 등록 요청 목록 로딩 중 오류가 발생했습니다.',
-      );
+      messageApi.error(e.message || '약국 등록 요청 목록 로딩 중 오류가 발생했습니다.');
       setRequests([]);
       setTotal(0);
     } finally {
@@ -89,13 +89,13 @@ export default function BranchManagementPage() {
       console.log('✨ 요청 승인 처리 응답:', res.data);
 
       if (res.data.success) {
-        messageApi.success('요청이 승인 처리되었습니다.');
         fetchRequests();
+        messageApi.success('요청이 승인 처리되었습니다.');
         setDrawerOpen(false);
       }
     } catch (e: any) {
       console.error('요청 승인 처리 실패:', e);
-      messageApi.error(e.response?.data?.message || '요청 승인 처리 중 오류가 발생했습니다.');
+      messageApi.error(e.message || '요청 승인 처리 중 오류가 발생했습니다.');
     }
   };
 
@@ -107,19 +107,19 @@ export default function BranchManagementPage() {
       console.log('✨ 요청 거절 처리 응답:', res.data);
 
       if (res.data.success) {
-        messageApi.success('요청이 거절 처리되었습니다.');
         fetchRequests();
+        messageApi.success('요청이 거절 처리되었습니다.');
         setDrawerOpen(false);
       }
     } catch (e: any) {
       console.error('요청 거절 처리 실패:', e);
-      messageApi.error(e.response?.data?.message || '요청 거절 처리 중 오류가 발생했습니다.');
+      messageApi.error(e.message || '요청 거절 처리 중 오류가 발생했습니다.');
     }
   };
 
   const tableColumns: TableProps<RegRequestResponse>['columns'] = [
     {
-      title: '약국 코드',
+      title: '약국코드',
       dataIndex: ['pharmacy', 'pharmacyId'],
       key: 'pharmacy.pharmacyId',
     },
@@ -136,6 +136,7 @@ export default function BranchManagementPage() {
     { title: '연락처', dataIndex: ['pharmacy', 'contact'], key: 'pharmacy.contact' },
     {
       title: '상태',
+      dataIndex: ['request', 'status'],
       key: 'request.status',
       render: (_: any, record: RegRequestResponse) => getStatusTag(record.request.status),
     },
@@ -147,15 +148,15 @@ export default function BranchManagementPage() {
       <Typography.Title level={3} style={{ marginBottom: '24px' }}>
         가맹점 관리
       </Typography.Title>
-
-      <Space.Compact>
+      {/* TODO: 검색 기능 구현 */}
+      <Space.Compact style={{ marginBottom: '16px' }}>
         <Select
           value={search.field}
           onChange={(value) =>
             setSearch((prev) => ({ ...prev, field: value as 'pharmacyId' | 'pharmacyName' }))
           }
           options={[
-            { value: 'pharmacyId', label: '약국 코드' },
+            { value: 'pharmacyId', label: '약국코드' },
             { value: 'pharmacyName', label: '약국명' },
           ]}
         />
@@ -167,7 +168,6 @@ export default function BranchManagementPage() {
           onSearch={() => fetchRequests()}
         />
       </Space.Compact>
-
       <Table
         columns={tableColumns}
         dataSource={requests}
@@ -187,13 +187,12 @@ export default function BranchManagementPage() {
           onChange: (page) => setCurrentPage(page),
         }}
       />
-
       <Drawer
         title={`${selectedBranch?.pharmacy.pharmacyName} 상세 정보`}
         placement="right"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        width={500}
+        width={'550px'}
       >
         {selectedBranch && (
           <>
@@ -217,20 +216,21 @@ export default function BranchManagementPage() {
                   : '미검토'}
               </Descriptions.Item>
               <Descriptions.Item label="상태">
-                {getStatusTag(selectedBranch.request.status)}
+                <Flex wrap justify="space-between" align="center">
+                  {getStatusTag(selectedBranch.request.status)}
+                  {selectedBranch && selectedBranch.request.status === 'PENDING' && (
+                    <Space>
+                      <Button type="primary" onClick={() => handleApprove(selectedBranch)}>
+                        승인
+                      </Button>
+                      <Button danger onClick={() => handleReject(selectedBranch)}>
+                        거절
+                      </Button>
+                    </Space>
+                  )}
+                </Flex>
               </Descriptions.Item>
             </Descriptions>
-
-            {selectedBranch && selectedBranch.request.status === 'PENDING' && (
-              <Space style={{ marginTop: 24 }}>
-                <Button type="primary" onClick={() => handleApprove(selectedBranch)}>
-                  승인
-                </Button>
-                <Button danger onClick={() => handleReject(selectedBranch)}>
-                  거절
-                </Button>
-              </Space>
-            )}
           </>
         )}
       </Drawer>
