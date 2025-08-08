@@ -2,10 +2,8 @@ from flask import Flask, request, Response
 from openai import OpenAI, APIError
 import os
 import json
-from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
 
 # 🔐 환경변수에서 API 키 읽기 (.env 사용 안함)
 if "OPENAI_API_KEY" not in os.environ:
