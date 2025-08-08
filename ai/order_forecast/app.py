@@ -1,109 +1,203 @@
-from flask import Flask, request, jsonify
+from flask import jsonify, request
+import os
 import pandas as pd
+import numpy as np
 import lightgbm as lgb
 from sklearn.model_selection import TimeSeriesSplit
+from sklearn.metrics import r2_score, mean_absolute_error
 
-app = Flask(__name__)
+# ====== 간단 설정 ======
+DATA_DIR = "./ai/order_forecast/"
+HISTORY_CSV_PATH = os.path.join(DATA_DIR, "pos_order_history.csv")
+DEFAULT_MIN_MONTHS = 6
+TARGET_COL = "ordered_quantity"
+ID_COLS = ["date", "store_id", "product_code"]
+INFO_COLS = ["product_code", "product_name", "main_category", "sub_category", "unit"]
+NUM_COLS = ["stock_level", "sales_quantity", "expiration_days_left", TARGET_COL]
 
-@app.route('/predict', methods=['POST'])
-def predict_order(file):
-    if 'file' not in request.files:
-        return jsonify({'error': 'CSV file is missing'}), 400
+os.makedirs(DATA_DIR, exist_ok=True)
 
-    file = request.files['file']
-    df = pd.read_csv(file)
+# ====== 유틸 ======
+def _get_min_months() -> int:
+    val = request.args.get("min_months") or request.form.get("min_months")
+    try:
+        return max(1, int(val)) if val is not None else DEFAULT_MIN_MONTHS
+    except:
+        return DEFAULT_MIN_MONTHS
 
-    # 1. 날짜 전처리: 문자열 처리 + datetime 변환 + 결측 제거
-    df['date'] = df['date'].astype(str)
-    df['date'] = df['date'].apply(lambda x: x if len(x) > 7 else x + '-01')
-    df['date'] = pd.to_datetime(df['date'], errors='coerce')
-    df = df[df['date'].notnull()]  # datetime 변환 실패 제거
+def _parse_month_series(s: pd.Series) -> pd.Series:
+    s = s.astype(str).apply(lambda x: x if len(x) > 7 else x + "-01")
+    return pd.to_datetime(s, errors="coerce")
 
-    # 2. 다음달 날짜 계산 및 중복 방지
-    last_date = df['date'].max()
-    next_month = (last_date + pd.DateOffset(months=1)).replace(day=1)
-    if next_month in df['date'].values:
-        return jsonify({'error': f'{next_month.strftime("%Y-%m")} already exists in data'}), 400
+def _load_history() -> pd.DataFrame:
+    if not os.path.exists(HISTORY_CSV_PATH):
+        cols = ID_COLS + INFO_COLS[1:] + NUM_COLS
+        return pd.DataFrame(columns=cols)
+    return pd.read_csv(HISTORY_CSV_PATH)
 
-    # 3. 다음달 예측용 데이터 생성 (date는 Timestamp 형 유지)
-    store_ids = df['store_id'].unique()
-    product_names = df['product_name'].unique()
-    future_raw = pd.DataFrame([
-        {
-            'date': next_month,  # Timestamp로 유지
-            'store_id': store,
-            'product_name': product,
-            'stock_level': 0,
-            'sales_quantity': 0,
-            'expiration_days_left': 180,
-            'ordered_quantity': 0
-        }
-        for store in store_ids for product in product_names
-    ])
-    df_full = pd.concat([df, future_raw], ignore_index=True)
+def _dedupe_concat(base: pd.DataFrame, add: pd.DataFrame) -> pd.DataFrame:
+    for c in set(base.columns) - set(add.columns):
+        add[c] = np.nan
+    for c in set(add.columns) - set(base.columns):
+        base[c] = np.nan
+    df = pd.concat([base[add.columns], add], ignore_index=True)
+    df["date"] = _parse_month_series(df["date"])
+    df = df[df["date"].notnull()].copy()
+    df.sort_values(by=["date"], inplace=True)
+    df = df.drop_duplicates(subset=ID_COLS, keep="last").reset_index(drop=True)
+    return df
 
-    # 4. 전처리 함수 정의
-    def preprocess(df):
-        df = df.sort_values(by='date')
-        df_grouped = df.groupby(['store_id', 'product_name'], group_keys=False)\
-                       .apply(lambda x: x.sort_values(by='date')).reset_index(drop=True)
+def _ensure_min_months(df: pd.DataFrame, cutoff_month: pd.Timestamp, min_months: int) -> pd.DataFrame:
+    hist = df[df["date"] <= cutoff_month].copy()
+    cnt = (
+        hist.groupby(["store_id", "product_code"])["date"]
+        .nunique()
+        .reset_index(name="n_months")
+    )
+    ok = cnt[cnt["n_months"] >= min_months][["store_id", "product_code"]]
+    return ok
 
-        df_grouped['month'] = df_grouped['date'].dt.month
-        df_grouped['year'] = df_grouped['date'].dt.year
-        df_grouped['day_of_week'] = df_grouped['date'].dt.dayofweek
+def _build_future_frame(df: pd.DataFrame, predict_month: pd.Timestamp, ok_pairs: pd.DataFrame) -> pd.DataFrame:
+    product_info = df[INFO_COLS].drop_duplicates("product_code")
+    future = ok_pairs.copy()
+    future["date"] = predict_month
+    future["stock_level"] = 0
+    future["sales_quantity"] = 0
+    future["expiration_days_left"] = 180
+    future[TARGET_COL] = 0
+    future = future.merge(product_info, on="product_code", how="left")
+    cols = ["date", "store_id", "product_code"] + INFO_COLS[1:] + NUM_COLS
+    return future[cols]
 
-        for i in range(1, 4):
-            df_grouped[f'sales_quantity_lag_{i}'] = df_grouped.groupby(['store_id', 'product_name'])['sales_quantity'].shift(i)
+def _preprocess_for_model(full_df: pd.DataFrame, predict_month: pd.Timestamp):
+    df = full_df.copy()
+    df["date"] = _parse_month_series(df["date"])
+    df = df[df["date"].notnull()].sort_values("date").reset_index(drop=True)
+    df["year"] = df["date"].dt.year
+    df["month"] = df["date"].dt.month
 
-        df_grouped['sales_quantity_rolling_mean_3'] = df_grouped.groupby(['store_id', 'product_name'])['sales_quantity'].transform(lambda x: x.rolling(window=3).mean())
-        df_grouped['sales_quantity_rolling_mean_6'] = df_grouped.groupby(['store_id', 'product_name'])['sales_quantity'].transform(lambda x: x.rolling(window=6).mean())
+    group_cols = ["store_id", "product_code"]
+    df = df.groupby(group_cols, group_keys=False).apply(lambda x: x.sort_values("date")).reset_index(drop=True)
 
-        df_grouped.fillna(0, inplace=True)
+    for i in range(1, 4):
+        df[f"sales_lag_{i}"] = df.groupby(group_cols)["sales_quantity"].shift(i)
+    df["sales_rolling_mean_3"] = df.groupby(group_cols)["sales_quantity"].transform(
+        lambda x: x.rolling(window=3, min_periods=1).mean()
+    )
 
-        train = df_grouped[df_grouped['date'] < next_month].copy()
-        test = df_grouped[df_grouped['date'] == next_month].copy()
+    df = df.fillna(0)
+    train = df[df["date"] < predict_month].copy()
+    test  = df[df["date"] == predict_month].copy()
 
-        for col in ['store_id', 'product_name']:
-            train = pd.get_dummies(train, columns=[col], prefix=col)
-            test = pd.get_dummies(test, columns=[col], prefix=col)
+    cat_cols = ["store_id", "product_code", "main_category", "sub_category", "unit"]
+    for c in cat_cols:
+        train = pd.get_dummies(train, columns=[c], prefix=c)
+        test  = pd.get_dummies(test,  columns=[c], prefix=c)
 
-        missing_cols = set(train.columns) - set(test.columns)
-        for col in missing_cols:
-            test[col] = 0
-        test = test[train.columns]
+    missing_cols = set(train.columns) - set(test.columns)
+    for c in missing_cols:
+        test[c] = 0
 
-        return train, test
+    drop_cols = [TARGET_COL, "date", "product_name"]
+    keep_cols = [c for c in train.columns if c not in drop_cols]
+    X_train, y_train = train[keep_cols], train[TARGET_COL]
+    X_test = test[keep_cols]
 
-    # 5. 학습 및 예측
-    train_data, test_data = preprocess(df_full)
-    X_train = train_data.drop(columns=['ordered_quantity', 'date'])
-    y_train = train_data['ordered_quantity']
-    X_test = test_data.drop(columns=['ordered_quantity', 'date'])
+    meta_cols = ["date", "store_id", "product_code", "product_name", "unit", "main_category", "sub_category"]
+    meta = test[meta_cols] if all([m in test.columns for m in meta_cols]) else df[df["date"] == predict_month][meta_cols]
+    return X_train, y_train, X_test, meta
 
+def _train_predict(X_train, y_train, X_test):
     preds = []
-    tscv = TimeSeriesSplit(n_splits=5)
-    for train_idx, val_idx in tscv.split(X_train):
-        X_t, X_val = X_train.iloc[train_idx], X_train.iloc[val_idx]
-        y_t, y_val = y_train.iloc[train_idx], y_train.iloc[val_idx]
-
-        model = lgb.LGBMRegressor(n_estimators=100, learning_rate=0.1, random_state=42)
-        model.fit(X_t, y_t, eval_set=[(X_val, y_val)])
+    val_scores = []
+    n_splits = min(5, max(2, len(X_train) // 50))
+    tscv = TimeSeriesSplit(n_splits=n_splits)
+    for tr_idx, va_idx in tscv.split(X_train):
+        model = lgb.LGBMRegressor(n_estimators=300, learning_rate=0.05, max_depth=-1, random_state=42)
+        model.fit(X_train.iloc[tr_idx], y_train.iloc[tr_idx],
+                  eval_set=[(X_train.iloc[va_idx], y_train.iloc[va_idx])])
         preds.append(model.predict(X_test))
+        val_pred = model.predict(X_train.iloc[va_idx])
+        val_scores.append((r2_score(y_train.iloc[va_idx], val_pred),
+                           mean_absolute_error(y_train.iloc[va_idx], val_pred)))
+    y_pred = np.mean(preds, axis=0) if preds else lgb.LGBMRegressor().fit(X_train, y_train).predict(X_test)
+    r2_avg = np.mean([x[0] for x in val_scores])
+    mae_avg = np.mean([x[1] for x in val_scores])
+    return np.maximum(0, np.rint(y_pred).astype(int)), r2_avg, mae_avg
 
-    y_pred = sum(preds) / len(preds)
-    test_data['predicted_order'] = y_pred.astype(int)
+# ====== 게이트웨이에서 호출 ======
+def predict_order(file_storage):
+    if file_storage is None:
+        return jsonify({"success": False, "data": None, "error": "CSV file is missing"}), 400
 
-    # 6. 결과 반환
-    original_df = df_full.copy()
-    result_base = original_df[original_df['date'] == next_month][['date', 'store_id', 'product_name']].reset_index(drop=True)
-    result = pd.concat([result_base, test_data[['predicted_order']].reset_index(drop=True)], axis=1)
+    history = _load_history()
+    try:
+        upload_df = pd.read_csv(file_storage)
+    except Exception as e:
+        return jsonify({"success": False, "data": None, "error": f"failed to read uploaded csv: {e}"}), 400
+
+    required = set(["date","store_id","product_code","product_name","main_category","sub_category","unit",
+                    "stock_level","sales_quantity","expiration_days_left","ordered_quantity"])
+    missing = required - set(upload_df.columns)
+    if missing:
+        return jsonify({"success": False, "data": None, "error": f"missing columns in upload: {sorted(list(missing))}"}), 400
+
+    try:
+        merged = _dedupe_concat(history, upload_df)
+    except Exception as e:
+        return jsonify({"success": False, "data": None, "error": f"failed to concat/dedupe: {e}"}), 500
+    if merged.empty:
+        return jsonify({"success": False, "data": None, "error": "no data after merge"}), 400
+
+    upload_month = _parse_month_series(upload_df["date"]).max()
+    if pd.isna(upload_month):
+        return jsonify({"success": False, "data": None, "error": "invalid upload month"}), 400
+    predict_month = (upload_month + pd.DateOffset(months=1)).replace(day=1)
+
+    min_months = _get_min_months()
+    ok_pairs = _ensure_min_months(merged, cutoff_month=upload_month, min_months=min_months)
+    if ok_pairs.empty:
+        return jsonify({"success": False, "data": None,
+                        "error": f"At least {min_months} months of history required for each (store_id, product_code)."}), 400
+
+    future_df = _build_future_frame(merged, predict_month, ok_pairs)
+    full_df = pd.concat([merged, future_df], ignore_index=True)
+
+    try:
+        X_train, y_train, X_test, meta = _preprocess_for_model(full_df, predict_month=predict_month)
+        if len(X_train) == 0 or len(X_test) == 0:
+            return jsonify({"success": False, "data": None, "error": "Not enough rows to train or predict"}), 400
+        y_pred, r2_score_avg, mae_score_avg = _train_predict(X_train, y_train, X_test)
+    except Exception as e:
+        return jsonify({"success": False, "data": None, "error": f"model failure: {e}"}), 500
+
+    try:
+        save_df = merged.copy()
+        save_df["date"] = save_df["date"].dt.strftime("%Y-%m")
+        save_df.to_csv(HISTORY_CSV_PATH, index=False)
+    except Exception as e:
+        print(f"[WARN] history save failed: {e}")
+
+    meta = meta.reset_index(drop=True)
+    meta["predicted_order"] = y_pred
+    results = []
+    for _, r in meta.iterrows():
+        results.append({
+            "product_name": r.get("product_name"),
+            "product_code": r.get("product_code"),
+            "predicted_quantity": int(r.get("predicted_order", 0)),
+            "store_id": r.get("store_id"),
+            "unit": r.get("unit"),
+            "main_category": r.get("main_category"),
+            "sub_category": r.get("sub_category")
+        })
 
     return jsonify({
         "success": True,
-        "data": result.to_dict(orient="records"),
+        "model_score": {
+            "r2": round(r2_score_avg, 4),
+            "mae": round(mae_score_avg, 2)
+        },
+        "data": results,
         "error": None
-    }), 200
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    }), 200  
