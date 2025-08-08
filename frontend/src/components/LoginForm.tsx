@@ -1,5 +1,5 @@
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
-import { Button, Divider, Flex, Form, Input, Space } from 'antd';
+import { Button, Divider, Flex, Form, Input } from 'antd';
 import { Link } from 'react-router-dom';
 import type { UserRole } from '../types/profile.type';
 
@@ -32,33 +32,37 @@ export default function LoginForm({ role, form, handleSubmit }: LoginFormProps) 
           로그인
         </Button>
 
-        <Space align="center" split={<Divider type="vertical" />}>
+        <Flex justify="center" align="center" gap="small">
           {role === 'BRANCH' ? (
             <>
-              <Link to="/register" style={{ color: 'black' }}>
+              <Link to="/register" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 회원가입
               </Link>
-              <Link to="" style={{ color: 'black' }}>
+              <Divider type="vertical" />
+              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 아이디 찾기
               </Link>
-              <Link to="" style={{ color: 'black' }}>
+              <Divider type="vertical" />
+              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 비밀번호 찾기
               </Link>
             </>
           ) : (
             <>
-              <Link to="/hq-register" style={{ color: 'black' }}>
+              <Link to="/hq-register" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 회원가입
               </Link>
-              <Link to="" style={{ color: 'black' }}>
+              <Divider type="vertical" />
+              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 아이디 찾기
               </Link>
-              <Link to="" style={{ color: 'black' }}>
+              <Divider type="vertical" />
+              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 비밀번호 찾기
               </Link>
             </>
           )}
-        </Space>
+        </Flex>
       </Flex>
     </Form>
   );
