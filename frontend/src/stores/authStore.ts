@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { instance } from '../api/api';
 import type { LoginRequest } from '../types/auth.type';
 import {
+  PHARMACY_STATUS,
   USER_ROLE,
   type Admin,
   type Pharmacy,
@@ -42,12 +43,22 @@ export const useAuthStore = create<AuthState>()(
           console.log('🧪 로그인 응답:', res.data);
           if (res.data.success) {
             const { user, profile, accessToken } = res.data.data;
+
+            if (role === USER_ROLE.BRANCH) {
+              if (profile.status === PHARMACY_STATUS.PENDING) {
+                throw new Error('승인 대기 중인 계정입니다. 관리자에게 문의하세요.');
+              }
+              if (profile.status === PHARMACY_STATUS.REJECTED) {
+                throw new Error('승인 거절된 계정입니다. 관리자에게 문의하세요.');
+              }
+            }
+
             set({ isAuthenticated: true, user, profile, accessToken });
             localStorage.setItem('accessToken', accessToken);
           }
         } catch (e: any) {
           console.error('로그인 실패:', e);
-          throw new Error(e.response?.data?.message || '로그인 중 오류가 발생했습니다.');
+          throw new Error(e.message || '로그인 중 오류가 발생했습니다.');
         }
       },
 

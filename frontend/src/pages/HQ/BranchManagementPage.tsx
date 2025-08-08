@@ -1,301 +1,239 @@
-import { EyeOutlined } from '@ant-design/icons';
 import {
   Button,
-  Card,
-  Col,
   Descriptions,
+  Drawer,
   Input,
-  Modal,
-  Row,
+  Select,
   Space,
-  Statistic,
   Table,
   Tag,
   Typography,
   message,
+  type TableProps,
 } from 'antd';
-import { useState } from 'react';
+import dayjs from 'dayjs';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { instance } from '../../api/api';
+import type { RegRequestResponse } from '../../types/permission.type';
+import { PHARMACY_STATUS } from '../../types/profile.type';
 
-const { Title } = Typography;
-
-const dummyData = [
-  {
-    key: '1',
-    branchCode: 'BR001',
-    branchName: '유성점',
-    pharmacist: '김약사',
-    contact: '010-1111-2222',
-    balance: 150000,
-    address: '대전 유성구 대학로 99',
-    openedAt: '2023-01-15',
-    lastCharged: '2025-07-20',
-    status: '운영 중',
-    manager: '박대리',
-    businessHours: '09:00 ~ 18:00',
-    bank: '농협 123-4567-8901',
-    note: '거래 안정적',
-  },
-  {
-    key: '2',
-    branchCode: 'BR002',
-    branchName: 'Kt점',
-    pharmacist: '최진호',
-    contact: '010-2222-3333',
-    balance: 200000,
-    address: '서울 강남구 테헤란로 123',
-    openedAt: '2022-09-10',
-    lastCharged: '2025-07-10',
-    status: '휴점',
-    manager: '이대리',
-    businessHours: '10:00 ~ 17:00',
-    bank: '신한 110-5555-1234',
-    note: '리뉴얼 예정',
-  },
-  {
-    key: '3',
-    branchCode: 'BR003',
-    branchName: '신규점',
-    pharmacist: '이약사',
-    contact: '010-3333-4444',
-    balance: 0,
-    address: '부산 해운대구 센텀로 55',
-    openedAt: '',
-    lastCharged: '',
-    status: '요청됨',
-    manager: '',
-    businessHours: '',
-    bank: '',
-    note: '',
-  },
-];
+const PAGE_SIZE = 10;
 
 export default function BranchManagementPage() {
-  const [data, setData] = useState(dummyData);
-  const [searchText, setSearchText] = useState('');
-  const [selectedBranch, setSelectedBranch] = useState<any>(null);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
-  const [selectedRejectBranch, setSelectedRejectBranch] = useState<any>(null);
+  const [messageApi, contextHolder] = message.useMessage();
+  const navigate = useNavigate();
 
-  // 상태별 통계
-  const totalCount = data.length;
-  const activeCount = data.filter((b) => b.status === '운영 중').length;
-  const pausedCount = data.filter((b) => b.status === '휴점').length;
-  const requestedCount = data.filter((b) => b.status === '요청됨').length;
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [search, setSearch] = useState({
+    field: 'pharmacyId' as 'pharmacyId' | 'pharmacyName',
+    keyword: '',
+    appliedField: 'pharmacyId' as 'pharmacyId' | 'pharmacyName',
+    appliedKeyword: '',
+  });
+  const [selectedBranch, setSelectedBranch] = useState<RegRequestResponse>();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [requests, setRequests] = useState<RegRequestResponse[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  const filteredData = data.filter(
-    (item) =>
-      item.branchName.includes(searchText) ||
-      item.pharmacist.includes(searchText) ||
-      item.branchCode.includes(searchText),
-  );
+  const fetchRequests = async () => {
+    setLoading(true);
+    try {
+      const res = await instance.get('/admin/pharmacies/requests', {
+        params: {
+          page: currentPage - 1,
+          pageSize: PAGE_SIZE,
+        },
+      });
+
+      // LOG: 테스트용 로그
+      console.log('✨ 약국 등록 요청 목록 로딩:', res.data);
+
+      if (res.data.success) {
+        const { data, totalElements } = res.data;
+        setRequests(data || []);
+        setTotal(totalElements || 0);
+      }
+    } catch (e: any) {
+      console.error('약국 등록 요청 목록 로딩 실패:', e);
+      messageApi.error(
+        e.response?.data?.message || '약국 등록 요청 목록 로딩 중 오류가 발생했습니다.',
+      );
+      setRequests([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, [currentPage, search.appliedKeyword, search.appliedField]);
 
   const getStatusTag = (status: string) => {
     const color =
-      status === '운영 중'
-        ? 'green'
-        : status === '휴점'
-          ? 'orange'
-          : status === '요청됨'
-            ? 'blue'
-            : 'default';
+      status === PHARMACY_STATUS.ACTIVE
+        ? 'success'
+        : status === PHARMACY_STATUS.PENDING
+          ? 'processing'
+          : 'default';
     return <Tag color={color}>{status}</Tag>;
   };
 
-  const openDetailModal = (record: any) => {
-    setSelectedBranch(record);
-    setModalVisible(true);
-  };
+  const handleApprove = async (record: RegRequestResponse) => {
+    try {
+      const res = await instance.post(`/admin/pharmacies/${record.request.pharmacyId}/approve`);
 
-  const handleApprove = (branch: any) => {
-    const updated = data.map((b) => (b.key === branch.key ? { ...b, status: '운영 중' } : b));
-    setData(updated);
-    message.success('가맹점 승인 완료');
-  };
+      // LOG: 테스트용 로그
+      console.log('✨ 요청 승인 처리 응답:', res.data);
 
-  const showRejectModal = (branch: any) => {
-    setSelectedRejectBranch(branch);
-    setRejectReason('');
-    setIsRejectModalVisible(true);
-  };
-
-  const handleRejectConfirm = () => {
-    if (!rejectReason.trim()) {
-      message.error('거절 사유를 입력해주세요.');
-      return;
+      if (res.data.success) {
+        messageApi.success('요청이 승인 처리되었습니다.');
+        fetchRequests();
+        setDrawerOpen(false);
+      }
+    } catch (e: any) {
+      console.error('요청 승인 처리 실패:', e);
+      messageApi.error(e.response?.data?.message || '요청 승인 처리 중 오류가 발생했습니다.');
     }
-
-    const updated = data.map((b) =>
-      b.key === selectedRejectBranch.key ? { ...b, status: '거절됨', note: rejectReason } : b,
-    );
-    setData(updated);
-    setIsRejectModalVisible(false);
-    message.success('거절 처리 완료');
   };
 
-  const handleRejectCancel = () => {
-    setIsRejectModalVisible(false);
-    setRejectReason('');
+  const handleReject = async (record: RegRequestResponse) => {
+    try {
+      const res = await instance.post(`/admin/pharmacies/${record.request.pharmacyId}/reject`);
+
+      // LOG: 테스트용 로그
+      console.log('✨ 요청 거절 처리 응답:', res.data);
+
+      if (res.data.success) {
+        messageApi.success('요청이 거절 처리되었습니다.');
+        fetchRequests();
+        setDrawerOpen(false);
+      }
+    } catch (e: any) {
+      console.error('요청 거절 처리 실패:', e);
+      messageApi.error(e.response?.data?.message || '요청 거절 처리 중 오류가 발생했습니다.');
+    }
   };
 
-  const columns = [
+  const tableColumns: TableProps<RegRequestResponse>['columns'] = [
     {
-      title: '지점코드',
-      dataIndex: 'branchCode',
-      key: 'branchCode',
+      title: '약국 코드',
+      dataIndex: ['pharmacy', 'pharmacyId'],
+      key: 'pharmacy.pharmacyId',
     },
     {
-      title: '지점명',
-      dataIndex: 'branchName',
-      key: 'branchName',
-      render: (text: string, record: any) => (
-        <Button type="link" icon={<EyeOutlined />} onClick={() => openDetailModal(record)}>
-          {text}
-        </Button>
-      ),
+      title: '약국명',
+      dataIndex: ['pharmacy', 'pharmacyName'],
+      key: 'pharmacy.pharmacyName',
     },
-    { title: '약사명', dataIndex: 'pharmacist', key: 'pharmacist' },
-    { title: '연락처', dataIndex: 'contact', key: 'contact' },
     {
-      title: '보유금액',
-      dataIndex: 'balance',
-      key: 'balance',
-      render: (val: number) => `${val.toLocaleString()}원`,
-      sorter: (a: any, b: any) => a.balance - b.balance,
+      title: '대표자명',
+      dataIndex: ['pharmacy', 'representativeName'],
+      key: 'pharmacy.representativeName',
     },
+    { title: '연락처', dataIndex: ['pharmacy', 'contact'], key: 'pharmacy.contact' },
     {
       title: '상태',
-      dataIndex: 'status',
-      key: 'status',
-      filters: [
-        { text: '운영 중', value: '운영 중' },
-        { text: '휴점', value: '휴점' },
-        { text: '요청됨', value: '요청됨' },
-        { text: '거절됨', value: '거절됨' },
-      ],
-      onFilter: (value: any, record: any) => record.status === value,
-      render: getStatusTag,
-    },
-    {
-      title: '최근 충전일',
-      dataIndex: 'lastCharged',
-      key: 'lastCharged',
-      sorter: (a: any, b: any) =>
-        new Date(a.lastCharged).getTime() - new Date(b.lastCharged).getTime(),
-    },
-    {
-      title: '충전',
-      key: 'charge',
-      render: (_: any, record: any) =>
-        record.status === '운영 중' || record.status === '휴점' ? (
-          <Button type="primary">충전</Button>
-        ) : null,
-    },
-    {
-      title: '관리',
-      key: 'actions',
-      render: (_: any, record: any) =>
-        record.status === '요청됨' ? (
-          <Space>
-            <Button onClick={() => handleApprove(record)}>승인</Button>
-            <Button danger onClick={() => showRejectModal(record)}>
-              거절
-            </Button>
-          </Space>
-        ) : null,
+      key: 'request.status',
+      render: (_: any, record: RegRequestResponse) => getStatusTag(record.request.status),
     },
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Title level={2}>가맹점 관리</Title>
+    <>
+      {contextHolder}
+      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+        가맹점 관리
+      </Typography.Title>
 
-      {/* 카드 대시보드 */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic title="총 가맹점 수" value={totalCount} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic title="운영 중" value={activeCount} valueStyle={{ color: 'green' }} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic title="휴점" value={pausedCount} valueStyle={{ color: 'orange' }} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic title="요청됨" value={requestedCount} valueStyle={{ color: 'blue' }} />
-          </Card>
-        </Col>
-      </Row>
+      <Space.Compact>
+        <Select
+          value={search.field}
+          onChange={(value) =>
+            setSearch((prev) => ({ ...prev, field: value as 'pharmacyId' | 'pharmacyName' }))
+          }
+          options={[
+            { value: 'pharmacyId', label: '약국 코드' },
+            { value: 'pharmacyName', label: '약국명' },
+          ]}
+        />
+        <Input.Search
+          allowClear
+          value={search.keyword}
+          placeholder="검색어 입력"
+          onChange={(e) => setSearch((prev) => ({ ...prev, keyword: e.target.value }))}
+          onSearch={() => fetchRequests()}
+        />
+      </Space.Compact>
 
-      {/* 검색창 */}
-      <Input.Search
-        placeholder="지점명, 약사명, 지점코드로 검색"
-        value={searchText}
-        onChange={(e) => setSearchText(e.target.value)}
-        style={{ width: 350, marginBottom: 16 }}
-        allowClear
-      />
-
-      {/* 테이블 */}
       <Table
-        columns={columns}
-        dataSource={filteredData}
-        pagination={{ pageSize: 5 }}
-        rowKey="branchCode"
+        columns={tableColumns}
+        dataSource={requests}
+        loading={loading}
+        rowKey={(record) => record.request.id}
+        onRow={(record) => ({
+          onClick: () => {
+            setSelectedBranch(record);
+            setDrawerOpen(true);
+          },
+        })}
+        pagination={{
+          position: ['bottomCenter'],
+          pageSize: PAGE_SIZE,
+          total: total,
+          current: currentPage,
+          onChange: (page) => setCurrentPage(page),
+        }}
       />
 
-      {/* 상세 모달 */}
-      <Modal
-        title={`${selectedBranch?.branchName} 상세 정보`}
-        open={modalVisible}
-        onCancel={() => setModalVisible(false)}
-        footer={null}
+      <Drawer
+        title={`${selectedBranch?.pharmacy.pharmacyName} 상세 정보`}
+        placement="right"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        width={500}
       >
         {selectedBranch && (
-          <Descriptions bordered column={1} size="middle">
-            <Descriptions.Item label="약사명">{selectedBranch.pharmacist}</Descriptions.Item>
-            <Descriptions.Item label="연락처">{selectedBranch.contact}</Descriptions.Item>
-            <Descriptions.Item label="주소">{selectedBranch.address}</Descriptions.Item>
-            <Descriptions.Item label="개설일">{selectedBranch.openedAt}</Descriptions.Item>
-            <Descriptions.Item label="운영시간">{selectedBranch.businessHours}</Descriptions.Item>
-            <Descriptions.Item label="계좌정보">{selectedBranch.bank}</Descriptions.Item>
-            <Descriptions.Item label="보유금액">
-              {selectedBranch.balance.toLocaleString()}원
-            </Descriptions.Item>
-            <Descriptions.Item label="최근 충전일">{selectedBranch.lastCharged}</Descriptions.Item>
-            <Descriptions.Item label="상태">
-              {getStatusTag(selectedBranch.status)}
-            </Descriptions.Item>
-            <Descriptions.Item label="비고">{selectedBranch.note}</Descriptions.Item>
-            <Descriptions.Item label="본사 담당자">{selectedBranch.manager}</Descriptions.Item>
-          </Descriptions>
-        )}
-      </Modal>
+          <>
+            <Descriptions bordered column={1} size="middle">
+              <Descriptions.Item label="대표자명">
+                {selectedBranch.pharmacy.representativeName}
+              </Descriptions.Item>
+              <Descriptions.Item label="사업자등록번호">
+                {selectedBranch.pharmacy.bizRegNo}
+              </Descriptions.Item>
+              <Descriptions.Item label="주소">{`${selectedBranch.pharmacy.address} ${selectedBranch.pharmacy.detailAddress}`}</Descriptions.Item>
+              <Descriptions.Item label="연락처">
+                {selectedBranch.pharmacy.contact}
+              </Descriptions.Item>
+              <Descriptions.Item label="요청 일시">
+                {dayjs(selectedBranch.request.requestedAt).format('YYYY년 MM월 DD일 HH시 mm분')}
+              </Descriptions.Item>
+              <Descriptions.Item label="검토 일시">
+                {selectedBranch.request.reviewedAt
+                  ? dayjs(selectedBranch.request.reviewedAt).format('YYYY년 MM월 DD일 HH시 mm분')
+                  : '미검토'}
+              </Descriptions.Item>
+              <Descriptions.Item label="상태">
+                {getStatusTag(selectedBranch.request.status)}
+              </Descriptions.Item>
+            </Descriptions>
 
-      {/* 거절 사유 입력 모달 */}
-      <Modal
-        title="거절 사유 입력"
-        open={isRejectModalVisible}
-        onOk={handleRejectConfirm}
-        onCancel={handleRejectCancel}
-        okText="확인"
-        cancelText="취소"
-      >
-        <Input.TextArea
-          value={rejectReason}
-          onChange={(e) => setRejectReason(e.target.value)}
-          placeholder="거절 사유를 입력해주세요"
-          rows={4}
-        />
-      </Modal>
-    </div>
+            {selectedBranch && selectedBranch.request.status === 'PENDING' && (
+              <Space style={{ marginTop: 24 }}>
+                <Button type="primary" onClick={() => handleApprove(selectedBranch)}>
+                  승인
+                </Button>
+                <Button danger onClick={() => handleReject(selectedBranch)}>
+                  거절
+                </Button>
+              </Space>
+            )}
+          </>
+        )}
+      </Drawer>
+    </>
   );
 }
