@@ -10,7 +10,7 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/admin/returns")
+@RequestMapping("/api/admin/returns")
 public class AdminReturnController {
 
     private final ReturnService returnService;

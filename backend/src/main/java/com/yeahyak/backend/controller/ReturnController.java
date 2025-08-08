@@ -13,7 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/branch/returns")
+@RequestMapping("/api/branch/returns")
 public class ReturnController {
 
     private final ReturnService returnService;
