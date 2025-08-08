@@ -29,7 +29,7 @@ export default function LoginPage() {
     try {
       await login({ ...values, role: activeTab });
     } catch (e: any) {
-      messageApi.error(e.message);
+      messageApi.error({ content: e.message, duration: 5 });
     }
   };
 
