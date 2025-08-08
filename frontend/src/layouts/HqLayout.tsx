@@ -13,9 +13,8 @@ import {
   TagsFilled,
   UserOutlined,
 } from '@ant-design/icons';
-import { ConfigProvider, Dropdown, Flex, Layout, Menu, Typography } from 'antd';
+import { ConfigProvider, Divider, Dropdown, Flex, Layout, Menu, Typography } from 'antd';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import Chatbot from '../components/Chatbot';
 import { useAuthStore } from '../stores/authStore';
 import { USER_ROLE, type Admin } from '../types/profile.type';
 const { Sider, Header, Content, Footer } = Layout;
@@ -87,6 +86,12 @@ export default function HqLayout() {
   const user = useAuthStore((state) => state.user);
   const profile = useAuthStore((state) => state.profile);
   const admin = user?.role === USER_ROLE.ADMIN ? (profile as Admin) : null;
+
+  // 이용약관과 개인정보처리방침 새 창으로 열기
+  const openWindow = (type: 'terms' | 'privacy') => {
+    const url = type === 'terms' ? '/terms.html' : '/privacy.html';
+    window.open(url, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+  };
 
   // 아바타 메뉴 아이템
   const avatarMenuItems = {
@@ -174,11 +179,21 @@ export default function HqLayout() {
             <Content style={{ margin: '24px', padding: '24px' }}>
               <Outlet />
             </Content>
-            <Footer style={{ textAlign: 'center' }}>© 2025 Team yeahyak</Footer>
+            <Footer style={{ textAlign: 'center' }}>
+              © 2025 Team yeahyak
+              <Divider type="vertical" />
+              <Typography.Link onClick={() => openWindow('terms')} style={{ color: '#000000' }}>
+                이용약관
+              </Typography.Link>
+              <Divider type="vertical" />
+              <Typography.Link onClick={() => openWindow('privacy')} style={{ color: '#000000' }}>
+                개인정보처리방침
+              </Typography.Link>
+            </Footer>
           </Layout>
         </Layout>
       </Layout>
-      <Chatbot />
+      {/* <Chatbot /> */}
     </ConfigProvider>
   );
 }
