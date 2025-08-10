@@ -12,7 +12,7 @@ import {
   Typography,
   type TabsProps,
 } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { instance } from '../../../api/api';
 import ProductCardGrid from '../../../components/ProductCardGrid';
@@ -49,42 +49,65 @@ export default function ProductListPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // TODO: API 연동 확인
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const res = await instance.get('/products/filter', {
-        params: {
-          mainCategory: activeTab,
-          subCategory: activeSubCategory === '전체' ? undefined : activeSubCategory,
-          searchKeyword: search.appliedKeyword,
-          page: currentPage - 1,
-          size: PAGE_SIZE,
-        },
-      });
-
-      // LOG: 테스트용 로그
-      console.log('✨ 제품 목록 로딩 응답:', res.data);
-
-      if (res.data.success) {
-        const { data, totalElements, currentPage: serverPage } = res.data;
-        setProducts(data || []);
-        setTotal(totalElements || 0);
-        setCurrentPage(serverPage + 1);
-      }
-    } catch (e: any) {
-      console.error('제품 목록 로딩 실패:', e);
-      messageApi.error(e.response?.data?.message || '제품 목록 로딩 중 오류가 발생했습니다.');
-      setProducts([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // TODO: API 연동 확인 (버전 A: 전체 조회 한 번만)
   useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const res = await instance.get('/products'); // GET /api/products
+        console.log('✨ 제품 목록 로딩 응답:', res.data);
+
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          setProducts(res.data.data);
+        } else {
+          setProducts([]);
+        }
+      } catch (e: any) {
+        console.error('제품 목록 로딩 실패:', e);
+        messageApi.error(e.response?.data?.message || '제품 목록 로딩 중 오류가 발생했습니다.');
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchProducts();
-  }, [activeTab, activeSubCategory, currentPage, search.appliedKeyword, search.appliedField]);
+  }, []); // 🔹 최초 1회만 호출
+
+  // ✅ 1) 필터 + 검색 결과 계산 (프론트에서 처리)
+  const filteredProducts = useMemo(() => {
+    let arr = products;
+
+    // 메인 카테고리
+    if (activeTab) {
+      arr = arr.filter((p) => p.mainCategory === activeTab);
+    }
+    // 서브 카테고리
+    if (activeSubCategory !== '전체') {
+      arr = arr.filter((p) => p.subCategory === activeSubCategory);
+    }
+    // 검색
+    const kw = search.appliedKeyword.trim();
+    if (kw) {
+      arr = arr.filter((p) => {
+        const target =
+          search.appliedField === 'productName' ? p.productName : p.manufacturer;
+        return (target ?? '').includes(kw);
+      });
+    }
+    return arr;
+  }, [products, activeTab, activeSubCategory, search.appliedField, search.appliedKeyword]);
+
+  // ✅ 2) 페이지용 잘라내기
+  const pagedProducts = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredProducts.slice(start, start + PAGE_SIZE);
+  }, [filteredProducts, currentPage]);
+
+  // ✅ 3) total 갱신 (필터/검색 후 개수)
+  useEffect(() => {
+    setTotal(filteredProducts.length);
+  }, [filteredProducts]);
 
   const handleTabChange = (key: string) => {
     setActiveTab(key as ProductMainCategory);
@@ -96,11 +119,13 @@ export default function ProductListPage() {
       appliedField: 'productName',
       appliedKeyword: '',
     });
+    // NOTE: 버전 A에서는 재조회하지 않음(전체 목록 고정)
   };
 
   const handleSubCategoryChange = (value: string) => {
     setActiveSubCategory(value as ProductSubCategoryWithAll);
     setCurrentPage(1);
+    // NOTE: 버전 A에서는 재조회하지 않음(전체 목록 고정)
   };
 
   const handleSearch = () => {
@@ -110,6 +135,7 @@ export default function ProductListPage() {
       appliedKeyword: prev.keyword.trim(),
     }));
     setCurrentPage(1);
+    // NOTE: 버전 A에서는 재조회하지 않음(전체 목록 고정)
   };
 
   const tabsItems: TabsProps['items'] = MAIN_CATEGORIES.map((type) => {
@@ -136,7 +162,10 @@ export default function ProductListPage() {
               <Select
                 value={search.field}
                 onChange={(value) =>
-                  setSearch((prev) => ({ ...prev, field: value as 'productName' | 'manufacturer' }))
+                  setSearch((prev) => ({
+                    ...prev,
+                    field: value as 'productName' | 'manufacturer',
+                  }))
                 }
                 options={[
                   { value: 'productName', label: '제품명' },
@@ -151,7 +180,8 @@ export default function ProductListPage() {
               />
             </Space.Compact>
           </Flex>
-          {loading ? <Skeleton active /> : <ProductCardGrid products={products} />}
+
+          {loading ? <Skeleton active /> : <ProductCardGrid products={pagedProducts} />}
         </>
       ),
     };
@@ -165,7 +195,7 @@ export default function ProductListPage() {
           제품 목록
         </Typography.Title>
 
-        {user?.role === USER_ROLE.ADMIN && (
+        {true && (
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -177,6 +207,7 @@ export default function ProductListPage() {
       </Flex>
 
       <Tabs activeKey={activeTab} onChange={handleTabChange} items={tabsItems} />
+
       <Pagination
         align="center"
         current={currentPage}

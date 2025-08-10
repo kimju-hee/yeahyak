@@ -27,6 +27,11 @@ export default function ProductDetailPage() {
 
   const [product, setProduct] = useState<ProductResponse>();
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false); // 🔒 중복 클릭 방지
+
+  // 🔧 개발용: 로그인 없이 ADMIN 버튼 강제 노출
+  const DEV_FORCE_ADMIN = true;
+  const showAdminButtons = DEV_FORCE_ADMIN || user?.role === USER_ROLE.ADMIN;
 
   // TODO: API 연동 확인
   const fetchProduct = async () => {
@@ -35,8 +40,11 @@ export default function ProductDetailPage() {
       const res = await instance.get(`/products/${id}`);
       // LOG: 테스트용 로그
       console.log('✨ 제품 정보 로딩 응답:', res.data);
-      if (res.data.success) {
-        const product = res.data.data as ProductResponse;
+
+      if (res.data?.success) {
+        const data = res.data.data;
+        const p = Array.isArray(data) ? (data[0] as ProductResponse) : (data as ProductResponse);
+        setProduct(p); // ✅ 상태 반영
       }
     } catch (e: any) {
       console.error('제품 정보 로딩 실패:', e);
@@ -48,19 +56,34 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     fetchProduct();
-  }, []);
+  }, [id]); // 필요시 [id]로 바꿔도 됨
 
   const handleDelete = async () => {
+    if (deleting) return;
     try {
-      if (window.confirm('정말 삭제하시겠습니까?')) {
-        const res = await instance.delete(`/products/${id}`);
-        // LOG: 테스트용 로그
-        console.log('✨ 제품 삭제 응답:', res.data);
-        navigate('/hq/products');
+      if (!window.confirm('정말 삭제하시겠습니까?')) return;
+
+      setDeleting(true);
+      const res = await instance.delete(`/products/${id}`);
+      // LOG: 테스트용 로그
+      console.log('✨ 제품 삭제 응답:', res.data);
+
+      if (res.data?.success) {
+        // 명세: data: ["삭제되었습니다."]
+        const msg =
+          (Array.isArray(res.data.data) && res.data.data[0]) ||
+          res.data.message ||
+          '삭제되었습니다.';
+        messageApi.success(msg);
+        navigate('/hq/products'); // ✅ 목록으로 이동
+      } else {
+        messageApi.error(res.data?.message || '삭제에 실패했습니다.');
       }
     } catch (e: any) {
       console.error('제품 삭제 실패:', e);
       messageApi.error(e.response?.data?.message || '제품 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -75,26 +98,10 @@ export default function ProductDetailPage() {
   };
 
   const descriptionsItems: DescriptionsProps['items'] = [
-    {
-      key: 'manufacturer',
-      label: '제조사',
-      children: product?.manufacturer,
-    },
-    {
-      key: 'productCode',
-      label: '보험코드',
-      children: product?.productCode,
-    },
-    {
-      key: 'subCategory',
-      label: '구분',
-      children: product?.subCategory,
-    },
-    {
-      key: 'unit',
-      label: '단위',
-      children: product?.unit,
-    },
+    { key: 'manufacturer', label: '제조사', children: product?.manufacturer },
+    { key: 'productCode', label: '보험코드', children: product?.productCode },
+    { key: 'subCategory', label: '구분', children: product?.subCategory },
+    { key: 'unit', label: '단위', children: product?.unit },
     {
       key: 'unitPrice',
       label: '판매가',
@@ -111,10 +118,10 @@ export default function ProductDetailPage() {
           size="large"
           shape="circle"
           icon={<LeftOutlined />}
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/hq/products')}
         />
         <Typography.Title level={3} style={{ marginBottom: '24px' }}>
-          제품 상세
+          제품 목록
         </Typography.Title>
       </Space>
 
@@ -122,12 +129,21 @@ export default function ProductDetailPage() {
         <Flex wrap justify="space-between" gap={36}>
           <div style={{ flex: 1 }}>
             {/* TODO: 제품 이미지 확인 */}
-            <Image
-              preview={false}
-              src="https://developers.elementor.com/docs/assets/img/elementor-placeholder-image.png"
-              alt="제품명"
-              style={{ objectFit: 'contain' }}
-            />
+            {product?.productImgUrl && product.productImgUrl.trim() !== '' ? (
+              <Image
+                preview={false}
+                src={product.productImgUrl} // ✅ 서버에서 온 base64 사용
+                alt={product?.productName || '제품 이미지'}
+                style={{ width: '100%', maxHeight: 220, objectFit: 'contain' }}
+              />
+            ) : (
+              <Image
+                preview={false}
+                src="https://developers.elementor.com/docs/assets/img/elementor-placeholder-image.png"
+                alt="이미지 없음"
+                style={{ width: '100%', maxHeight: 220, objectFit: 'contain' }}
+              />
+            )}
           </div>
 
           <Flex vertical flex={1}>
@@ -138,8 +154,8 @@ export default function ProductDetailPage() {
                   product?.mainCategory === PRODUCT_MAIN_CATEGORY.전문의약품
                     ? 'geekblue'
                     : product?.mainCategory === PRODUCT_MAIN_CATEGORY.일반의약품
-                      ? 'magenta'
-                      : 'purple'
+                    ? 'magenta'
+                    : 'purple'
                 }
               >
                 {product?.mainCategory}
@@ -148,12 +164,12 @@ export default function ProductDetailPage() {
 
             <Descriptions column={1} items={descriptionsItems} style={{ margin: '24px 0' }} />
 
-            {user?.role === USER_ROLE.ADMIN ? (
+            {showAdminButtons ? (
               <Space wrap>
                 <Button type="primary" onClick={() => navigate(`/hq/products/${id}/edit`)}>
                   수정
                 </Button>
-                <Button type="text" danger onClick={handleDelete}>
+                <Button type="text" danger loading={deleting} onClick={handleDelete}>
                   삭제
                 </Button>
               </Space>

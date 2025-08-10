@@ -1,18 +1,7 @@
 import { LeftOutlined, UploadOutlined } from '@ant-design/icons';
 import {
-  Button,
-  Card,
-  Divider,
-  Flex,
-  Form,
-  Image,
-  Input,
-  InputNumber,
-  message,
-  Select,
-  Space,
-  Typography,
-  Upload,
+  Button, Card, Divider, Flex, Form, Image, Input, InputNumber,
+  message, Select, Space, Typography, Upload
 } from 'antd';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import { useEffect, useState } from 'react';
@@ -42,38 +31,44 @@ export default function HqProductRegisterPage() {
   const [imgList, setImgList] = useState<UploadFile[]>([]);
   const [pdfList, setPdfList] = useState<UploadFile[]>([]);
 
-  const typeOptions = Object.keys(PRODUCT_MAIN_CATEGORY).map((type) => ({
-    value: type,
-    label: PRODUCT_MAIN_CATEGORY[type as ProductMainCategory],
-  }));
   const watchedType = Form.useWatch('mainCategory', form);
+
+  const typeOptions = Object.keys(PRODUCT_MAIN_CATEGORY).map((key) => ({
+    value: key,
+    label: PRODUCT_MAIN_CATEGORY[key as ProductMainCategory],
+  }));
+
   const subCategoryOptions =
-    watchedType && PRODUCT_SUB_CATEGORY[watchedType as ProductMainCategory]
-      ? PRODUCT_SUB_CATEGORY[watchedType as ProductMainCategory].map((label) => ({
-          value: label,
-          label,
-        }))
-      : [];
+  watchedType && PRODUCT_SUB_CATEGORY[watchedType as ProductMainCategory]
+    ? PRODUCT_SUB_CATEGORY[watchedType as ProductMainCategory].map((item) =>
+        typeof item === 'string'
+          ? {
+              value: item, // 예: "COLD_MEDICINE"
+              label: item.replace(/_/g, ' '), // 예: "COLD MEDICINE"
+            }
+          : {
+              value: (item as { value: string; label: string }).value,
+              label: (item as { value: string; label: string }).label,
+            }
+      )
+    : [];
+
+
+
 
   useEffect(() => {
     form.setFieldsValue({ subCategory: undefined });
   }, [watchedType]);
 
-  // TODO: 이미지 업로드 기능 테스트
   const handleImgChange: UploadProps['onChange'] = async ({ fileList }) => {
     setImgList(fileList);
-    const img = fileList[0];
-
-    if (!img) {
+    const file = fileList[0];
+    if (!file) {
       form.setFieldsValue({ productImgUrl: '' });
       return;
     }
-    if (img.originFileObj) {
-      const base64 = await getBase64(img.originFileObj as File);
-      form.setFieldsValue({ productImgUrl: base64 });
-    } else if (img.url) {
-      form.setFieldsValue({ productImgUrl: img.url });
-    }
+    const base64 = await getBase64(file.originFileObj as File);
+    form.setFieldsValue({ productImgUrl: base64 });
   };
 
   const handlePreview = async (img: UploadFile) => {
@@ -84,12 +79,17 @@ export default function HqProductRegisterPage() {
     setPreviewOpen(true);
   };
 
-  // TODO: PDF 업로드 기능 테스트
-  const handlePdfChange: UploadProps['onChange'] = async ({ fileList }) => {
+  const handlePdfChange: UploadProps['onChange'] = ({ fileList }) => {
     setPdfList(fileList);
+    const file = fileList[0];
+    if (file) {
+      const fallbackPath = file.name; // 파일 경로 대신 이름만 넘김
+      form.setFieldsValue({ pdfPath: fallbackPath });
+    } else {
+      form.setFieldsValue({ pdfPath: '' }); // 업로드 안 하면 빈값
+    }
   };
 
-  // TODO: AI 요약 기능 테스트
   const handleAiSummarize = async () => {
     if (pdfList.length === 0) {
       messageApi.warning('PDF 파일을 먼저 업로드해 주세요.');
@@ -97,66 +97,48 @@ export default function HqProductRegisterPage() {
     }
 
     try {
-      // TODO: API 연동 확인
-      const res = await instance.post('summarize/new-drug', {
-        file: pdfList[0].originFileObj,
-      });
-      // LOG: 테스트용 로그
-      console.log('✨ AI 요약 응답:', res.data);
-      if (res.data.success) {
-        form.setFieldsValue({ details: res.data.summary });
-        messageApi.success('AI가 제품 정보를 요약했습니다.');
-      }
-    } catch (e: any) {
-      console.error('제품 정보 요약 실패:', e);
-      messageApi.error(e.response?.data?.message || '제품 정보 요약 중 오류가 발생했습니다.');
+      // AI 요약 실제 호출 X (임시 더미처리)
+      messageApi.info('AI 요약 기능은 현재 비활성화되어 있습니다.');
+    } catch (e) {
+      console.error('요약 실패:', e);
     }
   };
 
-  // TODO: API 연동 확인
   const handleSubmit = async () => {
-    try {
-      const payload = await form.getFieldsValue();
-      const res = await instance.post('/products', payload);
-      // LOG: 테스트용 로그
-      console.log('✨ 제품 등록 응답:', res.data);
-      if (res.data.success) {
-        navigate(`/hq/products/${res.data.data.productId}`);
-      }
-    } catch (e: any) {
-      console.error('제품 등록 실패:', e);
-      messageApi.error(e.response?.data?.message || '제품 등록 중 오류가 발생했습니다.');
+  try {
+    const payload = await form.getFieldsValue();
+    
+    const res = await instance.post('/products', payload);
+    // LOG: 테스트용 로그
+    console.log('✨ 제품 등록 응답:', res.data);
+    if (res.data.success) {
+      const productId = res.data.data[0]; // ✅ productId 추출
+      navigate(`/hq/products/${productId}`); // ✅ 상세페이지로 이동
     }
-  };
+  } catch (e: any) {
+    console.error('제품 등록 실패:', e);
+    messageApi.error(e.response?.data?.message || '제품 등록 중 오류가 발생했습니다.');
+  }
+};
+
 
   return (
     <>
       {contextHolder}
-      {/* TODO: 뒤로가기 버튼을 눌렀을 때 편집 여부에 따른 window.confirm 추가 */}
       <Space size="large" align="baseline">
-        <Button
-          type="link"
-          size="large"
-          shape="circle"
-          icon={<LeftOutlined />}
-          onClick={() => navigate(-1)}
-        />
-        <Typography.Title level={3} style={{ marginBottom: '24px' }}>
-          제품 등록
-        </Typography.Title>
+        <Button type="link" icon={<LeftOutlined />} onClick={() => navigate(-1)} />
+        <Typography.Title level={3}>제품 등록</Typography.Title>
       </Space>
 
-      <Card style={{ width: '80%', borderRadius: '12px', padding: '24px', margin: '0 auto' }}>
+      <Card style={{ width: '80%', margin: '0 auto', borderRadius: 12 }}>
         <Form
           form={form}
-          name="product-register"
           layout="vertical"
           onFinish={handleSubmit}
           autoComplete="off"
         >
-          <Flex wrap justify="space-between" gap={24}>
-            <Flex vertical flex={1} justify="center" align="center">
-              {/* TODO: 인증된 사용자만 파일 업로드 가능하도록 제한 + 파일 용량 제한 + 파일 형식 제한 */}
+          <Flex gap={24} wrap justify="space-between">
+            <Flex vertical flex={1} align="center">
               <Upload
                 accept="image/*"
                 listType="picture-card"
@@ -168,42 +150,29 @@ export default function HqProductRegisterPage() {
               >
                 {imgList.length >= 1 ? null : '이미지 업로드'}
               </Upload>
-              {previewImage && (
-                <Image
-                  wrapperStyle={{ display: 'none' }}
-                  preview={{
-                    visible: previewOpen,
-                    onVisibleChange: (visible) => setPreviewOpen(visible),
-                    afterOpenChange: (visible) => !visible && setPreviewImage(''),
-                  }}
-                  src={previewImage}
-                />
-              )}
+              <Image
+                wrapperStyle={{ display: 'none' }}
+                preview={{
+                  visible: previewOpen,
+                  onVisibleChange: setPreviewOpen,
+                  afterOpenChange: (v) => !v && setPreviewImage(''),
+                }}
+                src={previewImage || undefined} // ✅ 빈 문자열이면 undefined
+              />
+
               <Form.Item name="productImgUrl" noStyle>
                 <Input type="hidden" />
               </Form.Item>
             </Flex>
 
             <Flex vertical flex={1}>
-              <Form.Item
-                name="productName"
-                label="제품명"
-                rules={[{ required: true, message: '제품명을 입력하세요.' }]}
-              >
+              <Form.Item name="productName" label="제품명" rules={[{ required: true }]}>
                 <Input />
               </Form.Item>
-              <Form.Item
-                name="manufacturer"
-                label="제조사"
-                rules={[{ required: true, message: '제조사를 입력하세요.' }]}
-              >
+              <Form.Item name="manufacturer" label="제조사" rules={[{ required: true }]}>
                 <Input />
               </Form.Item>
-              <Form.Item
-                name="productCode"
-                label="보험코드"
-                rules={[{ required: true, message: '보험코드를 입력하세요.' }]}
-              >
+              <Form.Item name="productCode" label="보험코드" rules={[{ required: true }]}>
                 <Input />
               </Form.Item>
             </Flex>
@@ -211,41 +180,24 @@ export default function HqProductRegisterPage() {
 
           <Divider />
 
-          <Flex wrap justify="space-between" gap={24}>
+          <Flex wrap gap={24} justify="space-between">
             <Flex vertical flex={1}>
-              <Form.Item
-                name="type"
-                label="유형"
-                rules={[{ required: true, message: '유형을 선택하세요.' }]}
-              >
-                <Select placeholder="선택" options={typeOptions} />
+              <Form.Item name="mainCategory" label="유형" rules={[{ required: true }]}>
+                <Select options={typeOptions} placeholder="선택" />
               </Form.Item>
-              <Form.Item
-                name="subCategory"
-                label="구분"
-                rules={[{ required: true, message: '구분을 선택하세요.' }]}
-              >
-                <Select placeholder="선택" options={subCategoryOptions} disabled={!watchedType} />
+              <Form.Item name="subCategory" label="구분" rules={[{ required: true }]}>
+                <Select options={subCategoryOptions} placeholder="선택" disabled={!watchedType} />
               </Form.Item>
             </Flex>
 
             <Flex vertical flex={1}>
-              <Form.Item
-                name="unit"
-                label="단위"
-                rules={[{ required: true, message: '단위를 입력하세요.' }]}
-              >
+              <Form.Item name="unit" label="단위" rules={[{ required: true }]}>
                 <Input />
               </Form.Item>
-              <Form.Item
-                name="unitPrice"
-                label="판매가"
-                rules={[{ required: true, message: '판매가를 입력하세요.' }]}
-              >
-                {/* FIXME: 가격 입력 시 천 단위 콤마 추가해서 보여주되 저장 시에는 숫자만 저장되게 해주세요 */}
+              <Form.Item name="unitPrice" label="판매가" rules={[{ required: true }]}>
                 <InputNumber
-                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원'}
-                  parser={(value) => value?.replace(/[원,]/g, '') as unknown as number}
+                  formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원'}
+                  parser={(v) => v?.replace(/[원,]/g, '') as unknown as number}
                   style={{ width: '100%' }}
                 />
               </Form.Item>
@@ -257,7 +209,6 @@ export default function HqProductRegisterPage() {
           <Flex wrap justify="space-between" gap={24}>
             <Typography.Title level={4}>제품 상세 정보</Typography.Title>
             <Space wrap>
-              {/* TODO: 인증된 사용자만 파일 업로드 가능하도록 제한 + 파일 용량 제한 + 파일 형식 제한 */}
               <Upload
                 accept=".pdf"
                 listType="text"
@@ -274,7 +225,11 @@ export default function HqProductRegisterPage() {
             </Space>
           </Flex>
 
-          <Form.Item name="details" style={{ marginTop: '16px' }}>
+          <Form.Item name="pdfPath" noStyle>
+            <Input type="hidden" />
+          </Form.Item>
+
+          <Form.Item name="details" style={{ marginTop: 16 }}>
             <Input.TextArea rows={8} />
           </Form.Item>
 

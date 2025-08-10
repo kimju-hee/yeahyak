@@ -46,6 +46,7 @@ export default function HqProductEditPage() {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 메인/서브 카테고리 옵션
   const typeOptions = Object.keys(PRODUCT_MAIN_CATEGORY).map((type) => ({
     value: type,
     label: PRODUCT_MAIN_CATEGORY[type as ProductMainCategory],
@@ -59,20 +60,40 @@ export default function HqProductEditPage() {
         }))
       : [];
 
-  // TODO: API 연동 확인
+  // TODO: API 연동 확인 (상세 불러와서 프리필)
   const fetchProduct = async () => {
     setLoading(true);
     try {
       const res = await instance.get(`/products/${id}`);
       // LOG: 테스트용 로그
       console.log('✨ 제품 정보 로딩 응답:', res.data);
-      if (res.data.success) {
-        const product = res.data.data as ProductResponse;
-        form.setFieldsValue(product);
+
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        const product = res.data.data[0] as ProductResponse;
+
+        // 폼 채우기
+        form.setFieldsValue({
+          ...product,
+          details: product.details ?? '', // null 보호
+        });
+
+        // 기존 이미지 미리보기 세팅
+        if (product.productImgUrl && product.productImgUrl.trim() !== '') {
+          setFileList([
+            {
+              uid: '-1',
+              name: 'product-image',
+              status: 'done',
+              url: product.productImgUrl,
+            },
+          ]);
+        } else {
+          setFileList([]);
+        }
       }
     } catch (e: any) {
       console.error('제품 정보 로딩 실패:', e);
-      messageApi.error(e.message || '제품 정보 로딩 중 오류가 발생했습니다.');
+      messageApi.error(e.response?.data?.message || '제품 정보 로딩 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -80,12 +101,13 @@ export default function HqProductEditPage() {
 
   useEffect(() => {
     fetchProduct();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   // TODO: 이미지 업로드 기능 테스트
-  const handleChange: UploadProps['onChange'] = async ({ fileList }) => {
-    setFileList(fileList);
-    const file = fileList[0];
+  const handleChange: UploadProps['onChange'] = async ({ fileList: fl }) => {
+    setFileList(fl);
+    const file = fl[0];
 
     if (!file) {
       form.setFieldsValue({ productImgUrl: '' });
@@ -101,21 +123,27 @@ export default function HqProductEditPage() {
   };
 
   const handlePreview = async (file: UploadFile) => {
-    if (!file.url && !file.preview) {
+    if (!file.url && !file.preview && file.originFileObj) {
       file.preview = await getBase64(file.originFileObj as File);
     }
-    setPreviewImage(file.url || (file.preview as string));
+    setPreviewImage((file.url || (file.preview as string)) ?? '');
     setPreviewOpen(true);
   };
 
-  // TODO: API 연동 확인
+  // TODO: API 연동 확인 (PUT 저장)
   const handleSubmit = async () => {
     try {
       const payload = await form.getFieldsValue();
+      // LOG: 전송 페이로드 확인
+      console.log('✨ 수정 요청 payload:', payload);
+
       const res = await instance.put(`/products/${id}`, payload);
       // LOG: 테스트용 로그
       console.log('✨ 제품 정보 수정 응답:', res.data);
+
+      messageApi.success('수정이 완료되었습니다.');
       navigate(`/hq/products/${id}`);
+      
     } catch (e: any) {
       console.error('제품 정보 수정 실패:', e);
       messageApi.error(e.response?.data?.message || '제품 정보 수정 중 오류가 발생했습니다.');
@@ -140,15 +168,7 @@ export default function HqProductEditPage() {
       </Space>
 
       <Card style={{ width: '80%', borderRadius: '12px', padding: '24px', margin: '0 auto' }}>
-        <Flex wrap justify="space-between" gap={24}>
-          <Typography.Text type="secondary">ID: {form.getFieldValue('productId')}</Typography.Text>
-          <Typography.Text type="secondary">
-            등록일: {dayjs(form.getFieldValue('createdAt')).format('YYYY-MM-DD')}
-          </Typography.Text>
-        </Flex>
-
-        <Divider />
-
+        {/* ⬇️ 경고 제거: form 인스턴스 연결 후 값을 읽도록 헤더를 Form 내부로 이동 */}
         <Form
           form={form}
           name="product-edit"
@@ -156,6 +176,22 @@ export default function HqProductEditPage() {
           onFinish={handleSubmit}
           autoComplete="off"
         >
+          {/* 헤더(폼 내부) */}
+          <Flex wrap justify="space-between" gap={24} style={{ marginBottom: 16 }}>
+            <Typography.Text type="secondary">
+              ID: {Form.useWatch('productId', form)}
+            </Typography.Text>
+            <Typography.Text type="secondary">
+              등록일:{' '}
+              {(() => {
+                const createdAt = Form.useWatch('createdAt', form) as string | undefined;
+                return createdAt ? dayjs(createdAt).format('YYYY-MM-DD') : '-';
+              })()}
+            </Typography.Text>
+          </Flex>
+
+          <Divider />
+
           <Flex wrap justify="space-between" gap={36}>
             <Flex vertical flex={1} justify="center" align="center">
               {/* TODO: 인증된 사용자만 파일 업로드 가능하도록 제한 + 파일 용량 제한 + 파일 형식 제한 */}
@@ -169,6 +205,7 @@ export default function HqProductEditPage() {
               >
                 {fileList.length >= 1 ? null : '이미지 업로드'}
               </Upload>
+
               {previewImage && (
                 <Image
                   wrapperStyle={{ display: 'none' }}
@@ -180,6 +217,8 @@ export default function HqProductEditPage() {
                   src={previewImage}
                 />
               )}
+
+              {/* 실제 전송되는 이미지 데이터 */}
               <Form.Item name="productImgUrl" noStyle>
                 <Input type="hidden" />
               </Form.Item>
@@ -193,6 +232,7 @@ export default function HqProductEditPage() {
               >
                 <Input />
               </Form.Item>
+
               <Form.Item
                 name="manufacturer"
                 label="제조사"
@@ -200,6 +240,7 @@ export default function HqProductEditPage() {
               >
                 <Input />
               </Form.Item>
+
               <Form.Item
                 name="productCode"
                 label="보험코드"
@@ -214,13 +255,15 @@ export default function HqProductEditPage() {
 
           <Flex wrap justify="space-between" gap={36}>
             <Flex vertical flex={1}>
+              {/* ⚠️ name을 mainCategory로 — API와 일치 */}
               <Form.Item
-                name="type"
+                name="mainCategory"
                 label="유형"
                 rules={[{ required: true, message: '유형을 입력하세요.' }]}
               >
                 <Select options={typeOptions} />
               </Form.Item>
+
               <Form.Item
                 name="subCategory"
                 label="구분"
@@ -238,6 +281,7 @@ export default function HqProductEditPage() {
               >
                 <Input />
               </Form.Item>
+
               <Form.Item
                 name="unitPrice"
                 label="판매가"
@@ -245,7 +289,7 @@ export default function HqProductEditPage() {
               >
                 {/* FIXME: 가격 입력 시 천 단위 콤마 추가해서 보여주되 저장 시에는 숫자만 저장되게 해주세요 */}
                 <InputNumber
-                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원'}
+                  formatter={(value) => (value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원' : '')}
                   parser={(value) => value?.replace(/[원,]/g, '') as unknown as number}
                   style={{ width: '100%' }}
                 />
@@ -261,7 +305,7 @@ export default function HqProductEditPage() {
           </Form.Item>
 
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <Button type="primary" htmlType="submit">
+            <Button type="primary" htmlType="submit" loading={loading}>
               저장
             </Button>
           </div>
