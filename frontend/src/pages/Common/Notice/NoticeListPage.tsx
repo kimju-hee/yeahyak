@@ -26,15 +26,10 @@ export default function NoticeListPage() {
   const navigate = useNavigate();
 
   const user = useAuthStore((state) => state.user) as User;
+  const basePath = user.role === USER_ROLE.BRANCH ? '/branch' : '/hq';
 
   const [notices, setNotices] = useState<Announcement[]>([]);
   const [activeTab, setActiveTab] = useState<AnnouncementType>('NOTICE');
-  const [search, setSearch] = useState({
-    field: 'title' as 'title' | 'content',
-    keyword: '',
-    appliedField: 'title' as 'title' | 'content',
-    appliedKeyword: '',
-  });
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [total, setTotal] = useState(0);
@@ -71,27 +66,15 @@ export default function NoticeListPage() {
 
   useEffect(() => {
     fetchNotices();
-  }, [activeTab, currentPage, search.appliedKeyword]);
+  }, [activeTab, currentPage]);
 
   const handleTabChange = (key: string) => {
     setActiveTab(key as AnnouncementType);
-    setSearch({
-      field: 'title',
-      keyword: '',
-      appliedField: 'title',
-      appliedKeyword: '',
-    });
     setCurrentPage(1);
   };
 
-  const handleSearch = () => {
-    setSearch((prev) => ({
-      ...prev,
-      appliedField: prev.field,
-      appliedKeyword: prev.keyword.trim(),
-    }));
-    setCurrentPage(1);
-  };
+  // TODO: 검색 기능 구현
+  const handleSearch = () => {};
 
   const tableColumns: TableProps<Announcement>['columns'] = [
     {
@@ -104,6 +87,7 @@ export default function NoticeListPage() {
       title: '제목',
       dataIndex: 'title',
       key: 'title',
+      ellipsis: true,
     },
     {
       title: '작성 일시',
@@ -124,7 +108,6 @@ export default function NoticeListPage() {
         rowKey="announcementId"
         onRow={(record) => ({
           onClick: () => {
-            const basePath = user?.role === USER_ROLE.BRANCH ? '/branch' : '/hq';
             navigate(`${basePath}/notices/${record.announcementId}`);
           },
           style: { cursor: 'pointer' },
@@ -176,26 +159,20 @@ export default function NoticeListPage() {
         {/* TODO: 검색 기능 구현 */}
         <Space.Compact>
           <Select
-            value={search.field}
-            onChange={(value) =>
-              setSearch((prev) => ({ ...prev, field: value as 'title' | 'content' }))
-            }
-            options={[
-              { value: 'title', label: '제목' },
-              { value: 'content', label: '내용' },
-            ]}
+            value={'제목 및 내용'}
+            onChange={() => {}}
+            options={[{ value: '제목 및 내용', label: '제목 및 내용' }]}
           />
           <Input.Search
             allowClear
-            value={search.keyword}
             placeholder="검색어 입력"
-            onChange={(e) => setSearch((prev) => ({ ...prev, keyword: e.target.value }))}
+            onChange={() => {}}
             onSearch={handleSearch}
           />
         </Space.Compact>
 
         {user.role === USER_ROLE.ADMIN && (
-          <Button type="primary" onClick={() => navigate('/hq/notices/new')}>
+          <Button type="primary" onClick={() => navigate(`${basePath}/notices/new`)}>
             작성
           </Button>
         )}

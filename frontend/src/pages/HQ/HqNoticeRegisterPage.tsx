@@ -25,6 +25,11 @@ export default function HqNoticeRegisterPage() {
     form.setFieldsValue({ attachmentUrl: fileList[0].name || '' });
   };
 
+  const handleRemove: UploadProps['onRemove'] = () => {
+    setFileList([]);
+    form.setFieldsValue({ attachmentUrl: '' });
+  };
+
   const handleAiSummarize = async () => {
     if (fileList.length === 0 || !fileList[0].originFileObj) {
       messageApi.warning('첨부 파일이 없습니다.');
@@ -49,6 +54,22 @@ export default function HqNoticeRegisterPage() {
     try {
       const formData = new FormData();
       formData.append('file', fileList[0].originFileObj as File);
+
+      if (
+        watchedType === ANNOUNCEMENT_TYPE.LAW &&
+        !fileList[0].originFileObj.name.endsWith('.txt')
+      ) {
+        messageApi.warning('해당 카테고리 요약은 .txt 파일만 지원합니다.');
+        return;
+      } else if (
+        (watchedType === ANNOUNCEMENT_TYPE.EPIDEMIC ||
+          watchedType === ANNOUNCEMENT_TYPE.NEW_PRODUCT) &&
+        !fileList[0].originFileObj.name.endsWith('.pdf')
+      ) {
+        messageApi.warning('해당 카테고리 요약은 .pdf 파일만 지원합니다.');
+        return;
+      }
+
       const res = await aiInstance.post(getEndpoint(watchedType), formData);
       // LOG: 테스트용 로그
       console.log('✨ AI 문서 요약:', res.data);
@@ -72,7 +93,7 @@ export default function HqNoticeRegisterPage() {
     try {
       const payload = {
         type: values.type,
-        title: values.title,
+        title: values.title.trim(),
         content: values.content,
         attachmentUrl: values.attachmentUrl || '',
       };
@@ -176,13 +197,14 @@ export default function HqNoticeRegisterPage() {
             <Form.Item name="attachmentUrl" noStyle>
               <Input type="hidden" />
             </Form.Item>
-
+            // TODO: 파일 용량 제한
             <Upload
               accept=".pdf,.txt"
               listType="text"
               fileList={fileList}
               beforeUpload={() => false}
               onChange={handleChange}
+              onRemove={handleRemove}
               maxCount={1}
             >
               {fileList.length >= 1 ? null : (
@@ -191,7 +213,6 @@ export default function HqNoticeRegisterPage() {
                 </Button>
               )}
             </Upload>
-
             <Button
               type="primary"
               disabled={!watchedType || watchedType === ANNOUNCEMENT_TYPE.NOTICE}

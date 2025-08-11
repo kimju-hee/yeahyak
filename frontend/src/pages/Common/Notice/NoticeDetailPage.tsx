@@ -14,6 +14,7 @@ export default function NoticeDetailPage() {
   const navigate = useNavigate();
 
   const user = useAuthStore((state) => state.user) as User;
+  const basePath = user.role === USER_ROLE.BRANCH ? '/branch' : '/hq';
 
   const [notice, setNotice] = useState<Announcement>();
   const [loading, setLoading] = useState(false);
@@ -50,7 +51,7 @@ export default function NoticeDetailPage() {
         console.log('✨ 공지사항 삭제:', res.data);
         if (res.data.success) {
           messageApi.success('공지사항이 삭제되었습니다.');
-          navigate('/hq/notices');
+          navigate(`${basePath}/notices`);
         }
       } catch (e: any) {
         console.error('공지사항 삭제 실패:', e);
@@ -64,6 +65,11 @@ export default function NoticeDetailPage() {
       key: 'title',
       label: '제목',
       children: notice.title,
+    },
+    {
+      key: 'type',
+      label: '구분',
+      children: notice.type,
     },
     {
       key: 'createdAt',
@@ -94,26 +100,20 @@ export default function NoticeDetailPage() {
 
       <Descriptions
         bordered
-        column={2}
+        column={3}
         size="middle"
-        style={{ marginBottom: 24 }}
+        style={{ marginBottom: '24px' }}
         items={descriptionsItems}
       />
 
-      <Card style={{ marginBottom: 24, padding: 24 }}>
+      <Card style={{ marginBottom: '24px', padding: '24px' }}>
         <Typography>
           <div dangerouslySetInnerHTML={{ __html: notice.content }} />
         </Typography>
       </Card>
 
       <Flex wrap style={{ justifyContent: 'space-between' }}>
-        <Button
-          type="default"
-          onClick={() => {
-            const basePath = user.role === USER_ROLE.BRANCH ? '/branch' : '/hq';
-            navigate(`${basePath}/notices`);
-          }}
-        >
+        <Button type="default" onClick={() => navigate(`${basePath}/notices`)}>
           목록
         </Button>
 
@@ -122,7 +122,7 @@ export default function NoticeDetailPage() {
             <Button type="text" danger onClick={handleDelete}>
               삭제
             </Button>
-            <Button type="primary" onClick={() => navigate(`/hq/notices/${id}/edit`)}>
+            <Button type="primary" onClick={() => navigate(`${basePath}/notices/${id}/edit`)}>
               수정
             </Button>
           </Space>
