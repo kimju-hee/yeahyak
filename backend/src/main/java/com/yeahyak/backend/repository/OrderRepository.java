@@ -13,30 +13,23 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
-    List<Order> findByPharmacy_PharmacyIdAndCreatedAtBetween(Long pharmacyId, LocalDateTime start, LocalDateTime end);
-    Page<Order> findByPharmacy_PharmacyIdAndStatus(Long pharmacyId, OrderStatus status, Pageable pageable);
 
-    @Query("""
-                SELECT o FROM Order o
-                WHERE (:status IS NULL OR o.status = :status)
-                  AND (:pharmacyName IS NULL OR o.pharmacy.pharmacyName LIKE %:pharmacyName%)
-                ORDER BY o.createdAt DESC
-            """)
-    Page<Order> findAllWithFilters(
-            @Param("status") String status,
-            @Param("pharmacyName") String pharmacyName,
-            Pageable pageable
+    List<Order> findByPharmacy_PharmacyIdAndCreatedAtBetween(
+            Long pharmacyId,
+            LocalDateTime startDateTime,
+            LocalDateTime endDateTime
     );
 
+
     @Query("""
-                SELECT o FROM Order o
-                WHERE o.pharmacy.pharmacyId = :pharmacyId
-                  AND (:status IS NULL OR o.status = :status)
-                ORDER BY o.createdAt DESC
-            """)
-    Page<Order> findByPharmacyAndStatus(
-            @Param("pharmacyId") Long pharmacyId,
-            @Param("status") String status,
+    SELECT o FROM Order o
+    WHERE (:status IS NULL OR o.status = :status)
+      AND (:pharmacyName IS NULL OR :pharmacyName = '' 
+           OR LOWER(o.pharmacy.pharmacyName) LIKE LOWER(CONCAT('%', :pharmacyName, '%')))
+    """)
+    Page<Order> findAllWithFilters(
+            @Param("status") OrderStatus status,
+            @Param("pharmacyName") String pharmacyName,
             Pageable pageable
     );
 
@@ -44,12 +37,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     SELECT o FROM Order o
     WHERE o.pharmacy.pharmacyId = :pharmacyId
       AND (:status IS NULL OR o.status = :status)
-    ORDER BY o.createdAt DESC
-""")
+    """)
     Page<Order> findByPharmacyAndOptionalStatus(
             @Param("pharmacyId") Long pharmacyId,
-            @Param("status") String status,
+            @Param("status") OrderStatus status,
             Pageable pageable
     );
-
 }

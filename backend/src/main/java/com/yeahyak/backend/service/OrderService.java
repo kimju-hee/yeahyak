@@ -124,16 +124,33 @@ public class OrderService {
 
     public Map<String, Object> getAllOrders(int page, int size, String status, String pharmacyName) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Order> orders = orderRepository.findAllWithFilters(status, pharmacyName, pageable);
+
+        OrderStatus st = null;
+        if (status != null && !status.isBlank()) {
+            try {
+                st = OrderStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("올바르지 않은 상태값입니다: " + status);
+            }
+        }
+
+        Page<Order> orders = orderRepository.findAllWithFilters(st, pharmacyName, pageable);
         return convertToPagedResponse(orders);
     }
 
     public Map<String, Object> getOrdersByPharmacy(Long pharmacyId, int page, int size, String status) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-        OrderStatus orderStatus = OrderStatus.valueOf(status);
+        OrderStatus st = null;
+        if (status != null && !status.isBlank()) {
+            try {
+                st = OrderStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("올바르지 않은 상태값입니다: " + status);
+            }
+        }
 
-        Page<Order> orders = orderRepository.findByPharmacy_PharmacyIdAndStatus(pharmacyId, orderStatus, pageable);
+        Page<Order> orders = orderRepository.findByPharmacyAndOptionalStatus(pharmacyId, st, pageable);
         return convertToPagedResponse(orders);
     }
 
