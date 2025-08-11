@@ -17,18 +17,18 @@ import { useNavigate } from 'react-router-dom';
 import { instance } from '../../../api/api';
 import { useAuthStore } from '../../../stores/authStore';
 import { type Announcement, type AnnouncementType } from '../../../types/announcement.type';
-import { USER_ROLE } from '../../../types/profile.type';
+import { USER_ROLE, type User } from '../../../types/profile.type';
 
 const PAGE_SIZE = 10;
 
 export default function NoticeListPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
-  const user = useAuthStore((state) => state.user);
 
+  const user = useAuthStore((state) => state.user) as User;
+
+  const [notices, setNotices] = useState<Announcement[]>([]);
   const [activeTab, setActiveTab] = useState<AnnouncementType>('NOTICE');
-  const [currentPage, setCurrentPage] = useState<number>(1);
-
   const [search, setSearch] = useState({
     field: 'title' as 'title' | 'content',
     keyword: '',
@@ -36,55 +36,52 @@ export default function NoticeListPage() {
     appliedKeyword: '',
   });
 
-  const [notices, setNotices] = useState<Announcement[]>([]);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const fetchNotices = async () => {
-  setLoading(true);
-  try {
-    const res = await instance.get('/announcements', {
-      params: {
-        type: activeTab,
-        page: currentPage - 1,
-        size: PAGE_SIZE,
-      },
-    });
+    setLoading(true);
+    try {
+      const res = await instance.get('/announcements', {
+        params: {
+          type: activeTab,
+          page: currentPage - 1,
+          size: PAGE_SIZE,
+        },
+      });
 
-    console.log('✨ 공지사항 목록 로딩:', res.data);
+      // LOG: 테스트용 로그
+      console.log('✨ 공지사항 목록 로딩:', res.data);
 
-    if (res.data.success && res.data.data) {
-      const { content, total } = res.data.data;
-      setNotices(content || []);
-      setTotal(total || 0);
-    } else {
+      if (res.data.success) {
+        const { data, totalElements } = res.data;
+        setNotices(data);
+        setTotal(totalElements);
+      }
+    } catch (e: any) {
+      console.error('공지사항 목록 로딩 실패:', e);
+      messageApi.error(e.message || '공지사항 목록 로딩 중 오류가 발생했습니다.');
       setNotices([]);
       setTotal(0);
+    } finally {
+      setLoading(false);
     }
-  } catch (e: any) {
-    console.error('공지사항 목록 로딩 실패:', e);
-    messageApi.error(e.response?.data?.message || '공지사항 목록 로딩 중 오류가 발생했습니다.');
-    setNotices([]);
-    setTotal(0);
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   useEffect(() => {
     fetchNotices();
-  }, [activeTab, currentPage, search.appliedField, search.appliedKeyword]);
+  }, [activeTab, currentPage, search.appliedKeyword]);
 
   const handleTabChange = (key: string) => {
     setActiveTab(key as AnnouncementType);
-    setCurrentPage(1);
     setSearch({
       field: 'title',
       keyword: '',
       appliedField: 'title',
       appliedKeyword: '',
     });
+    setCurrentPage(1);
   };
 
   const handleSearch = () => {
@@ -109,10 +106,10 @@ export default function NoticeListPage() {
       key: 'title',
     },
     {
-      title: '작성일',
+      title: '작성 일시',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
+      render: (date: string) => dayjs(date).format('YYYY. MM. DD. HH:mm'),
       width: '240px',
     },
   ];
@@ -134,9 +131,9 @@ export default function NoticeListPage() {
         })}
         pagination={{
           position: ['bottomCenter'],
-          current: currentPage,
-          total: total,
           pageSize: PAGE_SIZE,
+          total: total,
+          current: currentPage,
           onChange: (page) => setCurrentPage(page),
         }}
       />
@@ -146,7 +143,7 @@ export default function NoticeListPage() {
   const tabsItems: TabsProps['items'] = [
     {
       key: 'NOTICE',
-      label: '공지사항',
+      label: '안내',
       children: renderTable(),
     },
     {
@@ -176,6 +173,7 @@ export default function NoticeListPage() {
       <Tabs activeKey={activeTab} onChange={handleTabChange} items={tabsItems} centered />
 
       <Flex wrap style={{ justifyContent: 'space-between' }}>
+        {/* TODO: 검색 기능 구현 */}
         <Space.Compact>
           <Select
             value={search.field}
@@ -196,7 +194,7 @@ export default function NoticeListPage() {
           />
         </Space.Compact>
 
-        {user?.role === USER_ROLE.ADMIN && (
+        {user.role === USER_ROLE.ADMIN && (
           <Button type="primary" onClick={() => navigate('/hq/notices/new')}>
             작성
           </Button>

@@ -1,125 +1,102 @@
 import { LeftOutlined, UploadOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
-import {
-  Button,
-  Flex,
-  Form,
-  Input,
-  message,
-  Select,
-  Space,
-  Typography,
-  Upload,
-  Modal,
-} from 'antd';
-import { useEffect, useState } from 'react';
+import { Button, Flex, Form, Input, message, Modal, Select, Space, Typography, Upload } from 'antd';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { aiInstance, instance } from '../../api/api';
 import TiptapEditor from '../../components/TiptapEditor';
-import { instance } from '../../api/api';
+import { ANNOUNCEMENT_TYPE, type AnnouncementRequest } from '../../types/announcement.type';
 
 export default function HqNoticeRegisterPage() {
   const [messageApi, contextHolder] = message.useMessage();
+  const [modal, modalContextHolder] = Modal.useModal();
   const [form] = Form.useForm();
   const navigate = useNavigate();
 
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
   const [isEdited, setIsEdited] = useState(false);
 
   const watchedType = Form.useWatch('type', form);
   const watchedContent = Form.useWatch('content', form);
 
-  // 수정 여부 감지
-  useEffect(() => {
-    if (!isEdited && (watchedType || watchedContent)) {
-      setIsEdited(true);
-    }
-  }, [watchedType, watchedContent, isEdited]);
-
-  // 첨부파일 업로드 상태 관리
   const handleChange: UploadProps['onChange'] = ({ fileList }) => {
     setFileList(fileList);
-    form.setFieldValue('attachmentUrl', fileList[0]?.name || '');
+    form.setFieldsValue({ attachmentUrl: fileList[0].name || '' });
   };
 
-  // AI 요약 호출
-  const aiUrlMap: Record<string, string> = {
-  EPIDEMIC: 'http://localhost:5002/summarize-epidemic',
-  LAW: 'http://localhost:5000/summarize-law',
-  NEW_PRODUCT: 'http://localhost:5001/summarize-pdf',
-};
-
-// 함수는 단 한 번만 아래처럼 작성
-const handleAiSummarize = async () => {
-  if (fileList.length === 0 || !fileList[0].originFileObj) {
-    messageApi.warning('첨부 파일이 없습니다.');
-    return;
-  }
-
-  const endpoint = aiUrlMap[watchedType];
-  if (!endpoint) {
-    messageApi.warning('AI 요약이 지원되지 않는 유형입니다.');
-    return;
-  }
-
-  try {
-    const formData = new FormData();
-    formData.append('file', fileList[0].originFileObj as File);
-
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      body: formData,
-    });
-
-    const result = await res.json();
-
-    if (result.summary) {
-      form.setFieldsValue({ content: result.summary });
-      messageApi.success('AI가 문서를 요약했습니다.');
-    } else {
-      throw new Error(result.error || '요약 결과가 없습니다.');
+  const handleAiSummarize = async () => {
+    if (fileList.length === 0 || !fileList[0].originFileObj) {
+      messageApi.warning('첨부 파일이 없습니다.');
+      return;
     }
-  } catch (e: any) {
-    console.error('문서 요약 실패:', e);
-    messageApi.error(e.message || '문서 요약 중 오류가 발생했습니다.');
-  }
-};
 
-  // 공지사항 등록 API 호출
-  const handleSubmit = async () => {
+    // 카테고리에 따른 엔드포인트 매핑
+    const getEndpoint = (type: keyof typeof ANNOUNCEMENT_TYPE) => {
+      switch (type) {
+        case ANNOUNCEMENT_TYPE.EPIDEMIC:
+          return '/summarize/epidemic';
+        case ANNOUNCEMENT_TYPE.LAW:
+          return '/summarize/law';
+        case ANNOUNCEMENT_TYPE.NEW_PRODUCT:
+          return '/summarize/pdf';
+        default:
+          return '/summarize/pdf';
+      }
+    };
+
+    setAiLoading(true);
     try {
-      const values = await form.validateFields();
+      const formData = new FormData();
+      formData.append('file', fileList[0].originFileObj as File);
+      const res = await aiInstance.post(getEndpoint(watchedType), formData);
+      // LOG: 테스트용 로그
+      console.log('✨ AI 문서 요약:', res.data);
+      if (res.data.success) {
+        if (watchedType === ANNOUNCEMENT_TYPE.EPIDEMIC) {
+          form.setFieldsValue({ content: res.data.data.notice });
+        } else {
+          form.setFieldsValue({ content: res.data.data.summary });
+        }
+        messageApi.success('AI가 문서를 요약했습니다!');
+      }
+    } catch (e: any) {
+      console.error('AI 문서 요약 실패:', e);
+      messageApi.error(e.message || 'AI 문서 요약 중 오류가 발생했습니다.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleSubmit = async (values: AnnouncementRequest) => {
+    try {
       const payload = {
         type: values.type,
         title: values.title,
         content: values.content,
         attachmentUrl: values.attachmentUrl || '',
       };
-
-      console.log('[📤 전송 payload]', payload);
-
       const res = await instance.post('/announcements', payload);
-
-      console.log('[📥 서버 응답]', res.data);
-
-      if (res.data.success && res.data.data?.announcementId) {
+      // LOG: 테스트용 로그
+      console.log('✨ 공지사항 등록:', res.data);
+      if (res.data.success) {
         messageApi.success('공지사항이 등록되었습니다.');
-        const id = res.data.data.announcementId;
+        const id = res.data.data[0].announcementId;
         navigate(`/hq/notices/${id}`);
-      } else {
-        messageApi.error('공지사항 등록 후 ID를 가져오는 데 실패했습니다.');
       }
     } catch (e: any) {
       console.error('공지사항 등록 실패:', e);
-      messageApi.error(
-        e?.response?.data?.message || e?.message || '공지사항 등록 중 오류가 발생했습니다.'
-      );
+      messageApi.error(e.message || '공지사항 등록 중 오류가 발생했습니다.');
     }
   };
 
-  // 뒤로가기 시 confirm
+  const handleFormValuesChange = () => {
+    setIsEdited(true);
+  };
+
   const handleBack = () => {
     if (isEdited) {
-      Modal.confirm({
+      modal.confirm({
         title: '페이지를 나가시겠습니까?',
         content: '작성 중인 내용이 사라집니다.',
         okText: '나가기',
@@ -134,6 +111,7 @@ const handleAiSummarize = async () => {
   return (
     <>
       {contextHolder}
+      {modalContextHolder}
       <Space size="large" align="baseline">
         <Button
           type="link"
@@ -151,6 +129,7 @@ const handleAiSummarize = async () => {
         form={form}
         name="notice-register"
         layout="vertical"
+        onValuesChange={handleFormValuesChange}
         onFinish={handleSubmit}
         autoComplete="off"
       >
@@ -164,7 +143,7 @@ const handleAiSummarize = async () => {
             <Select
               placeholder="카테고리 선택"
               options={[
-                { value: 'NOTICE', label: '공지' },
+                { value: 'NOTICE', label: '안내' },
                 { value: 'EPIDEMIC', label: '감염병' },
                 { value: 'LAW', label: '법령' },
                 { value: 'NEW_PRODUCT', label: '신제품' },
@@ -175,6 +154,7 @@ const handleAiSummarize = async () => {
             name="title"
             label="제목"
             rules={[{ required: true, message: '제목을 입력해주세요.' }]}
+            style={{ flex: 5 }}
           >
             <Input />
           </Form.Item>
@@ -187,12 +167,12 @@ const handleAiSummarize = async () => {
         >
           <TiptapEditor
             value={watchedContent}
-            onChange={(val: string) => form.setFieldValue('content', val)}
+            onChange={(val: string) => form.setFieldsValue({ content: val })}
           />
         </Form.Item>
 
         <Flex wrap justify="space-between" gap={8}>
-          <Space wrap align="baseline">
+          <Space wrap align="center">
             <Form.Item name="attachmentUrl" noStyle>
               <Input type="hidden" />
             </Form.Item>
@@ -214,8 +194,9 @@ const handleAiSummarize = async () => {
 
             <Button
               type="primary"
-              disabled={watchedType === 'NOTICE'}
+              disabled={!watchedType || watchedType === ANNOUNCEMENT_TYPE.NOTICE}
               onClick={handleAiSummarize}
+              loading={aiLoading}
             >
               AI 요약
             </Button>
