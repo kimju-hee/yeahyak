@@ -1,46 +1,40 @@
 import { Button, Input, Modal, Space, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from 'antd';
-import { mockOrders } from '../../mocks/order.mock';
-import { mockPharmacies } from '../../mocks/pharmacy.mock';
-import { mockProducts } from '../../mocks/product.mock';
-import { mockReturns } from '../../mocks/return.mock';
-import { mockHqStocks, mockHqStockTransactions } from '../../mocks/stock.mock';
-import type { Product } from '../../mocks/types';
- 
+import axios from 'axios';
+
 const { Title } = Typography;
- 
+
 interface StockItem {
-  key: string;
   stockId: number;
   productId: number;
   productCode: string;
   productName: string;
   unit: string;
   quantity: number;
-  lastInboundDate: string;
-  lastOutboundDate: string;
+  lastInboundDate: string | null;
+  lastOutboundDate: string | null;
 }
- 
-const buildStockData = (): StockItem[] => {
-  return mockHqStocks.map((stock) => {
-    const product = mockProducts.find((p: Product) => p.id === stock.productId);
-    return {
-      key: stock.id.toString(),
-      stockId: stock.id,
-      productId: stock.productId,
-      productCode: product?.productCode ?? '',
-      productName: product?.productName ?? '',
-      unit: product?.unit ?? '',
-      quantity: stock.quantity,
-      lastInboundDate: stock.lastInboundedAt?.slice(0, 10) ?? '-',
-      lastOutboundDate: stock.lastOutboundedAt?.slice(0, 10) ?? '-',
-    };
-  });
-};
- 
-const StockTransactionTable: React.FC<{ data: any[] }> = ({ data }) => (
+
+interface HqTxRow {
+  id: number;
+  date: string; // "YYYY-MM-DD"
+  type: string; // "입고" | "출고" | "반품입고"
+  quantity: number;
+  balance: number;
+  remark: string;
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  data: T[];
+  totalPages: number;
+  totalElements: number;
+  currentPage: number; // 0-based
+}
+
+const StockTransactionTable: React.FC<{ data: HqTxRow[] }> = ({ data }) => (
   <Card styles={{ body: { maxHeight: 400, overflowY: 'auto', paddingRight: 8 } }}>
     <Table
       size="small"
@@ -58,97 +52,65 @@ const StockTransactionTable: React.FC<{ data: any[] }> = ({ data }) => (
     />
   </Card>
 );
- 
- 
+
 export default function HqStockPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<StockItem | null>(null);
-  const [filteredData, setFilteredData] = useState<StockItem[]>(buildStockData());
-  const [searchKeyword, setSearchKeyword] = useState<string>('');
-  const [currentPage, setCurrentPage] = useState(1);
+
+  // 목록 데이터 (API)
+  const [rows, setRows] = useState<StockItem[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState(1); // antd는 1-base
   const pageSize = 10;
- 
-  const showModal = (item: StockItem) => {
+
+  // 검색어
+  const [searchKeyword, setSearchKeyword] = useState<string>('');
+
+  // 거래내역 데이터 (API)
+  const [txRows, setTxRows] = useState<HqTxRow[]>([]);
+
+  // 목록 API
+  const fetchStocks = async (page = 0, search = '') => {
+    const res = await axios.get<ApiResponse<StockItem>>('/api/hq/stocks', {
+      params: { page, size: pageSize, search: search || undefined },
+    });
+    const r = res.data;
+    setRows(r.data);
+    setTotal(r.totalElements);
+    setCurrentPage(r.currentPage + 1); // API는 0-base → antd 1-base
+  };
+
+  // 거래내역 API
+  const fetchTransactions = async (stockId: number) => {
+    const res = await axios.get<ApiResponse<HqTxRow>>(`/api/hq/stocks/${stockId}/transactions`);
+    setTxRows(res.data.data);
+  };
+
+  useEffect(() => {
+    fetchStocks(0, '');
+  }, []);
+
+  const showModal = async (item: StockItem) => {
     setSelectedItem(item);
     setIsModalOpen(true);
+    await fetchTransactions(item.stockId);
   };
- 
+
   const handleCancel = () => setIsModalOpen(false);
- 
+
   const handleSearch = () => {
-    const keyword = searchKeyword.trim().toLowerCase();
-    const data = buildStockData();
-    const result = keyword
-      ? data.filter(
-          (item) =>
-            item.productCode.toLowerCase().includes(keyword) ||
-            item.productName.toLowerCase().includes(keyword),
-        )
-      : data;
-    setFilteredData(result);
-    setCurrentPage(1); // 검색 시 첫 페이지로 초기화
+    const keyword = searchKeyword.trim();
+    fetchStocks(0, keyword);
   };
- 
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchKeyword(value);
     if (value.trim() === '') {
-      setFilteredData(buildStockData());
-      setCurrentPage(1);
+      fetchStocks(0, '');
     }
   };
- 
-  const getModalData = () => {
-    if (!selectedItem) return [];
- 
-    const txList = mockHqStockTransactions
-      .filter((tx) => tx.hqStockId === selectedItem.stockId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
- 
-    let currentStock = selectedItem.quantity;
- 
-    const result = txList.map((tx) => {
-      let typeLabel: '입고' | '출고' | '반품입고';
-      let isInbound = false;
-      let remark = '-';
- 
-      if (tx.type === 'IN') {
-        typeLabel = '입고';
-        isInbound = true;
-      } else if (tx.type === 'RETURN_IN') {
-        typeLabel = '반품입고';
-        isInbound = true;
-        if (tx.returnId) {
-          const ret = mockReturns.find((r) => r.id === tx.returnId);
-          const pharmacy = mockPharmacies.find((p) => p.id === ret?.pharmacyId);
-          if (pharmacy) remark = pharmacy.pharmacyName;
-        }
-      } else {
-        typeLabel = '출고';
-        isInbound = false;
-        if (tx.orderId) {
-          const order = mockOrders.find((o) => o.id === tx.orderId);
-          const pharmacy = mockPharmacies.find((p) => p.id === order?.pharmacyId);
-          if (pharmacy) remark = pharmacy.pharmacyName;
-        }
-      }
- 
-      const row = {
-        id: tx.id,
-        date: tx.createdAt.slice(0, 10),
-        type: typeLabel,
-        quantity: tx.quantity,
-        balance: currentStock,
-        remark,
-      };
- 
-      currentStock -= isInbound ? tx.quantity : -tx.quantity;
-      return row;
-    });
- 
-    return result.reverse();
-  };
- 
+
   const columns: ColumnsType<StockItem> = [
     {
       title: 'No',
@@ -183,18 +145,20 @@ export default function HqStockPage() {
       title: '최종 입고 일시',
       dataIndex: 'lastInboundDate',
       key: 'lastInboundDate',
+      render: (v: string | null) => v ?? '-',
     },
     {
       title: '최종 출고 일시',
       dataIndex: 'lastOutboundDate',
       key: 'lastOutboundDate',
+      render: (v: string | null) => v ?? '-',
     },
   ];
- 
+
   return (
     <>
       <Title level={3}>본사 재고 현황</Title>
- 
+
       <Space style={{ marginBottom: 16 }}>
         <Input.Search
           placeholder="품목코드 또는 품목명 검색"
@@ -208,27 +172,28 @@ export default function HqStockPage() {
           조회
         </Button>
       </Space>
- 
+
       <Table
         columns={columns}
-        dataSource={filteredData}
+        dataSource={rows}
         pagination={{
           pageSize,
-          onChange: (page) => setCurrentPage(page),
+          current: currentPage,
+          total,
+          onChange: (page) => fetchStocks(page - 1, searchKeyword.trim()),
         }}
-        rowKey="key"
+        rowKey="stockId"
       />
- 
+
       <Modal
         title={selectedItem?.productName}
         open={isModalOpen}
         footer={null}
         onCancel={handleCancel}
-        destroyOnHidden // ✅ 변경된 부분
+        destroyOnHidden
         width={700}
       >
-
-        {selectedItem && <StockTransactionTable data={getModalData()} />}
+        {selectedItem && <StockTransactionTable data={txRows} />}
       </Modal>
     </>
   );

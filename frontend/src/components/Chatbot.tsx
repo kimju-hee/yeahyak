@@ -5,6 +5,12 @@ import { MessageOutlined } from '@ant-design/icons';
 import { Bubble } from '@ant-design/x';
 import { Rnd } from 'react-rnd';
 
+// Markdown 렌더링
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
+import rehypeSanitize from 'rehype-sanitize';
+
 const { TextArea } = Input;
 const { Title } = Typography;
 
@@ -20,16 +26,20 @@ export default function Chatbot() {
   const [mode, setMode] = useState<'FAQ' | 'Q&A' | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const messageEndRef = useRef<HTMLDivElement>(null);
-  const chatbotRef = useRef<HTMLDivElement>(null);
+  const [isSending, setIsSending] = useState(false);  // 중복 전송 방지
+  const [composing, setComposing] = useState(false);  // IME(한글) 조합 상태
+  const [ready, setReady] = useState(false);          // window 접근 안전화(SSR 대비)
 
+  const messageEndRef = useRef<HTMLSpanElement | null>(null);  // 실제로 span 사용
+  const chatbotRef = useRef<HTMLDivElement | null>(null);
+
+  // 클라이언트 렌더 보장
+  useEffect(() => setReady(true), []);
+
+  // 바깥 클릭/ESC로 닫기 (현재 UX 유지)
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        mode &&
-        chatbotRef.current &&
-        !chatbotRef.current.contains(e.target as Node)
-      ) {
+      if (mode && chatbotRef.current && !chatbotRef.current.contains(e.target as Node)) {
         setMode(null);
         setMessages([]);
       }
@@ -51,20 +61,22 @@ export default function Chatbot() {
     };
   }, [mode]);
 
+  // 자동 스크롤
   useEffect(() => {
-    if (messageEndRef.current) {
-      messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim() || !mode) return;
+    if (!input.trim() || !mode || isSending) return;
 
-    const userMessage: ChatMessage = { role: 'user', content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    const trimmed = input.trim();
+    const userMessage: ChatMessage = { role: 'user', content: trimmed };
+    const nextMessages = [...messages, userMessage]; // 최신 메시지 포함
+    setMessages(nextMessages);
     setInput('');
+    setIsSending(true);
 
-    // ✅ mode에 따라 API 경로 결정
+    // 🔒 API 라인: 원본 유지
     const endpoint =
       mode === 'FAQ'
         ? 'http://localhost:8080/api/chat/faq'
@@ -73,33 +85,27 @@ export default function Chatbot() {
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: 1,
-          question: input,
-          history: messages.map((msg) => ({
+          question: trimmed,
+          history: nextMessages.map((msg) => ({
             type: msg.role === 'user' ? 'human' : 'ai',
             content: msg.content,
           })),
         }),
       });
 
-      const result = await response.json();
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const result = await response.json().catch(() => ({} as any));
       const reply = result?.data?.reply || '응답이 없습니다.';
 
-      const botMessage: ChatMessage = {
-        role: 'bot',
-        content: reply,
-      };
-      setMessages((prev) => [...prev, botMessage]);
+      setMessages((prev) => [...prev, { role: 'bot', content: reply }]);
     } catch (error) {
-      const errorMessage: ChatMessage = {
-        role: 'bot',
-        content: '서버 오류가 발생했습니다.',
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, { role: 'bot', content: '서버 오류가 발생했습니다.' }]);
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -114,21 +120,13 @@ export default function Chatbot() {
           ? '안녕하세요. 자주 묻는 질문을 도와드리겠습니다.'
           : '안녕하세요. 무엇을 도와드릴까요?',
     };
-    setMessages([initialBotMessage]);
+    setMessages([initialBotMessage]);  // 이 초기 문구도 history에 포함됨
     setOpen(false);
   };
 
   const dropdownItems: MenuProps['items'] = [
-    {
-      key: 'faq',
-      label: 'FAQ',
-      onClick: () => handleSelect('faq'),
-    },
-    {
-      key: 'qna',
-      label: 'Q&A',
-      onClick: () => handleSelect('qna'),
-    },
+    { key: 'faq', label: 'FAQ', onClick: () => handleSelect('faq') },
+    { key: 'qna', label: 'Q&A', onClick: () => handleSelect('qna') },
   ];
 
   return (
@@ -153,17 +151,12 @@ export default function Chatbot() {
           placement="bottomRight"
           arrow
         >
-          <Button
-            type="primary"
-            shape="circle"
-            size="large"
-            icon={<MessageOutlined />}
-          />
+          <Button type="primary" shape="circle" size="large" icon={<MessageOutlined />} />
         </Dropdown>
       </aside>
 
       {/* 챗봇 */}
-      {mode && (
+      {mode && ready && (
         <Rnd
           default={{
             x: window.innerWidth - 400,
@@ -174,32 +167,51 @@ export default function Chatbot() {
           minWidth={300}
           minHeight={400}
           bounds="#chatbot-wrapper"
-          enableResizing={true}
+          // ⬇⬇ 헤더만 드래그 가능
+          dragHandleClassName="chatbot-header"
+          // ⬇⬇ 테두리/모서리에서만 리사이즈
+          enableResizing={{
+            top: true, right: true, bottom: true, left: true,
+            topRight: true, bottomRight: true, bottomLeft: true, topLeft: true,
+          }}
+          resizeHandleStyles={{
+            top: { height: '6px', cursor: 'ns-resize' },
+            right: { width: '6px', cursor: 'ew-resize' },
+            bottom: { height: '6px', cursor: 'ns-resize' },
+            left: { width: '6px', cursor: 'ew-resize' },
+            topRight: { width: '10px', height: '10px', cursor: 'ne-resize' },
+            bottomRight: { width: '10px', height: '10px', cursor: 'se-resize' },
+            bottomLeft: { width: '10px', height: '10px', cursor: 'sw-resize' },
+            topLeft: { width: '10px', height: '10px', cursor: 'nw-resize' },
+          }}
           style={{ position: 'absolute', pointerEvents: 'auto' }}
         >
           <div ref={chatbotRef} style={{ height: '100%' }}>
             <Card
               title={
-                <Title level={5} style={{ margin: 0 }}>
-                  {mode === 'FAQ' ? 'FAQ 챗봇' : 'Q&A 챗봇'}
-                </Title>
+                // ⬇⬇ 이 영역만 창 이동 가능
+                <div className="chatbot-header" style={{ cursor: 'move', display: 'flex', alignItems: 'center' }}>
+                  <Title level={5} style={{ margin: 0 }}>
+                    {mode === 'FAQ' ? 'FAQ 챗봇' : 'Q&A 챗봇'}
+                  </Title>
+                </div>
               }
               style={{
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
               }}
-              styles={{ // ✅ 변경된 부분
+              styles={{
                 body: {
                   display: 'flex',
                   flexDirection: 'column',
                   flex: 1,
                   padding: 0,
                   overflow: 'hidden',
+                  border: '1px solid #e5e7eb', // 테두리 힌트(선택)
                 },
               }}
             >
-
               {/* 메시지 영역 */}
               <main
                 style={{
@@ -210,6 +222,7 @@ export default function Chatbot() {
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 8,
+                  userSelect: 'text',            // ⬅ 텍스트 선택 허용
                 }}
               >
                 {messages.map((msg, idx) => (
@@ -222,17 +235,33 @@ export default function Chatbot() {
                     }}
                   >
                     <Bubble
-                      content={msg.content}
                       shape="corner"
                       placement={msg.role === 'user' ? 'end' : 'start'}
                       styles={{
                         content: {
-                          maxWidth: 240,
+                          maxWidth: 320,
                           backgroundColor:
                             msg.role === 'user' ? '#1677ff' : '#f0f0f0',
                           color: msg.role === 'user' ? '#fff' : '#000',
+                          padding: 12,
                         },
                       }}
+                      // 마크다운 렌더링
+                      content={
+                        <div style={{ whiteSpace: 'normal', wordBreak: 'break-word', userSelect: 'text' }}>
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm, remarkBreaks]}
+                            rehypePlugins={[rehypeSanitize]}
+                            components={{
+                              a: ({ node, ...props }) => (
+                                <a {...props} target="_blank" rel="noopener noreferrer" />
+                              ),
+                            }}
+                          >
+                            {msg.content}
+                          </ReactMarkdown>
+                        </div>
+                      }
                     />
                   </article>
                 ))}
@@ -246,13 +275,22 @@ export default function Chatbot() {
                     autoSize={{ minRows: 1, maxRows: 2 }}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
+                    onCompositionStart={() => setComposing(true)}
+                    onCompositionEnd={() => setComposing(false)}
                     onPressEnter={(e) => {
+                      if (composing) return; // IME 조합 중엔 전송 금지
                       e.preventDefault();
                       handleSend();
                     }}
                     placeholder="메시지를 입력하세요..."
+                    disabled={isSending}
                   />
-                  <Button type="primary" onClick={handleSend}>
+                  <Button
+                    type="primary"
+                    onClick={handleSend}
+                    disabled={!input.trim()}
+                    loading={isSending}
+                  >
                     전송
                   </Button>
                 </Space.Compact>
