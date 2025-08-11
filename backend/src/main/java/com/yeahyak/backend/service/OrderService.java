@@ -54,7 +54,6 @@ public class OrderService {
         orderRepository.save(orders);
 
         int totalPrice = 0;
-
         List<OrderItemResponse> itemResponses = new ArrayList<>();
 
         for (OrderItemRequest itemRequest : request.getItems()) {
@@ -89,11 +88,10 @@ public class OrderService {
                 .pharmacyName(pharmacy.getPharmacyName())
                 .createdAt(orders.getCreatedAt())
                 .totalPrice(totalPrice)
-                .status(orders.getStatus().name()) // enum -> string
+                .status(orders.getStatus().name())
                 .items(itemResponses)
                 .build();
     }
-
 
     @Transactional
     public List<OrderResponse> getAllOrders() {
@@ -122,38 +120,17 @@ public class OrderService {
         }).toList();
     }
 
-    public Map<String, Object> getAllOrders(int page, int size, String status, String pharmacyName) {
+    public Map<String, Object> getAllOrders(int page, int size, OrderStatus status, String pharmacyName) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-
-        OrderStatus st = null;
-        if (status != null && !status.isBlank()) {
-            try {
-                st = OrderStatus.valueOf(status.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("올바르지 않은 상태값입니다: " + status);
-            }
-        }
-
-        Page<Order> orders = orderRepository.findAllWithFilters(st, pharmacyName, pageable);
+        Page<Order> orders = orderRepository.findAllWithFilters(status, pharmacyName, pageable);
         return convertToPagedResponse(orders);
     }
 
-    public Map<String, Object> getOrdersByPharmacy(Long pharmacyId, int page, int size, String status) {
+    public Map<String, Object> getOrdersByPharmacy(Long pharmacyId, int page, int size, OrderStatus status) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-
-        OrderStatus st = null;
-        if (status != null && !status.isBlank()) {
-            try {
-                st = OrderStatus.valueOf(status.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("올바르지 않은 상태값입니다: " + status);
-            }
-        }
-
-        Page<Order> orders = orderRepository.findByPharmacyAndOptionalStatus(pharmacyId, st, pageable);
+        Page<Order> orders = orderRepository.findByPharmacyAndOptionalStatus(pharmacyId, status, pageable);
         return convertToPagedResponse(orders);
     }
-
 
     private Map<String, Object> convertToPagedResponse(Page<Order> orders) {
         List<OrderResponse> orderResponses = orders.getContent().stream().map(order -> {
@@ -260,5 +237,4 @@ public class OrderService {
 
         orderRepository.delete(order);
     }
-
 }
