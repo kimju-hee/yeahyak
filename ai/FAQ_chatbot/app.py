@@ -102,4 +102,4 @@ if __name__ == '__main__':
     print("[본사 정책 관련] [운영 프로세스 관련] [반복 상담/고객 응대 관련] [복약지도 관련] [반품/교환/클레임 관련]  import os.py:76 - faq_server.py:77")
     print("위의 카테고리 안에서의 질문에 대답해드립니다 \n - faq_server.py:78")
     print("## exit를 입력 시 채팅이 종료됩니다\n - faq_server.py:79")
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)

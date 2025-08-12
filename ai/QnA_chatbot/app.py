@@ -62,5 +62,5 @@ def handle_chat():
 
 if __name__ == '__main__':
     print("🤖 챗봇 에이전트를 생성 중입니다...")
-    app.run(debug=True, port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)
     print("✅ 챗봇 에이전트가 준비되었습니다.")

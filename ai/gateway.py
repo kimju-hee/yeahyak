@@ -152,4 +152,4 @@ def order_forecast_route():
 
 if __name__ == '__main__':
     print("🚀 Gateway 서버 실행 중... http://localhost:5000")
-    app.run(port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)

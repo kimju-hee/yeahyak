@@ -101,4 +101,5 @@ def summarize_law():
         return Response(json.dumps({"summary": summary}, ensure_ascii=False), content_type="application/json; charset=utf-8")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    print("✅ 법률 요약 서버 실행 중... http://localhost:5000")
+    app.run(host="0.0.0.0", port=5000, debug=True)

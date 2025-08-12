@@ -201,3 +201,8 @@ def predict_order(file_storage):
         "data": results,
         "error": None
     }), 200  
+
+# 서버 실행
+if __name__ == "__main__":
+    print("✅ Order 예측 서버 실행 중... http://localhost:5000")
+    app.run(host="0.0.0.0", port=5000, debug=True)

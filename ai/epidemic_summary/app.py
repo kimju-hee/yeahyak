@@ -73,5 +73,5 @@ def summarize_epidemic():
 
 # 서버 실행
 if __name__ == "__main__":
-    print("✅ 감염병 요약 서버 실행 중... http://localhost:5002")
-    app.run(host="0.0.0.0", port=5002, debug=True)
+    print("✅ 감염병 요약 서버 실행 중... http://localhost:5000")
+    app.run(host="0.0.0.0", port=5000, debug=True)

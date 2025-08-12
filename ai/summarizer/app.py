@@ -76,5 +76,5 @@ def summarize_pdf():
         )
 
 if __name__ == "__main__":
-    print("💊 약품 요약 서버 실행 중... http://localhost:5001/summarize-pdf")
-    app.run(host="0.0.0.0", port=5001, debug=True)
+    print("💊 약품 요약 서버 실행 중... http://localhost:5000/summarize-pdf")
+    app.run(host="0.0.0.0", port=5000, debug=True)
