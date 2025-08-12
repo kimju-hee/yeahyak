@@ -12,7 +12,9 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { ConfigProvider, Divider, Dropdown, Flex, Layout, Menu, Space, Typography } from 'antd';
+import { useRef } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import Chatbot from '../components/Chatbot';
 import { useAuthStore } from '../stores/authStore';
 import { PHARMACY_STATUS, USER_ROLE, type Pharmacy } from '../types/profile.type';
 const { Sider, Header, Content, Footer } = Layout;
@@ -108,6 +110,8 @@ export default function BranchLayout() {
 
   const selectedKeys = getSelectedKeys();
 
+  const contentRef = useRef<HTMLDivElement>(null);
+
   return (
     <ConfigProvider theme={theme}>
       <Layout style={{ minHeight: '100vh' }}>
@@ -161,9 +165,21 @@ export default function BranchLayout() {
             ></Menu>
           </Sider>
           <Layout>
-            <Content style={{ margin: '24px', padding: '24px' }}>
-              <Outlet />
-            </Content>
+            <div
+              ref={contentRef}
+              style={{
+                position: 'relative',
+                flex: 1,
+                minHeight: 0,
+                padding: '24px',
+                margin: '24px',
+              }}
+            >
+              <Content>
+                <Outlet />
+              </Content>
+              <Chatbot boundsRef={contentRef} />
+            </div>
             <Footer style={{ textAlign: 'center' }}>
               © 2025 Team yeahyak
               <Divider type="vertical" />
@@ -178,7 +194,6 @@ export default function BranchLayout() {
           </Layout>
         </Layout>
       </Layout>
-      {/* <Chatbot /> */}
     </ConfigProvider>
   );
 }
