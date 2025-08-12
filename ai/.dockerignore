@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+*.log
+data/
+tmp/
+*.ipynb
+*.pdf
+*.xlsx
+*.csv
+*.zip
+.git
