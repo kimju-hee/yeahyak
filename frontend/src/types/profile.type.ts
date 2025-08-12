@@ -2,15 +2,14 @@ export interface User {
   userId: number;
   email: string;
   point: number;
-  role: 'BRANCH' | 'ADMIN';
+  role: UserRole;
 }
-
-export type UserRole = keyof typeof USER_ROLE;
 
 export const USER_ROLE = {
   BRANCH: 'BRANCH',
   ADMIN: 'ADMIN',
 } as const;
+export type UserRole = keyof typeof USER_ROLE;
 
 export interface Pharmacy {
   pharmacyId: number;
@@ -25,13 +24,12 @@ export interface Pharmacy {
   status: PharmacyStatus;
 }
 
-export type PharmacyStatus = keyof typeof PHARMACY_STATUS;
-
 export const PHARMACY_STATUS = {
   PENDING: 'PENDING',
   ACTIVE: 'ACTIVE',
   REJECTED: 'REJECTED',
 } as const;
+export type PharmacyStatus = keyof typeof PHARMACY_STATUS;
 
 export interface Admin {
   adminId: number;
@@ -40,12 +38,11 @@ export interface Admin {
   department: AdminDepartment;
 }
 
-export type AdminDepartment = keyof typeof ADMIN_DEPARTMENT;
-
 export const ADMIN_DEPARTMENT = {
   운영팀: '운영팀',
   총무팀: '총무팀',
 } as const;
+export type AdminDepartment = keyof typeof ADMIN_DEPARTMENT;
 
 export interface AdminProfileUpdateRequest {
   adminId: number;

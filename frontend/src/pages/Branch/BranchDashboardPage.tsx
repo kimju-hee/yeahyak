@@ -1,48 +1,46 @@
 import { Card, Col, List, message, Row, Table } from 'antd';
+import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { instance } from '../../api/api';
 import { useAuthStore } from '../../stores/authStore';
-import type { Announcement } from '../../types/announcement.type';
-import type { OrderItemListResponse } from '../../types/order.type';
+import { ANNOUNCEMENT_TYPE, type Announcement } from '../../types/announcement.type';
+import type { OrderListResponse } from '../../types/order.type';
 import type { Pharmacy, User } from '../../types/profile.type';
 
 export default function BranchDashboardPage() {
   const [messageApi, contextHolder] = message.useMessage();
+
   const user = useAuthStore((state) => state.user) as User;
   const profile = useAuthStore((state) => state.profile) as Pharmacy;
   const pharmacyId = profile.pharmacyId;
 
   const [latestNotices, setLatestNotices] = useState<Announcement[]>([]);
-  const [recentOrderItems, setRecentOrderItems] = useState<OrderItemListResponse[]>([]);
+  const [recentOrder, setRecentOrder] = useState<OrderListResponse[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // TODO: 쿼리 파라미터 확인
         const noticeRes = await instance.get('/announcements?page=0&size=5');
         // LOG: 테스트용 로그
         console.log('✨ 최근 공지사항 로딩 응답:', noticeRes.data);
-        if (noticeRes.data.success) {
-          setLatestNotices(noticeRes.data.data || []);
+        if (noticeRes.data.success && noticeRes.data.data.length > 0) {
+          setLatestNotices(noticeRes.data.data);
         }
 
-        // TODO: 쿼리 파라미터 확인
         const orderRes = await instance.get(
-          `/orders/branch/orders?page=0&size=1&pharmacyId=${pharmacyId}`,
+          `/orders/branch/orders?pharmacyId=${pharmacyId}&page=0&size=1`,
         );
         // LOG: 테스트용 로그
         console.log('✨ 최근 발주 상세 로딩 응답:', orderRes.data);
         if (orderRes.data.success && orderRes.data.data.length > 0) {
-          setRecentOrderItems(orderRes.data.data[0].items || []);
+          setRecentOrder(orderRes.data.data);
         }
       } catch (e: any) {
         console.error('대시보드 데이터 로드 실패:', e);
-        messageApi.error(
-          e.response?.data?.message || '대시보드 데이터 로딩 중 오류가 발생했습니다.',
-        );
+        messageApi.error(e.message || '대시보드 데이터 로딩 중 오류가 발생했습니다.');
         setLatestNotices([]);
-        setRecentOrderItems([]);
+        setRecentOrder([]);
       }
     };
 
@@ -83,8 +81,11 @@ export default function BranchDashboardPage() {
             <List
               dataSource={latestNotices}
               renderItem={(item) => (
-                <List.Item>
-                  <Link to={`/branch/notices/${item.announcementId}`}>{item.title}</Link>
+                <List.Item key={item.announcementId}>
+                  <List.Item.Meta
+                    title={<Link to={`/branch/notices/${item.announcementId}`}>{item.title}</Link>}
+                    description={ANNOUNCEMENT_TYPE[item.type]}
+                  />
                 </List.Item>
               )}
             />
@@ -94,15 +95,36 @@ export default function BranchDashboardPage() {
 
       <Row wrap gutter={16} style={{ marginTop: '16px' }}>
         <Col span={12}>
-          <Card title="최근 발주 상세" variant="borderless">
-            <Table
-              dataSource={recentOrderItems}
-              columns={recentOrderItemsColumns}
-              pagination={false}
-              rowKey={(_, idx) => `item-${idx}`}
-              size="small"
-            />
-          </Card>
+          {recentOrder.length > 0 ? (
+            <Card
+              title={`최근 발주 상세 (${(() => {
+                const orderDate = dayjs(recentOrder[0].createdAt);
+                const today = dayjs();
+                const diffDays = today.diff(orderDate, 'day');
+                return diffDays === 0 ? '오늘' : `${diffDays}일 전`;
+              })()})`}
+              variant="borderless"
+            >
+              <Table
+                dataSource={recentOrder[0].items}
+                columns={recentOrderItemsColumns}
+                pagination={false}
+                rowKey="productName"
+                size="small"
+              />
+            </Card>
+          ) : (
+            <Card title={`최근 발주 상세`} variant="borderless">
+              <Table
+                dataSource={[]}
+                columns={recentOrderItemsColumns}
+                pagination={false}
+                rowKey="productName"
+                size="small"
+                locale={{ emptyText: '최근 발주 내역이 없습니다.' }}
+              />
+            </Card>
+          )}
         </Col>
         <Col span={12}>
           <Card title="잔액 현황" variant="borderless">
