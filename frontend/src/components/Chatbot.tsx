@@ -1,266 +1,281 @@
-import { useState, useEffect, useRef } from 'react';
-import { Button, Dropdown, Input, Space, Typography, Card } from 'antd';
-import type { MenuProps } from 'antd';
-import { MessageOutlined } from '@ant-design/icons';
-import { Bubble } from '@ant-design/x';
+import {
+  CloseOutlined,
+  MedicineBoxOutlined,
+  MessageOutlined,
+  QuestionCircleOutlined,
+  RobotOutlined,
+} from '@ant-design/icons';
+import { Bubble, Sender } from '@ant-design/x';
+import { Button, Card, Flex, FloatButton, type GetProp } from 'antd';
+import DOMPurify from 'dompurify';
+import MarkdownIt from 'markdown-it';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { Rnd } from 'react-rnd';
+import { instance } from '../api/api';
+import { useAuthStore } from '../stores/authStore';
+import {
+  CHAT_ROLE,
+  CHAT_TYPE,
+  type ChatbotRequest,
+  type ChatMessage,
+  type ChatType,
+} from '../types/chatbot.type';
+import type { User } from '../types/profile.type';
 
-const { TextArea } = Input;
-const { Title } = Typography;
-
-type ChatRole = 'user' | 'bot';
-
-interface ChatMessage {
-  role: ChatRole;
-  content: string;
+interface ChatbotProps {
+  boundsRef: RefObject<HTMLDivElement | null>;
 }
 
-export default function Chatbot() {
-  const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<'FAQ' | 'Q&A' | null>(null);
+const md = new MarkdownIt({ html: false, breaks: true, linkify: true });
+
+const renderMarkdown: GetProp<typeof Bubble, 'messageRender'> = (raw) => {
+  const html = md.render(String(raw));
+  const safe = DOMPurify.sanitize(html);
+  return <div dangerouslySetInnerHTML={{ __html: safe }} />;
+};
+
+const roles: GetProp<typeof Bubble.List, 'roles'> = {
+  USER: {
+    placement: 'end',
+    shape: 'corner',
+  },
+  AI: {
+    placement: 'start',
+    shape: 'corner',
+    avatar: { icon: <RobotOutlined />, style: { color: '#fa8c16', backgroundColor: '#fff7e6' } },
+    messageRender: renderMarkdown,
+  },
+};
+
+export default function Chatbot({ boundsRef }: ChatbotProps) {
+  const user = useAuthStore((state) => state.user) as User;
+
+  const [chatType, setChatType] = useState<ChatType>();
+  const [content, setContent] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const messageEndRef = useRef<HTMLDivElement>(null);
-  const chatbotRef = useRef<HTMLDivElement>(null);
+  const [requesting, setRequesting] = useState(false);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        mode &&
-        chatbotRef.current &&
-        !chatbotRef.current.contains(e.target as Node)
-      ) {
-        setMode(null);
-        setMessages([]);
-      }
-    };
+  const abortController = useRef<AbortController | null>(null);
+  const keySeed = useRef(0);
 
-    const handleEscKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && mode) {
-        setMode(null);
-        setMessages([]);
-      }
-    };
+  const makeKey = useCallback(() => `k${++keySeed.current}`, []);
 
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscKey);
+  const [initialPosition, setInitialPosition] = useState({ x: 0, y: 0 });
+  const [resizeKey, setResizeKey] = useState(0);
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscKey);
-    };
-  }, [mode]);
+  const calculatePosition = useCallback(() => {
+    if (boundsRef.current) {
+      const parentWidth = boundsRef.current.clientWidth;
+      const parentHeight = boundsRef.current.clientHeight;
 
-  useEffect(() => {
-    if (messageEndRef.current) {
-      messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
-
-  const handleSend = async () => {
-    if (!input.trim() || !mode) return;
-
-    const userMessage: ChatMessage = { role: 'user', content: input };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput('');
-
-    // ✅ mode에 따라 API 경로 결정
-    const endpoint =
-      mode === 'FAQ'
-        ? 'http://localhost:8080/api/chat/faq'
-        : 'http://localhost:8080/api/chat/qna';
-
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: 1,
-          question: input,
-          history: messages.map((msg) => ({
-            type: msg.role === 'user' ? 'human' : 'ai',
-            content: msg.content,
-          })),
-        }),
+      setInitialPosition({
+        x: parentWidth - 360 - 48,
+        y: parentHeight - 480,
       });
-
-      const result = await response.json();
-      const reply = result?.data?.reply || '응답이 없습니다.';
-
-      const botMessage: ChatMessage = {
-        role: 'bot',
-        content: reply,
-      };
-      setMessages((prev) => [...prev, botMessage]);
-    } catch (error) {
-      const errorMessage: ChatMessage = {
-        role: 'bot',
-        content: '서버 오류가 발생했습니다.',
-      };
-      setMessages((prev) => [...prev, errorMessage]);
     }
-  };
+  }, [boundsRef]);
 
-  const handleSelect = (key: 'faq' | 'qna') => {
-    const selectedMode = key === 'faq' ? 'FAQ' : 'Q&A';
-    setMode(selectedMode);
-    setInput('');
-    const initialBotMessage: ChatMessage = {
-      role: 'bot',
-      content:
-        selectedMode === 'FAQ'
-          ? '안녕하세요. 자주 묻는 질문을 도와드리겠습니다.'
-          : '안녕하세요. 무엇을 도와드릴까요?',
+  useEffect(() => {
+    calculatePosition();
+    const handleResize = () => {
+      calculatePosition();
+      setResizeKey((prevKey) => prevKey + 1);
     };
-    setMessages([initialBotMessage]);
-    setOpen(false);
-  };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [boundsRef]);
 
-  const dropdownItems: MenuProps['items'] = [
-    {
-      key: 'faq',
-      label: 'FAQ',
-      onClick: () => handleSelect('faq'),
+  useEffect(() => () => abortController.current?.abort?.(), []);
+
+  const handleSelect = useCallback(
+    (type: ChatType) => {
+      abortController.current?.abort?.();
+      setChatType(type);
+      setContent('');
+      const initialMessage: ChatMessage = {
+        role: CHAT_ROLE.AI,
+        content:
+          type === CHAT_TYPE.FAQ
+            ? '안녕하세요 저는 FAQ 챗봇입니다. 무엇을 도와드릴까요?'
+            : '안녕하세요 저는 Q&A 챗봇입니다. 무엇을 도와드릴까요?',
+        key: makeKey(),
+      };
+      setMessages([initialMessage]);
     },
-    {
-      key: 'qna',
-      label: 'Q&A',
-      onClick: () => handleSelect('qna'),
+    [makeKey],
+  );
+
+  const handleClose = useCallback(() => {
+    abortController.current?.abort?.();
+    setChatType(undefined);
+    setMessages([]);
+    setContent('');
+  }, []);
+
+  const handleSend = useCallback(
+    async (raw: string) => {
+      if (!raw.trim() || !chatType || requesting) return;
+
+      const userMessage: ChatMessage = {
+        role: CHAT_ROLE.USER,
+        content: raw.trim(),
+        key: makeKey(),
+      };
+      const loadingMessage: ChatMessage = {
+        role: CHAT_ROLE.AI,
+        content: '',
+        key: makeKey(),
+        loading: true,
+      };
+      setMessages((prev) => [...prev, userMessage, loadingMessage]);
+      setContent('');
+
+      const payload: ChatbotRequest = {
+        userId: user.userId,
+        chatType: chatType,
+        query: raw.trim(),
+        history: [...messages, userMessage].map((message) => ({
+          role: message.role,
+          content: message.content,
+        })),
+      };
+      // LOG: 테스트용 로그
+      console.log('🤖 챗봇 요청:', payload);
+
+      const endpoint = chatType === CHAT_TYPE.FAQ ? '/chat/faq' : '/chat/qna';
+
+      setRequesting(true);
+      const controller = new AbortController();
+      abortController.current = controller;
+
+      try {
+        const res = await instance.post(endpoint, payload, { signal: controller.signal });
+        // LOG: 테스트용 로그
+        console.log('🤖 챗봇 응답:', res.data);
+        if (res.data.success) {
+          const aiMessage: ChatMessage = {
+            role: CHAT_ROLE.AI,
+            content: res.data.data.reply || '응답이 없습니다.',
+            key: makeKey(),
+          };
+          setMessages((prev) => prev.slice(0, -1).concat(aiMessage));
+        }
+      } catch (e: any) {
+        if (e.name === 'AbortError' || e.name === 'CanceledError') {
+          const cancelMessage = {
+            role: CHAT_ROLE.AI,
+            content: '답변 요청 취소됨',
+            key: makeKey(),
+          };
+          setMessages((prev) => prev.slice(0, -1).concat(cancelMessage));
+        } else {
+          const errorMessage = {
+            role: CHAT_ROLE.AI,
+            content: '알 수 없는 오류가 발생했습니다.',
+            key: makeKey(),
+          };
+          setMessages((prev) => prev.slice(0, -1).concat(errorMessage));
+        }
+      } finally {
+        setRequesting(false);
+        abortController.current = null;
+      }
     },
-  ];
+    [chatType, requesting, makeKey],
+  );
 
   return (
-    <div
-      id="chatbot-wrapper"
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        zIndex: 1000,
-        pointerEvents: 'none',
-      }}
-    >
-      {/* 버튼 */}
-      <aside style={{ position: 'absolute', top: 24, right: 24, pointerEvents: 'auto' }}>
-        <Dropdown
-          menu={{ items: dropdownItems }}
-          open={open}
-          onOpenChange={setOpen}
-          placement="bottomRight"
-          arrow
-        >
-          <Button
-            type="primary"
-            shape="circle"
-            size="large"
-            icon={<MessageOutlined />}
-          />
-        </Dropdown>
-      </aside>
+    <>
+      <FloatButton.Group
+        trigger="click"
+        type="primary"
+        style={{ insetInlineEnd: '24px' }}
+        icon={<MessageOutlined />}
+      >
+        <FloatButton
+          icon={<QuestionCircleOutlined />}
+          onClick={() => handleSelect(CHAT_TYPE.FAQ)}
+          tooltip={{ title: '운영에 대해 궁금한 점을 물어보세요!', placement: 'left' }}
+        />
+        <FloatButton
+          icon={<MedicineBoxOutlined />}
+          onClick={() => handleSelect(CHAT_TYPE.QNA)}
+          tooltip={{ title: '의약품에 대해 궁금한 점을 물어보세요!', placement: 'left' }}
+        />
+      </FloatButton.Group>
 
       {/* 챗봇 */}
-      {mode && (
+      {chatType && (
         <Rnd
-          default={{
-            x: window.innerWidth - 400,
-            y: window.innerHeight - 600,
-            width: 360,
-            height: 480,
-          }}
-          minWidth={300}
-          minHeight={400}
-          bounds="#chatbot-wrapper"
-          enableResizing={true}
-          style={{ position: 'absolute', pointerEvents: 'auto' }}
+          key={resizeKey}
+          default={{ x: initialPosition.x, y: initialPosition.y, width: 360, height: 480 }}
+          minWidth={360}
+          minHeight={480}
+          bounds={boundsRef?.current ?? undefined}
         >
-          <div ref={chatbotRef} style={{ height: '100%' }}>
-            <Card
-              title={
-                <Title level={5} style={{ margin: 0 }}>
-                  {mode === 'FAQ' ? 'FAQ 챗봇' : 'Q&A 챗봇'}
-                </Title>
-              }
-              style={{
-                height: '100%',
+          <Card
+            title={chatType === CHAT_TYPE.FAQ ? 'FAQ 챗봇' : 'Q&A 챗봇'}
+            extra={
+              <Button
+                type="text"
+                size="small"
+                icon={<CloseOutlined />}
+                onClick={handleClose}
+                style={{ margin: 0 }}
+              />
+            }
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0px 9px 28px 0px rgba(0, 0, 0, 0.05)',
+            }}
+            styles={{
+              body: {
                 display: 'flex',
                 flexDirection: 'column',
-              }}
-              styles={{ // ✅ 변경된 부분
-                body: {
-                  display: 'flex',
-                  flexDirection: 'column',
-                  flex: 1,
-                  padding: 0,
-                  overflow: 'hidden',
-                },
-              }}
-            >
+                flex: 1,
+                padding: '8px',
+                overflow: 'hidden',
+              },
+            }}
+          >
+            <Flex vertical justify="space-between" style={{ flex: 1, minHeight: 0 }}>
+              <Bubble.List
+                autoScroll
+                roles={roles}
+                items={messages.map((m) => ({
+                  role: m.role,
+                  content: m.content,
+                  loading: m.loading,
+                  key: m.key,
+                }))}
+                style={{ flex: 'auto', paddingInline: '8px' }}
+              />
 
-              {/* 메시지 영역 */}
-              <main
-                style={{
-                  flex: 1,
-                  minHeight: 0,
-                  overflowY: 'auto',
-                  padding: 12,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 8,
+              <Sender
+                placeholder={
+                  chatType === CHAT_TYPE.FAQ
+                    ? '운영에 대해 궁금한 점을 물어보세요!'
+                    : '의약품에 대해 궁금한 점을 물어보세요!'
+                }
+                loading={requesting}
+                value={content}
+                onChange={setContent}
+                onCancel={() => {
+                  abortController?.current?.abort?.();
+                  setContent('');
                 }}
-              >
-                {messages.map((msg, idx) => (
-                  <article
-                    key={idx}
-                    style={{
-                      display: 'flex',
-                      justifyContent:
-                        msg.role === 'user' ? 'flex-end' : 'flex-start',
-                    }}
-                  >
-                    <Bubble
-                      content={msg.content}
-                      shape="corner"
-                      placement={msg.role === 'user' ? 'end' : 'start'}
-                      styles={{
-                        content: {
-                          maxWidth: 240,
-                          backgroundColor:
-                            msg.role === 'user' ? '#1677ff' : '#f0f0f0',
-                          color: msg.role === 'user' ? '#fff' : '#000',
-                        },
-                      }}
-                    />
-                  </article>
-                ))}
-                <span ref={messageEndRef} />
-              </main>
-
-              {/* 입력창 */}
-              <footer style={{ padding: 12, borderTop: '1px solid #eee' }}>
-                <Space.Compact style={{ width: '100%' }}>
-                  <TextArea
-                    autoSize={{ minRows: 1, maxRows: 2 }}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onPressEnter={(e) => {
-                      e.preventDefault();
-                      handleSend();
-                    }}
-                    placeholder="메시지를 입력하세요..."
-                  />
-                  <Button type="primary" onClick={handleSend}>
-                    전송
-                  </Button>
-                </Space.Compact>
-              </footer>
-            </Card>
-          </div>
+                onSubmit={handleSend}
+                submitType="enter"
+                autoSize={{ maxRows: 4 }}
+                style={{ flex: 'none', marginTop: '8px' }}
+              />
+            </Flex>
+          </Card>
         </Rnd>
       )}
-    </div>
+    </>
   );
 }
