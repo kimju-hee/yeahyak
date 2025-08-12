@@ -1,0 +1,49 @@
+name: deploy-frontend (dev)
+
+on:
+  push:
+    branches: [dev]          # dev에서만 실행
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
+
+env:
+  IMAGE: ${{ secrets.ACR_LOGIN_SERVER }}/yeahyak-frontend:dev   # dev 태그로 푸시
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build & Push image (dev)
+        run: |
+          docker build -t "$IMAGE" ./frontend
+          docker push "$IMAGE"
+
+      - name: Deploy to VM (frontend only)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            cd /opt/yeahyak
+            docker login ${{ secrets.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }}
+
+            # compose에 우리 dev 이미지가 아직 안 박혀 있으면 1회 치환
+            grep -q 'yeahyak-frontend:dev' docker-compose.yml || \
+              sed -i 's#nginxdemos/hello#${{ secrets.ACR_LOGIN_SERVER }}/yeahyak-frontend:dev#' docker-compose.yml
+
+            docker compose pull frontend || true
+            docker compose up -d --no-deps frontend
+            docker image prune -f
