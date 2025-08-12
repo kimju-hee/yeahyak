@@ -150,6 +150,15 @@ def order_forecast_route():
     except Exception as e:
         return wrap_error(str(e), 500)
 
+# --- 헬스체크 ---
+@app.get("/health")
+def health(): 
+    return "ok", 200
+
 if __name__ == '__main__':
     print("🚀 Gateway 서버 실행 중... http://localhost:5000")
     app.run(host="0.0.0.0", port=5000, debug=True)
+
+# --- add: 기본 설정(파일 업로드 크기/타임아웃 대비) ---
+app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024   # 15MB 업로드 제한
+
