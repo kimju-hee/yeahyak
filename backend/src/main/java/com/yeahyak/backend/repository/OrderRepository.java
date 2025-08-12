@@ -2,6 +2,7 @@ package com.yeahyak.backend.repository;
 
 import com.yeahyak.backend.entity.Order;
 import com.yeahyak.backend.entity.OrderItems;
+import com.yeahyak.backend.entity.Pharmacy;
 import com.yeahyak.backend.entity.enums.OrderStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +20,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             LocalDateTime startDateTime,
             LocalDateTime endDateTime
     );
+
+    boolean existsByPharmacy(Pharmacy pharmacy);
 
 
     @Query("""

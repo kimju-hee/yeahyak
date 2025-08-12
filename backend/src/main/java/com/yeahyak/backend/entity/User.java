@@ -1,5 +1,6 @@
 package com.yeahyak.backend.entity;
 
+import com.yeahyak.backend.entity.enums.CreditStatus;
 import com.yeahyak.backend.entity.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
@@ -35,6 +36,11 @@ public class User implements UserDetails {
     private UserRole userRole;
 
     private Integer point = 0;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30, nullable = false)
+    private CreditStatus creditStatus = CreditStatus.FULL;
+
 
     @PrePersist
     public void prePersist() {

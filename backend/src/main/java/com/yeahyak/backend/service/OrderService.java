@@ -4,10 +4,8 @@ import com.yeahyak.backend.dto.OrderItemRequest;
 import com.yeahyak.backend.dto.OrderItemResponse;
 import com.yeahyak.backend.dto.OrderRequest;
 import com.yeahyak.backend.dto.OrderResponse;
-import com.yeahyak.backend.entity.OrderItems;
-import com.yeahyak.backend.entity.Order;
-import com.yeahyak.backend.entity.Pharmacy;
-import com.yeahyak.backend.entity.Product;
+import com.yeahyak.backend.entity.*;
+import com.yeahyak.backend.entity.enums.CreditStatus;
 import com.yeahyak.backend.entity.enums.OrderStatus;
 import com.yeahyak.backend.entity.enums.Status;
 import com.yeahyak.backend.repository.OrderItemRepository;
@@ -40,39 +38,15 @@ public class OrderService {
     public OrderResponse createOrder(OrderRequest request) {
         Pharmacy pharmacy = pharmacyRepository.findById(request.getPharmacyId())
                 .orElseThrow(() -> new IllegalArgumentException("약국이 존재하지 않습니다."));
-
-        if (pharmacy.getStatus() != Status.ACTIVE) {
-            throw new IllegalStateException("승인된 약국만 발주를 생성할 수 있습니다.");
-        }
-
-        Order orders = Order.builder()
-                .pharmacy(pharmacy)
-                .status(OrderStatus.REQUESTED)
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        orderRepository.save(orders);
+        if (pharmacy.getStatus() != Status.ACTIVE) throw new IllegalStateException("승인된 약국만 발주를 생성할 수 있습니다.");
 
         int totalPrice = 0;
         List<OrderItemResponse> itemResponses = new ArrayList<>();
-
         for (OrderItemRequest itemRequest : request.getItems()) {
             Product product = productRepository.findById(itemRequest.getProductId())
                     .orElseThrow(() -> new IllegalArgumentException("해당 제품이 존재하지 않습니다."));
-
             int subtotal = itemRequest.getQuantity() * itemRequest.getUnitPrice();
             totalPrice += subtotal;
-
-            OrderItems orderItem = OrderItems.builder()
-                    .orders(orders)
-                    .product(product)
-                    .quantity(itemRequest.getQuantity())
-                    .unitPrice(itemRequest.getUnitPrice())
-                    .subtotalPrice(subtotal)
-                    .build();
-
-            orderItemRepository.save(orderItem);
-
             itemResponses.add(OrderItemResponse.builder()
                     .productName(product.getProductName())
                     .quantity(itemRequest.getQuantity())
@@ -81,7 +55,36 @@ public class OrderService {
                     .build());
         }
 
+        User owner = pharmacy.getUser();
+        long next = owner.getPoint() - totalPrice;
+        if (next < -1000000) throw new IllegalStateException("CREDIT_LIMIT_EXCEEDED");
+        owner.setPoint((int) next);
+
+        Order orders = Order.builder()
+                .pharmacy(pharmacy)
+                .status(OrderStatus.REQUESTED)
+                .createdAt(LocalDateTime.now())
+                .build();
+        orderRepository.save(orders);
+
+        for (OrderItemRequest itemRequest : request.getItems()) {
+            Product product = productRepository.findById(itemRequest.getProductId()).orElseThrow();
+            int subtotal = itemRequest.getQuantity() * itemRequest.getUnitPrice();
+            OrderItems orderItem = OrderItems.builder()
+                    .orders(orders)
+                    .product(product)
+                    .quantity(itemRequest.getQuantity())
+                    .unitPrice(itemRequest.getUnitPrice())
+                    .subtotalPrice(subtotal)
+                    .build();
+            orderItemRepository.save(orderItem);
+        }
+
         orders.setTotalPrice(totalPrice);
+
+        if (next < 0 && orderRepository.existsByPharmacy(pharmacy)) {
+            owner.setCreditStatus(CreditStatus.SETTLEMENT_REQUIRED);
+        }
 
         return OrderResponse.builder()
                 .orderId(orders.getOrderId())
@@ -205,10 +208,15 @@ public class OrderService {
         order.setUpdatedAt(LocalDateTime.now());
     }
 
+
     @Transactional
     public void rejectOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 주문이 존재하지 않습니다."));
+        User owner = order.getPharmacy().getUser();
+        int total = order.getTotalPrice();
+        owner.setPoint(owner.getPoint() + total);
+        if (owner.getPoint() >= 0) owner.setCreditStatus(CreditStatus.FULL);
         order.setStatus(OrderStatus.REJECTED);
         order.setUpdatedAt(LocalDateTime.now());
     }
