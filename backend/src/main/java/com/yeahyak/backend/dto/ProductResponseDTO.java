@@ -21,6 +21,7 @@ public class ProductResponseDTO {
     private String manufacturer;
     private String details;
     private String unit;
+    private Integer stock;
     private BigDecimal unitPrice;
     private LocalDateTime createdAt;
     private String productImgUrl;

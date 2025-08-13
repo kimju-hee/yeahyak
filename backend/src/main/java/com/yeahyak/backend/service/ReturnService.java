@@ -4,6 +4,7 @@ import com.yeahyak.backend.dto.ReturnItemResponseDto;
 import com.yeahyak.backend.dto.ReturnRequestDto;
 import com.yeahyak.backend.dto.ReturnResponseDto;
 import com.yeahyak.backend.entity.*;
+import com.yeahyak.backend.entity.enums.InventoryDivision;
 import com.yeahyak.backend.entity.enums.ReturnStatus;
 import com.yeahyak.backend.repository.*;
 import jakarta.transaction.Transactional;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import com.yeahyak.backend.entity.enums.InventoryDivision;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +26,7 @@ public class ReturnService {
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final InventoryHistoryRepository inventoryHistoryRepository;
 
     @Transactional
     public ReturnResponseDto createReturnRequest(ReturnRequestDto dto) {
@@ -40,9 +43,7 @@ public class ReturnService {
             }
 
             List<OrderItems> orderItems = orderItemRepository.findByOrders(order);
-            orderedProducts = orderItems.stream()
-                    .map(OrderItems::getProduct)
-                    .toList();
+            orderedProducts = orderItems.stream().map(OrderItems::getProduct).toList();
         }
 
         Returns returns = new Returns();
@@ -60,17 +61,21 @@ public class ReturnService {
             Product product = productRepository.findById(itemDto.getProductId())
                     .orElseThrow(() -> new RuntimeException("제품 없음"));
 
-            if (dto.getOrderId() != null && orderedProducts.stream().noneMatch(p -> p.getProductId().equals(product.getProductId()))) {
+            if (dto.getOrderId() != null &&
+                    orderedProducts.stream().noneMatch(p -> p.getProductId().equals(product.getProductId()))) {
                 throw new RuntimeException("해당 주문에 포함되지 않은 상품입니다: " + product.getProductName());
             }
 
-            int subtotal = itemDto.getQuantity() * itemDto.getUnitPrice();
+            int qty = itemDto.getQuantity();
+            if (qty <= 0) throw new RuntimeException("반품 수량은 1 이상이어야 합니다.");
+
+            int subtotal = qty * itemDto.getUnitPrice();
             total += subtotal;
 
             ReturnItems item = new ReturnItems();
             item.setReturns(returns);
             item.setProduct(product);
-            item.setQuantity(itemDto.getQuantity());
+            item.setQuantity(qty);
             item.setUnitPrice(itemDto.getUnitPrice());
             item.setSubtotalPrice(subtotal);
             returnItemList.add(item);
@@ -80,7 +85,7 @@ public class ReturnService {
                     .productName(product.getProductName())
                     .manufacturer(product.getManufacturer())
                     .reason(dto.getReason())
-                    .quantity(itemDto.getQuantity())
+                    .quantity(qty)
                     .unitPrice(itemDto.getUnitPrice())
                     .subtotalPrice(subtotal)
                     .build());
@@ -89,6 +94,19 @@ public class ReturnService {
         returns.setTotalPrice(total);
         returnRepository.save(returns);
         returnItemsRepository.saveAll(returnItemList);
+
+        // ✅ 반품 "요청" 등록 시점 스냅샷 기록(RETURN_IN) — 재고 변경 없음
+        for (ReturnItems ri : returnItemList) {
+            Product product = ri.getProduct();
+            int snapshot = product.getStock() == null ? 0 : product.getStock();
+            inventoryHistoryRepository.save(InventoryHistory.builder()
+                    .product(product)
+                    .division(InventoryDivision.RETURN_IN)
+                    .quantity(ri.getQuantity())
+                    .stock(snapshot) // 현재 재고 스냅샷
+                    .note(pharmacy.getPharmacyName())
+                    .build());
+        }
 
         return ReturnResponseDto.builder()
                 .returnId(returns.getReturnId())
@@ -186,6 +204,34 @@ public class ReturnService {
         returns.setUpdatedAt(LocalDateTime.now());
     }
 
+    @Transactional
+    public void approve(Long returnId) {
+        Returns returns = returnRepository.findById(returnId)
+                .orElseThrow(() -> new RuntimeException("반품 정보 없음"));
+        if (returns.getStatus() != ReturnStatus.REQUESTED) {
+            throw new RuntimeException("이미 처리된 상태입니다.");
+        }
+
+        List<ReturnItems> items = returnItemsRepository.findByReturns(returns);
+        for (ReturnItems ri : items) {
+            int qty = ri.getQuantity();
+            productRepository.restoreStock(ri.getProduct().getProductId(), qty);
+            Product p = productRepository.findById(ri.getProduct().getProductId()).orElseThrow();
+            int after = p.getStock() == null ? 0 : p.getStock();
+
+            inventoryHistoryRepository.save(InventoryHistory.builder()
+                    .product(p)
+                    .division(InventoryDivision.IN)
+                    .quantity(qty)
+                    .stock(after)
+                    .note(returns.getPharmacy().getPharmacyName())
+                    .build());
+        }
+
+        returns.setStatus(ReturnStatus.COMPLETED);
+        returns.setUpdatedAt(LocalDateTime.now());
+    }
+
     public ReturnResponseDto getReturnDetail(Long returnId) {
         Returns returns = returnRepository.findById(returnId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 반품이 존재하지 않습니다."));
@@ -218,6 +264,16 @@ public class ReturnService {
                 .build();
     }
 
+    @Transactional
+    public void reject(Long returnId) {
+        Returns returns = returnRepository.findById(returnId)
+                .orElseThrow(() -> new RuntimeException("반품 정보 없음"));
+        if (returns.getStatus() != ReturnStatus.REQUESTED) {
+            throw new RuntimeException("이미 처리된 상태입니다.");
+        }
+        returns.setStatus(ReturnStatus.REJECTED);
+        returns.setUpdatedAt(LocalDateTime.now());
+    }
     @Transactional
     public void deleteReturn(Long returnId) {
         Returns returns = returnRepository.findById(returnId)
