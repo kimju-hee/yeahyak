@@ -1,20 +1,15 @@
-export interface Point {
-  pointId: number;
+export interface CreditResponse {
   userId: number;
-  amount: number;
-  status: PointStatus;
-  requestedAt: string;
+  email: string;
+  pharmacyName: string;
+  point: number;
+  creditStatus: CreditStatus;
 }
 
-export const POINT_STATUS = {
-  REQUESTED: 'REQUESTED',
-  APPROVED: 'APPROVED',
-  REJECTED: 'REJECTED',
+export const CREDIT_STATUS = {
+  FULL: 'FULL',
+  SETTLEMENT_REQUIRED: 'SETTLEMENT_REQUIRED',
 } as const;
+export type CreditStatus = keyof typeof CREDIT_STATUS;
 
-export type PointStatus = keyof typeof POINT_STATUS;
-
-export interface PointRequest {
-  userId: number;
-  amount: number;
-}
+export const CREDIT_LIMIT = -10000000;

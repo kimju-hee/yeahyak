@@ -1,10 +1,12 @@
-export interface Order {
-  orderId: number;
-  pharmacyId: number;
-  createdAt: string;
-  totalPrice: number;
-  status: OrderStatus;
-  updatedAt?: string;
+export interface CartItem {
+  productId: number;
+  productName: string;
+  productCode: string;
+  manufacturer: string;
+  unitPrice: number;
+  quantity: number;
+  subtotalPrice: number;
+  productImgUrl?: string;
 }
 
 export const ORDER_STATUS = {
@@ -17,31 +19,13 @@ export const ORDER_STATUS = {
 } as const;
 export type OrderStatus = keyof typeof ORDER_STATUS;
 
-export interface OrderItem {
-  orderItemId: number;
-  orderId: number;
-  productId: number;
-  quantity: number;
-  unitPrice: number;
-  subtotalPrice: number;
-}
-
-export interface CartItem {
-  productId: number;
-  productName: string;
-  productCode: string;
-  manufacturer: string;
-  quantity: number;
-  unitPrice: number;
-  subtotalPrice: number;
-  productImgUrl?: string;
-}
-
+// 발주 POST
 export interface OrderRequest {
   pharmacyId: number;
   items: OrderItemRequest[];
 }
 
+// 발주 POST
 export interface OrderItemRequest {
   productId: number;
   quantity: number;
@@ -49,7 +33,8 @@ export interface OrderItemRequest {
   subtotalPrice: number;
 }
 
-export interface OrderListResponse {
+// 발주 목록 GET
+export interface OrderResponse {
   orderId: number;
   pharmacyId: number;
   pharmacyName: string;
@@ -57,16 +42,18 @@ export interface OrderListResponse {
   totalPrice: number;
   status: OrderStatus;
   updatedAt?: string;
-  items: OrderItemListResponse[];
+  items: OrderItemResponse[];
 }
 
-export interface OrderItemListResponse {
+// 발주 목록 GET
+export interface OrderItemResponse {
   productName: string;
   quantity: number;
   unitPrice: number;
   subtotalPrice: number;
 }
 
+// 발주 상세 GET
 export interface OrderDetailResponse {
   orderId: number;
   pharmacyId: number;
@@ -78,6 +65,7 @@ export interface OrderDetailResponse {
   items: OrderItemDetailResponse[];
 }
 
+// 발주 상세 GET
 export interface OrderItemDetailResponse {
   productId: number;
   productName: string;
@@ -85,4 +73,6 @@ export interface OrderItemDetailResponse {
   quantity: number;
   unitPrice: number;
   subtotalPrice: number;
+  mainCategory: string;
+  subCategory: string;
 }
