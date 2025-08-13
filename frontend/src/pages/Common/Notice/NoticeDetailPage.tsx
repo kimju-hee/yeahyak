@@ -5,8 +5,15 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { instance } from '../../../api/api';
 import { useAuthStore } from '../../../stores/authStore';
-import type { Announcement } from '../../../types/announcement.type';
+import type { Announcement, AnnouncementType } from '../../../types/announcement.type';
 import { USER_ROLE, type User } from '../../../types/profile.type';
+
+const TYPE_LABELS: Record<AnnouncementType, string> = {
+  NOTICE: '안내',
+  EPIDEMIC: '감염병',
+  LAW: '법령',
+  NEW_PRODUCT: '신제품',
+};
 
 export default function NoticeDetailPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -69,7 +76,7 @@ export default function NoticeDetailPage() {
     {
       key: 'type',
       label: '구분',
-      children: notice.type,
+      children: TYPE_LABELS[notice.type] ?? notice.type,
     },
     {
       key: 'createdAt',
