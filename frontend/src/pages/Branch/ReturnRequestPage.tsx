@@ -1,384 +1,626 @@
-
-// 필요한 antd 컴포넌트 및 React 훅들을 가져옵니다.
 import {
   Button,
   Card,
-  Col,
   Descriptions,
+  Flex,
   Form,
   Input,
   InputNumber,
   Modal,
-  Row,
   Select,
+  Spin,
   Table,
   Tag,
   Typography,
   message,
+  type TableProps,
 } from 'antd';
-import React, { useState, useEffect, useCallback } from 'react';
-import type { ColumnsType, TableProps } from 'antd/es/table';
-import { instance as api } from '../../api/api';
+import dayjs from 'dayjs';
+import { useEffect, useState } from 'react';
+import { instance } from '../../api/api';
 import { useAuthStore } from '../../stores/authStore';
-import type { Pharmacy } from '../../types/profile.type';
-import { ReloadOutlined } from '@ant-design/icons';
+import {
+  ORDER_STATUS,
+  type OrderDetailResponse,
+  type OrderItemDetailResponse,
+  type OrderResponse,
+} from '../../types/order.type';
+import type { Pharmacy, User } from '../../types/profile.type';
+import {
+  RETURN_STATUS,
+  type ReturnCartItem,
+  type ReturnDetailResponse,
+  type ReturnRequest,
+  type ReturnResponse,
+  type ReturnStatus,
+} from '../../types/return.type';
 
-const { Option } = Select;
-const { Title } = Typography;
+const statusOptions = [
+  { value: RETURN_STATUS.REQUESTED, text: '대기' },
+  { value: RETURN_STATUS.APPROVED, text: '승인' },
+  { value: RETURN_STATUS.PROCESSING, text: '처리중' },
+  { value: RETURN_STATUS.COMPLETED, text: '완료' },
+  { value: RETURN_STATUS.REJECTED, text: '반려' },
+];
 
-// --- 타입 정의 ---
-interface ReturnResponse {
-  returnId: number;
-  pharmacyId: number;
-  pharmacyName: string;
-  orderId: number | null;
-  createdAt: string;
-  updatedAt: string | null;
-  totalPrice: number;
-  status: 'REQUESTED' | 'REJECTED' | 'APPROVED' | 'PROCESSING' | 'COMPLETED';
-  items: ReturnItemResponse[];
-}
-
-interface ReturnItemResponse {
-  productId: number;
-  productName: string;
-  manufacturer: string;
-  reason: string;
-  quantity: number;
-  unitPrice: number;
-  subtotalPrice: number;
-}
-
-interface Product {
-  productId: number | null;
-  productName: string;
-  productCode?: string;
-  manufacturer?: string;
-  unitPrice: number;
-}
-
-interface OrderItem {
-  productId: number | null;
-  productName: string;
-  productCode?: string;
-  manufacturer?: string;
-  quantity: number;
-  unitPrice: number;
-  subtotalPrice: number;
-}
-
-interface Order {
-  orderId: number;
-  pharmacyName: string;
-  createdAt: string;
-  totalPrice: number;
-  status: 'REQUESTED' | 'APPROVED' | 'PROCESSING' | 'SHIPPING' | 'COMPLETED' | 'CANCELED';
-  items: OrderItem[];
-}
-
-interface CartItem {
-  key: string;
-  orderId: number;
-  productId: number;
-  productName: string;
-  productCode?: string;
-  manufacturer?: string;
-  quantity: number;
-  unitPrice: number;
-  reason: string;
-  returnDate: string;
-}
-
-interface ReturnDetailModalProps {
-  open: boolean;
-  onClose: () => void;
-  returnDetail: ReturnResponse | null;
-}
-
-// --- 헬퍼 함수 ---
-const getStatusColor = (status: ReturnResponse['status']) => {
-  const colorMap = { REQUESTED: 'blue', APPROVED: 'cyan', PROCESSING: 'gold', COMPLETED: 'green', REJECTED: 'red' };
-  return colorMap[status] || 'default';
-};
-
-const statusTranslations: Record<ReturnResponse['status'], string> = {
-  'REQUESTED': '요청됨',
-  'REJECTED': '거절됨',
-  'APPROVED': '승인됨',
-  'PROCESSING': '처리 중',
-  'COMPLETED': '완료됨',
-};
-
-// --- 상세 정보 모달 컴포넌트 ---
-const ReturnDetailModal: React.FC<ReturnDetailModalProps> = ({ open, onClose, returnDetail }) => {
-  if (!returnDetail) return null;
+const getStatusTag = (status: ReturnStatus) => {
+  const statusColorMap: Record<ReturnStatus, { color: string; text: string }> = {
+    [RETURN_STATUS.REQUESTED]: { color: 'orange', text: '대기' },
+    [RETURN_STATUS.APPROVED]: { color: 'blue', text: '승인' },
+    [RETURN_STATUS.PROCESSING]: { color: 'blue', text: '처리중' },
+    [RETURN_STATUS.COMPLETED]: { color: 'green', text: '완료' },
+    [RETURN_STATUS.REJECTED]: { color: 'default', text: '반려' },
+  };
+  const { color, text } = statusColorMap[status];
   return (
-    <Modal title="반품 상세 정보" open={open} onCancel={onClose} footer={null} width={800}>
-      <Descriptions bordered column={2} size="small">
-        <Descriptions.Item label="반품 ID">{returnDetail.returnId}</Descriptions.Item>
-        <Descriptions.Item label="약국명">{returnDetail.pharmacyName}</Descriptions.Item>
-        <Descriptions.Item label="신청일">{new Date(returnDetail.createdAt).toLocaleString()}</Descriptions.Item>
-        <Descriptions.Item label="처리일">{returnDetail.updatedAt ? new Date(returnDetail.updatedAt).toLocaleString() : '-'}</Descriptions.Item>
-        <Descriptions.Item label="총 반품 금액">{returnDetail.totalPrice.toLocaleString()}원</Descriptions.Item>
-        <Descriptions.Item label="상태">
-          <Tag color={getStatusColor(returnDetail.status)}>{statusTranslations[returnDetail.status] || returnDetail.status}</Tag>
-        </Descriptions.Item>
-      </Descriptions>
-      <Typography.Title level={4} style={{ marginTop: 24, marginBottom: 16 }}>반품 품목</Typography.Title>
-      <Table dataSource={returnDetail.items} columns={[{ title: '제품명', dataIndex: 'productName' }, { title: '제조사', dataIndex: 'manufacturer' }, { title: '수량', dataIndex: 'quantity' }, { title: '단가', dataIndex: 'unitPrice', render: (val) => `${val.toLocaleString()}원` }, { title: '소계', dataIndex: 'subtotalPrice', render: (val) => `${val.toLocaleString()}원` }]} pagination={false} rowKey="productId" size="small" />
-      <Typography.Title level={4} style={{ marginTop: 24, marginBottom: 16 }}>반품 사유</Typography.Title>
-      <Card><Typography.Paragraph>{returnDetail.items[0]?.reason || '사유 없음'}</Typography.Paragraph></Card>
-    </Modal>
+    <Tag bordered={true} color={color}>
+      {text}
+    </Tag>
   );
 };
 
-// --- 메인 페이지 컴포넌트 ---
+const CART_PAGE_SIZE = 10;
+const ORDERS_PAGE_SIZE = 10;
+const RETURNS_PAGE_SIZE = 10;
+
 export default function ReturnRequestPage() {
-  const { profile } = useAuthStore();
-  const pharmacyProfile = profile as Pharmacy;
+  const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [returnHistory, setReturnHistory] = useState<ReturnResponse[]>([]);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [productList, setProductList] = useState<Product[]>([]);
-  const [currentMaxReturnQuantity, setCurrentMaxReturnQuantity] = useState<number>(1);
-  const [modalVisible, setModalVisible] = useState(false);
-  const today = new Date().toISOString().slice(0, 10);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedReturnDetail, setSelectedReturnDetail] = useState<ReturnResponse | null>(null);
-  const [ordersForModal, setOrdersForModal] = useState<Order[]>([]);
+  const [returnForm] = Form.useForm();
 
-  const [loading, setLoading] = useState({ history: false });
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 5, total: 0 });
+  const user = useAuthStore((state) => state.user) as User;
+  const profile = useAuthStore((state) => state.profile) as Pharmacy;
+  const updateUser = useAuthStore((state) => state.updateUser);
+  const credit = user.point;
+  const pharmacyId = profile.pharmacyId;
 
-  const fetchReturnHistory = useCallback(async (page = 1) => {
-    if (!pharmacyProfile?.pharmacyId) return;
-    setLoading(prev => ({ ...prev, history: true }));
+  const [returns, setReturns] = useState<ReturnResponse[]>([]);
+  const [currentStatusFilter, setCurrentStatusFilter] = useState<ReturnStatus | undefined>(
+    undefined,
+  );
+  const [returnsCurrentPage, setReturnsCurrentPage] = useState<number>(1);
+  const [returnsTotal, setReturnsTotal] = useState<number>(0);
+  const [returnsLoading, setReturnsLoading] = useState<boolean>(false);
+  const [expandedRowData, setExpandedRowData] = useState<Record<number, ReturnDetailResponse>>({});
+  const [expandedRowLoading, setExpandedRowLoading] = useState<Record<number, boolean>>({});
+  const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
+
+  const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
+  const [orders, setOrders] = useState<OrderResponse[]>([]);
+  const [ordersCurrentPage, setOrdersCurrentPage] = useState<number>(1);
+  const [ordersTotal, setOrdersTotal] = useState<number>(0);
+  const [ordersLoading, setOrdersLoading] = useState<boolean>(false);
+  const [selectedOrder, setSelectedOrder] = useState<OrderResponse | undefined>(undefined);
+  const [orderDetail, setOrderDetail] = useState<OrderDetailResponse | undefined>(undefined);
+  const [orderDetailLoading, setOrderDetailLoading] = useState<boolean>(false);
+  const [orderItems, setOrderItems] = useState<OrderItemDetailResponse[]>([]);
+  const [maxQuantity, setMaxQuantity] = useState<number>(0);
+
+  const [items, setItems] = useState<ReturnCartItem[]>([]);
+  const [submitLoading, setSubmitLoading] = useState<boolean>(false);
+  const totalPrice = items.reduce((sum, item) => sum + item.subtotalPrice, 0);
+
+  const fetchReturns = async (statusFilter: ReturnStatus | undefined) => {
+    setReturnsLoading(true);
     try {
-      const params = {
-        pharmacyId: pharmacyProfile.pharmacyId,
-        page: page - 1,
-        size: pagination.pageSize,
-      };
-      const response = await api.get('/branch/returns', { params });
-      const responseData = response.data || {};
-      setReturnHistory(responseData.data || []);
-      setPagination(prev => ({ ...prev, current: page, total: responseData.totalElements || 0 }));
-    } catch (error) {
-      message.error('반품 내역을 불러오는 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(prev => ({ ...prev, history: false }));
-    }
-  }, [pharmacyProfile, pagination.pageSize]);
-
-  const fetchOrders = useCallback(async () => {
-    if (!pharmacyProfile?.pharmacyId) return;
-    try {
-      const url = `/orders/branch/orders?pharmacyId=${pharmacyProfile.pharmacyId}&status=APPROVED`;
-      const response = await api.get(url);
-      if (response.data.success) {
-        setOrdersForModal(response.data.data || []);
-      } else {
-        message.error(response.data.message || '주문 목록을 불러오는데 실패했습니다.');
+      const res = await instance.get('/branch/returns', {
+        params: {
+          pharmacyId: pharmacyId,
+          page: returnsCurrentPage - 1,
+          size: RETURNS_PAGE_SIZE,
+          status: statusFilter,
+        },
+      });
+      // LOG: 테스트용 로그
+      console.log('✨ 반품 목록 로딩 응답:', res.data);
+      if (res.data.success) {
+        const { data, totalElements } = res.data;
+        setReturns(data);
+        setReturnsTotal(totalElements);
       }
-    } catch (error) {
-      message.error('주문 목록을 불러오는 중 오류가 발생했습니다.');
+    } catch (e: any) {
+      console.error('반품 목록 로딩 실패:', e);
+      messageApi.error(e.message || '반품 목록 로딩 중 오류가 발생했습니다.');
+    } finally {
+      setReturnsLoading(false);
     }
-  }, [pharmacyProfile]);
+  };
+
+  const fetchReturnDetail = async (returnId: number) => {
+    setExpandedRowLoading((prev) => ({ ...prev, [returnId]: true }));
+    try {
+      const res = await instance.get(`/branch/returns/${returnId}`);
+      // LOG: 테스트용 로그
+      console.log('✨ 반품 상세 로딩 응답:', res.data);
+      if (res.data.success) {
+        setExpandedRowData((prev) => ({ ...prev, [returnId]: res.data.data }));
+      }
+    } catch (e: any) {
+      console.error('반품 상세 로딩 실패:', e);
+      messageApi.error(e.message || '반품 상세 로딩 중 오류가 발생했습니다.');
+    } finally {
+      setExpandedRowLoading((prev) => ({ ...prev, [returnId]: false }));
+    }
+  };
+
+  const fetchOrders = async () => {
+    setOrdersLoading(true);
+    try {
+      const res = await instance.get('/orders/branch/orders', {
+        params: {
+          pharmacyId: pharmacyId,
+          page: ordersCurrentPage - 1,
+          size: ORDERS_PAGE_SIZE,
+          status: ORDER_STATUS.COMPLETED,
+        },
+      });
+      // LOG: 테스트용 로그
+      console.log('✨ 주문 목록 로딩 응답:', res.data);
+      if (res.data.success) {
+        const { data, totalElements } = res.data;
+        setOrders(data);
+        setOrdersTotal(totalElements);
+      }
+    } catch (e: any) {
+      console.error('주문 목록 로딩 실패:', e);
+      messageApi.error(e.message || '주문 목록 로딩 중 오류가 발생했습니다.');
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const fetchOrderDetail = async (orderId: number) => {
+    setOrderDetailLoading(true);
+    try {
+      const res = await instance.get(`/orders/${orderId}`);
+      // LOG: 테스트용 로그
+      console.log('✨ 주문 상세 로딩 응답:', res.data);
+      if (res.data.success) {
+        setOrderDetail(res.data.data);
+        setOrderItems(res.data.data.items);
+        form.setFieldsValue({
+          productName: undefined,
+          quantity: undefined,
+          unitPrice: undefined,
+        });
+      }
+    } catch (e: any) {
+      console.error('주문 상세 로딩 실패:', e);
+      messageApi.error(e.message || '주문 상세 로딩 중 오류가 발생했습니다.');
+    } finally {
+      setOrderDetailLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (pharmacyProfile?.pharmacyId) {
-      fetchOrders();
-      fetchReturnHistory(1);
-    }
-  }, [pharmacyProfile, fetchOrders, fetchReturnHistory]);
+    fetchReturns(currentStatusFilter);
+  }, [returnsCurrentPage, currentStatusFilter]);
 
-  const handleOrderClick = () => { setModalVisible(true); fetchOrders(); };
-  const handleOrderSelect = (order: Order) => {
-    form.setFieldValue('orderNumber', order.orderId);
-    setSelectedOrder(order);
-    const products = order.items
-      .filter(item => item.productId !== null)
-      .map(item => ({ ...item, productId: item.productId!, productCode: item.productCode, manufacturer: item.manufacturer }));
-    setProductList(products);
-    form.resetFields(['product', 'quantity', 'reason']);
-    setModalVisible(false);
-  };
+  useEffect(() => {
+    fetchOrders();
+  }, [isModalVisible, ordersCurrentPage]);
 
-  const handleProductChange = (productId: number) => {
-    const orderedItem = selectedOrder?.items.find(item => item.productId === productId);
-    const maxQty = orderedItem ? orderedItem.quantity : 1; // Explicitly check if orderedItem exists
-    setCurrentMaxReturnQuantity(maxQty);
-    const product = productList.find(p => p.productId === productId);
-    form.setFieldsValue({ unitPrice: product?.unitPrice || '', quantity: null });
-  };
+  useEffect(() => {
+    if (!orderDetail) setOrderItems([]);
+  }, [orderDetail]);
 
-  const handleAddItem = () => {
-    form.validateFields().then(values => {
-      if (!selectedOrder) { message.error('주문번호를 먼저 선택해주세요.'); return; }
-      const product = productList.find(p => p.productId === values.product);
-      if (!product) { message.error('제품 정보를 찾을 수 없습니다.'); return; }
-      if (items.some(item => item.orderId === selectedOrder.orderId && item.productId === product.productId)) {
-        message.warning('이미 추가된 반품 항목입니다.'); return; }
-      const newItem: CartItem = {
-        key: `${selectedOrder.orderId}-${product.productId}`,
-        orderId: selectedOrder.orderId,
-        productId: product.productId!,
-        productName: product.productName,
-        productCode: product.productCode,
-        manufacturer: product.manufacturer,
-        quantity: values.quantity,
-        unitPrice: product.unitPrice,
-        reason: values.reason,
-        returnDate: today,
-      };
-      setItems([...items, newItem]);
-      form.resetFields(['product', 'quantity', 'reason']);
-    }).catch(() => message.error('필수 입력 항목을 모두 채워주세요.'));
-  };
-
-  const handleRemoveItem = (key: string) => setItems(items.filter(item => item.key !== key));
-
-  const handleSubmit = async () => {
-    if (items.length === 0 || !selectedOrder) { message.warning('반품할 항목을 추가해주세요.'); return; }
-    try {
-      const response = await api.post('/branch/returns', { 
-        pharmacyId: pharmacyProfile.pharmacyId, 
-        orderId: selectedOrder.orderId, 
-        reason: items[0].reason, 
-        items: items.map(item => ({ productId: item.productId, quantity: item.quantity, unitPrice: item.unitPrice })) 
+  const handleItemChange = (productId: number) => {
+    const selectedItem = orderItems.find((item) => item.productId === productId);
+    if (selectedItem) {
+      setMaxQuantity(selectedItem.quantity);
+      form.setFieldsValue({
+        productName: selectedItem.productId,
+        unitPrice: selectedItem.unitPrice,
       });
-      if (response.data.success) {
-        message.success('반품 요청이 성공적으로 제출되었습니다.');
-        setItems([]);
-        form.resetFields();
-        setSelectedOrder(null);
-        fetchReturnHistory(1);
-      } else {
-        message.error(response.data.message || '반품 요청에 실패했습니다.');
-      }
-    } catch (error) {
-      message.error('반품 요청 중 오류가 발생했습니다.');
     }
   };
 
-  const handleReturnHistoryRowClick = async (record: ReturnResponse) => {
+  const handleAddItem = (values: { productName: number; quantity: number }) => {
+    const { productName, quantity } = values;
+    const selectedItem = orderItems.find((i) => i.productId === productName);
+    if (selectedItem) {
+      const newItem: ReturnCartItem = {
+        productId: selectedItem.productId,
+        productName: selectedItem.productName,
+        manufacturer: selectedItem.manufacturer,
+        mainCategory: selectedItem.mainCategory,
+        subCategory: selectedItem.subCategory,
+        quantity: quantity,
+        unitPrice: selectedItem.unitPrice,
+        subtotalPrice: selectedItem.unitPrice * quantity,
+      };
+      setItems((prevItems) => {
+        const existingItem = prevItems.find((i) => i.productId === newItem.productId);
+        if (existingItem) {
+          messageApi.warning('이미 반품 목록에 있는 제품입니다.');
+          return prevItems;
+        }
+        messageApi.success(`${newItem.productName}을(를) 반품 목록에 추가했습니다.`);
+        return [...prevItems, newItem];
+      });
+      form.resetFields(['productName', 'quantity', 'unitPrice']);
+    }
+  };
+
+  const handleRemoveItem = (productId: number) => {
+    setItems((prevItems) => prevItems.filter((i) => i.productId !== productId));
+  };
+
+  const handleSubmit = async (values: { reason: string | string[] }) => {
+    const { reason } = values;
+    if (!selectedOrder || items.length === 0) {
+      messageApi.error('주문을 선택하고 반품할 제품을 추가해주세요.');
+      return;
+    }
+    const reasonText = Array.isArray(reason) ? reason.join(', ') : reason;
+    const payload: ReturnRequest = {
+      pharmacyId: pharmacyId,
+      orderId: selectedOrder.orderId,
+      reason: reasonText,
+      items: items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+      })),
+    };
+    setSubmitLoading(true);
     try {
-      const response = await api.get(`/branch/returns/${record.returnId}`);
-      if (response.data.success) {
-        setSelectedReturnDetail(response.data.data);
-        setIsDetailModalOpen(true);
-      } else {
-        message.error(response.data.message || '반품 상세 정보를 불러오는 데 실패했습니다.');
+      const res = await instance.post('/branch/returns', payload);
+      // LOG: 테스트용 로그
+      console.log('✨ 반품 요청 응답:', res.data);
+      if (res.data.success) {
+        messageApi.success('반품 요청이 완료되었습니다.');
+        fetchReturns(currentStatusFilter);
+        updateUser({ point: credit + res.data.data.totalPrice });
+        setItems([]);
+        setSelectedOrder(undefined);
+        returnForm.resetFields(['reason']);
       }
-    } catch (error) {
-      message.error('반품 상세 정보를 불러오는 중 오류가 발생했습니다.');
+    } catch (e: any) {
+      console.error('반품 요청 실패:', e);
+      messageApi.error(e.message || '반품 요청 중 오류가 발생했습니다.');
+    } finally {
+      setSubmitLoading(false);
     }
   };
 
-  const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  const handleTableChange = (pagination: any, filters: any) => {
+    const newStatus = filters.status ? filters.status[0] : undefined;
+    const newPage = pagination.current;
+    if (newStatus !== currentStatusFilter) {
+      setCurrentStatusFilter(newStatus);
+      setReturnsCurrentPage(1);
+      return;
+    }
+    if (newPage !== returnsCurrentPage) {
+      setReturnsCurrentPage(newPage);
+    }
+  };
 
-  const columns: ColumnsType<CartItem> = [
-    { title: '신청일', dataIndex: 'returnDate' },
-    { title: '제품명', dataIndex: 'productName' },
-    { title: '제품번호', dataIndex: 'productCode' },
-    { title: '제조사', dataIndex: 'manufacturer' },
-    { title: '반품 수량', dataIndex: 'quantity' },
-    { title: '단가', dataIndex: 'unitPrice', render: (val) => `${val.toLocaleString()}원` },
-    { title: '반품 금액', render: (_, record) => `${(record.quantity * record.unitPrice).toLocaleString()}원` },
-    { title: '반품 사유', dataIndex: 'reason' },
-    { title: '관리', render: (_, record) => <Button danger onClick={() => handleRemoveItem(record.key)}>삭제</Button> },
+  const handleExpand = (expanded: boolean, record: ReturnResponse) => {
+    const returnId = record.returnId;
+    if (expanded) {
+      fetchReturnDetail(returnId);
+    }
+    setExpandedRowKeys(
+      expanded ? [...expandedRowKeys, returnId] : expandedRowKeys.filter((key) => key !== returnId),
+    );
+  };
+
+  // 반품카트 테이블
+  const cartColumns: TableProps<ReturnCartItem>['columns'] = [
+    { title: '제품명', dataIndex: 'productName', key: 'productName' },
+    { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer' },
+    { title: '대분류', dataIndex: 'mainCategory', key: 'mainCategory' },
+    { title: '소분류', dataIndex: 'subCategory', key: 'subCategory' },
+    { title: '단가', dataIndex: 'unitPrice', render: (v) => `${v.toLocaleString()}원` },
+    { title: '수량', dataIndex: 'quantity', key: 'quantity' },
+    {
+      title: '소계',
+      dataIndex: 'subtotalPrice',
+      key: 'subtotalPrice',
+      render: (v) => `${v.toLocaleString()}원`,
+    },
+    {
+      title: '관리',
+      key: 'actions',
+      render: (_, record) => (
+        <Button danger onClick={() => handleRemoveItem(record.productId)}>
+          삭제
+        </Button>
+      ),
+    },
   ];
 
-  const historyColumns: ColumnsType<ReturnResponse> = [
-    { title: '신청일', dataIndex: 'createdAt', render: (text) => new Date(text).toLocaleDateString() },
-    { title: '반품번호', dataIndex: 'returnId' },
-    { title: '총 반품 금액', dataIndex: 'totalPrice', render: (val) => `${val.toLocaleString()}원` },
-    { title: '상태', dataIndex: 'status', render: (status) => <Tag color={getStatusColor(status)}>{statusTranslations[status] || status}</Tag> },
-    { title: '반품 품목', dataIndex: 'items', render: (items: ReturnItemResponse[]) => `${items[0]?.productName || ''}${items.length > 1 ? ` 외 ${items.length - 1}건` : ''}` },
+  // 반품내역 테이블
+  const returnsColumns: TableProps<ReturnResponse>['columns'] = [
+    { title: '번호', dataIndex: 'returnId', key: 'returnId' },
+    {
+      title: '일시',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (v) => dayjs(v).format('YYYY. MM. DD. HH:mm'),
+    },
+    {
+      title: '요약',
+      key: 'returnSummary',
+      render: (_, record) => {
+        if (record.items.length > 1) {
+          return `${record.items[0].productName} 외 ${record.items.length - 1}건`;
+        } else {
+          return `${record.items[0].productName}`;
+        }
+      },
+    },
+    { title: '사유', dataIndex: 'reason', key: 'reason' },
+    {
+      title: '합계',
+      dataIndex: 'totalPrice',
+      key: 'totalPrice',
+      render: (v) => `${v.toLocaleString()}원`,
+    },
+    {
+      title: '상태',
+      dataIndex: 'status',
+      key: 'status',
+      render: (v) => getStatusTag(v),
+      filters: statusOptions,
+      filterMultiple: false,
+    },
   ];
 
-  const handleTableChange: TableProps<ReturnResponse>['onChange'] = (newPagination) => {
-    fetchReturnHistory(newPagination.current!);
+  // 반품내역 테이블 상세
+  const expandedRowRender = (record: ReturnResponse) => {
+    const detailData = expandedRowData[record.returnId];
+    const isLoading = expandedRowLoading[record.returnId];
+    if (isLoading) return <Spin />;
+    if (!detailData) return null;
+    return (
+      <>
+        <Table
+          bordered={true}
+          dataSource={detailData.items}
+          columns={[
+            { title: '제품명', dataIndex: 'productName', key: 'productName' },
+            { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer' },
+            { title: '수량', dataIndex: 'quantity', key: 'quantity' },
+            {
+              title: '단가',
+              dataIndex: 'unitPrice',
+              key: 'unitPrice',
+              render: (v) => `${v.toLocaleString()}원`,
+            },
+            {
+              title: '소계',
+              dataIndex: 'subtotalPrice',
+              key: 'subtotalPrice',
+              render: (v) => `${v.toLocaleString()}원`,
+            },
+          ]}
+          pagination={false}
+          rowKey="productId"
+          size="small"
+          summary={() => (
+            <Table.Summary fixed>
+              <Table.Summary.Row>
+                <Table.Summary.Cell index={0} colSpan={3} />
+                <Table.Summary.Cell index={1}>합계</Table.Summary.Cell>
+                <Table.Summary.Cell index={2}>
+                  {detailData.totalPrice.toLocaleString()}원
+                </Table.Summary.Cell>
+              </Table.Summary.Row>
+            </Table.Summary>
+          )}
+        />
+        <Typography.Text>
+          최근 상태 업데이트:{' '}
+          {detailData.updatedAt
+            ? dayjs(detailData.updatedAt).format('YYYY. MM. DD. HH:mm')
+            : dayjs(detailData.createdAt).format('YYYY. MM. DD. HH:mm')}
+        </Typography.Text>
+      </>
+    );
   };
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Title level={2}>반품 요청</Title>
-      <Form form={form} layout="vertical">
-        <Row gutter={16}>
-          <Col span={6}>
-            <Form.Item name="orderNumber" label={<span style={{ color: 'red' }}>* 주문번호</span>} rules={[{ required: true, message: '주문번호를 선택해주세요.' }]}>
-              <Input readOnly onClick={handleOrderClick} placeholder="주문번호 선택" />
+    <>
+      {contextHolder}
+      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+        반품 요청
+      </Typography.Title>
+
+      <Form form={form} layout="vertical" onFinish={handleAddItem}>
+        <Flex vertical>
+          <Flex wrap>
+            <Form.Item
+              name="orderId"
+              label="주문번호"
+              rules={[{ required: true, message: '주문번호를 선택해주세요.' }]}
+            >
+              <Input readOnly onClick={() => setIsModalVisible(true)} placeholder="주문번호 선택" />
             </Form.Item>
-          </Col>
-        </Row>
-        <Row gutter={16} align="bottom">
-          <Col span={4}>
-            <Form.Item name="product" label={<span style={{ color: 'red' }}>* 제품명</span>} rules={[{ required: true, message: '제품을 선택해주세요.' }]}>
-              <Select placeholder="제품 선택" onChange={handleProductChange} disabled={!selectedOrder}>
-                {productList.map((p, index) => (<Option key={p.productId !== null ? p.productId : `product-${index}`} value={p.productId!}>{p.productName}</Option>))}
-              </Select>
+          </Flex>
+          <Flex wrap>
+            <Form.Item
+              name="productName"
+              label="제품명"
+              rules={[{ required: true, message: '제품을 선택해주세요.' }]}
+            >
+              <Select
+                placeholder="제품 선택"
+                onChange={handleItemChange}
+                disabled={!selectedOrder || orderDetailLoading}
+                options={
+                  orderItems.length > 0
+                    ? orderItems.map((item) => ({
+                        value: item.productId,
+                        label: item.productName,
+                      }))
+                    : []
+                }
+              />
             </Form.Item>
-          </Col>
-          <Col span={4}>
-            <Form.Item name="quantity" label={<span style={{ color: 'red' }}>* 반품 수량</span>} rules={[{ required: true, message: '반품 수량 입력.' }, ({ getFieldValue }) => ({ validator(_, value) { if (!value || value <= currentMaxReturnQuantity) { return Promise.resolve(); } return Promise.reject(new Error(`반품 수량은 주문 수량(${currentMaxReturnQuantity}개)을 초과할 수 없습니다.`)); } })]}>
-              <InputNumber min={1} max={currentMaxReturnQuantity} style={{ width: '100%' }} placeholder={`주문 수량: ${currentMaxReturnQuantity || 0}개`} />
+            <Form.Item
+              name="quantity"
+              label="반품 수량"
+              rules={[
+                { required: true, message: '반품 수량을 입력해주세요.' },
+                () => ({
+                  validator(_, value) {
+                    if (!value || value <= maxQuantity) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(
+                      new Error(`반품 수량은 주문 수량(${maxQuantity}개)을 초과할 수 없습니다.`),
+                    );
+                  },
+                }),
+              ]}
+            >
+              <InputNumber
+                min={1}
+                max={maxQuantity}
+                style={{ width: '100%' }}
+                placeholder={`주문 수량: ${maxQuantity}개`}
+              />
             </Form.Item>
-          </Col>
-          <Col span={4}>
-            <Form.Item label="단가">
-              <Input disabled value={productList.find(p => p.productId === form.getFieldValue('product'))?.unitPrice ? `${productList.find(p => p.productId === form.getFieldValue('product'))?.unitPrice.toLocaleString()}원` : ''} />
+            <Form.Item name="unitPrice" label="단가">
+              <Input readOnly suffix="원" />
             </Form.Item>
-          </Col>
-          <Col span={6}>
-            <Form.Item name="reason" label={<span style={{ color: 'red' }}>* 반품 사유</span>} rules={[{ required: true, message: '반품 사유 입력.' }]}>
-              <Input.TextArea placeholder="반품 사유 입력" autoSize={{ minRows: 1, maxRows: 4 }} />
+            <Form.Item>
+              <Button type="primary" htmlType="submit">
+                항목 추가
+              </Button>
             </Form.Item>
-          </Col>
-          <Col><Form.Item><Button type="primary" onClick={handleAddItem} style={{ marginTop: 30 }}>항목 추가</Button></Form.Item></Col>
-        </Row>
+          </Flex>
+        </Flex>
       </Form>
 
-      <Table columns={columns} dataSource={items} pagination={false} style={{ marginTop: 16 }} rowKey="key" />
-      <div style={{ textAlign: 'right', marginTop: 12 }}>총 반품 금액: <strong>{totalAmount.toLocaleString()}원</strong></div>
-      <div style={{ textAlign: 'right', marginTop: 12 }}><Button type="primary" onClick={handleSubmit}>반품 신청</Button></div>
-
-      <Card title={
-        <Row justify="space-between" align="middle">
-          <Col><Title level={4} style={{ margin: 0 }}>반품 진행 현황</Title></Col>
-          <Col>
-            <Button icon={<ReloadOutlined />} onClick={() => fetchReturnHistory(pagination.current)} loading={loading.history}>
-              새로고침
-            </Button>
-          </Col>
-        </Row>
-      } style={{ marginTop: 48 }}>
-        <Table
-          columns={historyColumns}
-          dataSource={returnHistory}
-          rowKey="returnId"
-          pagination={pagination}
-          loading={loading.history}
-          onChange={handleTableChange}
-          onRow={(record) => ({ onClick: () => handleReturnHistoryRowClick(record) })}
-        />
-      </Card>
-
-      <Modal title="주문번호 선택" open={modalVisible} onCancel={() => setModalVisible(false)} footer={null}>
-        {ordersForModal.length > 0 ? (
-          ordersForModal.map(order => (
-            <Card key={order.orderId} hoverable onClick={() => handleOrderSelect(order)} style={{ marginBottom: 16 }}>
-              <p><strong>주문번호:</strong> {order.orderId}</p>
-              <p><strong>지점명:</strong> {order.pharmacyName}</p>
-              <p><strong>요청일자:</strong> {new Date(order.createdAt).toLocaleDateString()}</p>
-              <p><strong>총 금액:</strong> {order.totalPrice.toLocaleString()}원</p>
+      <Modal
+        title="발주 내역 선택"
+        open={isModalVisible}
+        onCancel={() => {
+          setIsModalVisible(false);
+          setOrdersCurrentPage(1);
+        }}
+        footer={null}
+        width={'400px'}
+      >
+        {orders.length > 0 ? (
+          orders.map((order) => (
+            <Card
+              hoverable
+              key={order.orderId}
+              onClick={() => {
+                setSelectedOrder(order);
+                fetchOrderDetail(order.orderId);
+                setIsModalVisible(false);
+                form.setFieldsValue({
+                  orderId: order.orderId,
+                });
+              }}
+            >
+              <Descriptions
+                title={dayjs(order.createdAt).format('YYYY-MM-DD')}
+                column={1}
+                size="small"
+              >
+                <Descriptions.Item label="주문번호">{order.orderId}</Descriptions.Item>
+                <Descriptions.Item label="요약">
+                  {order.items.length > 1
+                    ? `${order.items[0].productName} 외 ${order.items.length - 1}건`
+                    : `${order.items[0].productName}`}
+                </Descriptions.Item>
+                <Descriptions.Item label="합계">
+                  {order.totalPrice.toLocaleString()}원
+                </Descriptions.Item>
+              </Descriptions>
             </Card>
           ))
-        ) : <p>주문 내역이 없습니다.</p>}
+        ) : (
+          <Typography.Text>발주 내역이 없습니다.</Typography.Text>
+        )}
       </Modal>
 
-      <ReturnDetailModal open={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} returnDetail={selectedReturnDetail} />
-    </div>
+      <Typography.Title level={4} style={{ marginBottom: '24px' }}>
+        상세 내역
+      </Typography.Title>
+      <Table
+        columns={cartColumns}
+        dataSource={items.map((item) => ({
+          ...item,
+          subtotalPrice: item.unitPrice * item.quantity,
+        }))}
+        rowKey={(record) => record.productId}
+        pagination={{
+          position: ['bottomCenter'],
+          pageSize: CART_PAGE_SIZE,
+          total: items.length,
+        }}
+        summary={() => (
+          <Table.Summary fixed>
+            <Table.Summary.Row>
+              <Table.Summary.Cell index={0} colSpan={5} />
+              <Table.Summary.Cell index={1}>합계</Table.Summary.Cell>
+              <Table.Summary.Cell index={2}>{totalPrice.toLocaleString()}원</Table.Summary.Cell>
+            </Table.Summary.Row>
+          </Table.Summary>
+        )}
+      />
+      <Form form={returnForm} onFinish={handleSubmit}>
+        <Flex align="flex-end">
+          <Form.Item
+            name="reason"
+            label="반품 사유"
+            rules={[{ required: true, message: '반품 사유를 입력해주세요.' }]}
+          >
+            <Select
+              placeholder="반품 사유를 선택하세요. (직접 입력 가능)"
+              options={[
+                { value: '제품 불량', label: '제품 불량' },
+                { value: '오배송', label: '오배송' },
+                { value: '고객 단순 변심', label: '고객 단순 변심' },
+                { value: '주문 실수', label: '주문 실수' },
+              ]}
+              mode="tags"
+              optionFilterProp="label"
+            />
+          </Form.Item>
+          <Button
+            type="primary"
+            htmlType="submit"
+            disabled={items.length === 0}
+            loading={submitLoading}
+          >
+            반품 요청
+          </Button>
+        </Flex>
+      </Form>
+
+      <Typography.Title level={4} style={{ marginBottom: '24px' }}>
+        반품 내역
+      </Typography.Title>
+      <Table
+        columns={returnsColumns}
+        dataSource={returns}
+        loading={returnsLoading}
+        rowKey={(record) => record.returnId}
+        onChange={handleTableChange}
+        pagination={{
+          position: ['bottomCenter'],
+          pageSize: RETURNS_PAGE_SIZE,
+          total: returnsTotal,
+          current: returnsCurrentPage,
+          onChange: (page) => setReturnsCurrentPage(page),
+        }}
+        expandable={{
+          expandedRowRender,
+          onExpand: handleExpand,
+          expandedRowKeys,
+          expandRowByClick: true,
+          expandIcon: () => null,
+        }}
+      />
+    </>
   );
 }
