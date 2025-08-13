@@ -1,14 +1,52 @@
 import { Divider, Layout, Typography } from 'antd';
+import DOMPurify from 'dompurify';
 import { Outlet } from 'react-router-dom';
+
+// HTML 파일들을 텍스트로 import
+import privacyHtml from '../assets/privacy.html?raw';
+import termsHtml from '../assets/terms.html?raw';
+
 const { Content, Footer } = Layout;
 
 export default function PublicLayout() {
   const openTermsWindow = () => {
-    window.open('/terms.html', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+    const sanitizedHtml = DOMPurify.sanitize(termsHtml);
+    // UTF-8 BOM 추가하여 인코딩 확실히 처리
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + sanitizedHtml], { type: 'text/html; charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const newWindow = window.open(
+      url,
+      '_blank',
+      'width=800,height=600,scrollbars=yes,resizable=yes',
+    );
+
+    // 메모리 정리를 위해 URL 해제 (창이 닫힐 때)
+    if (newWindow) {
+      newWindow.addEventListener('beforeunload', () => {
+        URL.revokeObjectURL(url);
+      });
+    }
   };
 
   const openPrivacyWindow = () => {
-    window.open('/privacy.html', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+    const sanitizedHtml = DOMPurify.sanitize(privacyHtml);
+    // UTF-8 BOM 추가하여 인코딩 확실히 처리
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + sanitizedHtml], { type: 'text/html; charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const newWindow = window.open(
+      url,
+      '_blank',
+      'width=800,height=600,scrollbars=yes,resizable=yes',
+    );
+
+    // 메모리 정리를 위해 URL 해제 (창이 닫힐 때)
+    if (newWindow) {
+      newWindow.addEventListener('beforeunload', () => {
+        URL.revokeObjectURL(url);
+      });
+    }
   };
 
   return (
