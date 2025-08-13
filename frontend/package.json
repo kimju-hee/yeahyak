@@ -27,6 +27,8 @@
     "antd": "^5.26.6",
     "axios": "^1.11.0",
     "dayjs": "^1.11.13",
+    "dompurify": "^3.2.6",
+    "markdown-it": "^14.1.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hotkeys-hook": "^5.1.0",
