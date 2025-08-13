@@ -44,6 +44,7 @@ public class ProductServiceImpl implements ProductService {
                 .unit(dto.getUnit())
                 .unitPrice(dto.getUnitPrice())
                 .productImgUrl(dto.getProductImgUrl())
+                .stock(dto.getStock() == null ? 0 : dto.getStock())
                 .build();
 
         return productRepository.save(product).getProductId();
@@ -76,6 +77,7 @@ public class ProductServiceImpl implements ProductService {
         product.setUnit(dto.getUnit());
         product.setUnitPrice(dto.getUnitPrice());
         product.setProductImgUrl(dto.getProductImgUrl());
+        if (dto.getStock() != null) product.setStock(dto.getStock());
 
         return productRepository.save(product);
     }
@@ -121,6 +123,7 @@ public class ProductServiceImpl implements ProductService {
                 .details(product.getDetails())
                 .unit(product.getUnit())
                 .unitPrice(product.getUnitPrice())
+                .stock(product.getStock())
                 .productImgUrl(product.getProductImgUrl())
                 .createdAt(product.getCreatedAt())
                 .build());

@@ -18,6 +18,7 @@ public class ProductRequestDTO {
     private SubCategory subCategory;
     private String manufacturer;
     private String unit;
+    private Integer stock;
     private BigDecimal unitPrice;
     private String pdfPath;
     private String details;

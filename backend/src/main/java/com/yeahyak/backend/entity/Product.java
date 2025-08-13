@@ -38,6 +38,9 @@ public class Product {
     private String unit;
     private BigDecimal unitPrice;
 
+    @Column(nullable = false)
+    private Integer stock;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
