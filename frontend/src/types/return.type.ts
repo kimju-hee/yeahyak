@@ -7,15 +7,14 @@ export interface Return {
   updatedAt?: string;
 }
 
-export type ReturnStatus = keyof typeof RETURN_STATUS;
-
 export const RETURN_STATUS = {
   REQUESTED: 'REQUESTED',
   APPROVED: 'APPROVED',
   PROCESSING: 'PROCESSING',
   COMPLETED: 'COMPLETED',
-  CANCELED: 'CANCELED',
+  REJECTED: 'REJECTED',
 } as const;
+export type ReturnStatus = keyof typeof RETURN_STATUS;
 
 export interface ReturnItem {
   returnItemId: number;
@@ -29,30 +28,33 @@ export interface ReturnItem {
 
 export interface ReturnRequest {
   pharmacyId: number;
+  orderId: number;
+  reason: string;
   items: ReturnItemRequest[];
 }
 
 export interface ReturnItemRequest {
   productId: number;
-  reason: string;
   quantity: number;
   unitPrice: number;
 }
 
 export interface ReturnResponse {
+  returnId: number;
   orderId: number;
   pharmacyId: number;
   pharmacyName: string;
-  createdAt: string;
   totalPrice: number;
   status: ReturnStatus;
+  createdAt: string;
   updatedAt?: string;
   items: ReturnItemResponse[];
 }
 
 export interface ReturnItemResponse {
+  productId: number;
   productName: string;
-  reason: string;
+  manufacturer: string;
   quantity: number;
   unitPrice: number;
   subtotalPrice: number;

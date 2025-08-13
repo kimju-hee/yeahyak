@@ -7,16 +7,15 @@ export interface Order {
   updatedAt?: string;
 }
 
-export type OrderStatus = keyof typeof ORDER_STATUS;
-
 export const ORDER_STATUS = {
   REQUESTED: 'REQUESTED',
   APPROVED: 'APPROVED',
   PROCESSING: 'PROCESSING',
   SHIPPING: 'SHIPPING',
   COMPLETED: 'COMPLETED',
-  CANCELED: 'CANCELED',
+  REJECTED: 'REJECTED',
 } as const;
+export type OrderStatus = keyof typeof ORDER_STATUS;
 
 export interface OrderItem {
   orderItemId: number;
@@ -27,9 +26,19 @@ export interface OrderItem {
   subtotalPrice: number;
 }
 
+export interface CartItem {
+  productId: number;
+  productName: string;
+  productCode: string;
+  manufacturer: string;
+  quantity: number;
+  unitPrice: number;
+  subtotalPrice: number;
+  productImgUrl?: string;
+}
+
 export interface OrderRequest {
   pharmacyId: number;
-  totalPrice: number;
   items: OrderItemRequest[];
 }
 

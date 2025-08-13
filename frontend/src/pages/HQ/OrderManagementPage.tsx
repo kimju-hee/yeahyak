@@ -1,299 +1,449 @@
-
+import type { TableProps } from 'antd';
 import {
   Button,
+  Card,
   Cascader,
   Col,
   DatePicker,
-  Descriptions,
   Form,
-  Layout,
-  Modal,
+  Popconfirm,
   Row,
   Select,
   Space,
+  Statistic,
   Table,
   Tag,
   Typography,
   message,
 } from 'antd';
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import type { TableProps } from 'antd';
+import dayjs from 'dayjs';
+import { useEffect, useState } from 'react';
 import { instance } from '../../api/api';
+import { ORDER_STATUS, type OrderListResponse, type OrderStatus } from '../../types/order.type';
 
-// --- 타입 정의 ---
-interface OrderItem {
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  subtotalPrice: number;
-  productId: number;
-}
+// TODO: 지역이나 기간으로 필터링 기능 추가? 고민중
 
-interface Order {
-  orderId: number;
-  pharmacyName: string;
-  createdAt: string;
-  totalPrice: number;
-  status: 'REQUESTED' | 'APPROVED' | 'PROCESSING' | 'SHIPPING' | 'COMPLETED' | 'CANCELED';
-  items: OrderItem[];
-}
-
-interface OrderTableDataType extends Order {
-  key: React.Key;
-  productSummary: string;
-}
-
-interface Option {
-  value: string;
-  label: string;
-  children?: Option[];
-}
-
-// --- 상수 및 헬퍼 함수 ---
-const { Content } = Layout;
-const { Text } = Typography;
-
-const geoOptions: Option[] = [
-    {
-        value: '충남충북',
-        label: '충남충북',
-        children: [
-          { value: '천안', label: '천안' },
-          { value: '대전', label: '대전' },
-          { value: '청주', label: '청주' },
-          { value: 'test1', label: 'test1' },
-          { value: 'test2', label: 'test2' },
-        ],
-    },
+const regionOptions = [
+  {
+    value: '수도권',
+    label: '수도권',
+    children: [
+      { value: '서울', label: '서울' },
+      { value: '인천', label: '인천' },
+      { value: '경기', label: '경기' },
+    ],
+  },
+  { value: '강원', label: '강원' },
+  {
+    value: '충청',
+    label: '충청',
+    children: [
+      { value: '대전', label: '대전' },
+      { value: '세종', label: '세종' },
+      { value: '충북', label: '충북' },
+      { value: '충남', label: '충남' },
+    ],
+  },
+  {
+    value: '영남',
+    label: '영남',
+    children: [
+      { value: '부산', label: '부산' },
+      { value: '대구', label: '대구' },
+      { value: '울산', label: '울산' },
+      { value: '경북', label: '경북' },
+      { value: '경남', label: '경남' },
+    ],
+  },
+  {
+    value: '호남',
+    label: '호남',
+    children: [
+      { value: '광주', label: '광주' },
+      { value: '전북', label: '전북' },
+      { value: '전남', label: '전남' },
+    ],
+  },
+  { value: '제주', label: '제주' },
 ];
 
-// TODO : 태그 관련 논의 필요함
 const statusOptions = [
-  { value: 'REQUESTED', label: '승인 대기' },
-  { value: 'APPROVED', label: '승인 완료' },
-  { value: 'PROCESSING', label: '처리 중' },
-  { value: 'SHIPPING', label: '배송 중' },
-  { value: 'COMPLETED', label: '완료' },
-  { value: 'CANCELED', label: '취소' },
+  { value: ORDER_STATUS.REQUESTED, label: '대기' },
+  { value: ORDER_STATUS.APPROVED, label: '승인' },
+  { value: ORDER_STATUS.PROCESSING, label: '처리중' },
+  { value: ORDER_STATUS.SHIPPING, label: '배송중' },
+  { value: ORDER_STATUS.COMPLETED, label: '완료' },
+  { value: ORDER_STATUS.REJECTED, label: '반려' },
 ];
 
-const getStatusTag = (status: Order['status']) => {
-    const option = statusOptions.find(o => o.value === status);
-    const colorMap = {
-        REQUESTED: 'blue',
-        APPROVED: 'green',
-        PROCESSING: 'purple',
-        SHIPPING: 'orange',
-        COMPLETED: 'gold',
-        CANCELED: 'red',
-    };
-    return <Tag color={colorMap[status]}>{option ? option.label : status}</Tag>;
+const getStatusTag = (status: OrderStatus, isClickable: boolean) => {
+  const statusColorMap: Record<OrderStatus, { color: string; text: string }> = {
+    [ORDER_STATUS.REQUESTED]: { color: 'orange', text: '대기' },
+    [ORDER_STATUS.APPROVED]: { color: 'blue', text: '승인' },
+    [ORDER_STATUS.PROCESSING]: { color: 'blue', text: '처리중' },
+    [ORDER_STATUS.SHIPPING]: { color: 'cyan', text: '배송중' },
+    [ORDER_STATUS.COMPLETED]: { color: 'green', text: '완료' },
+    [ORDER_STATUS.REJECTED]: { color: 'default', text: '반려' },
+  };
+  const { color, text } = statusColorMap[status];
+  return (
+    <Tag bordered={true} color={color} style={isClickable ? { cursor: 'pointer' } : {}}>
+      {text}
+    </Tag>
+  );
 };
 
+const PAGE_SIZE = 10;
 
-// --- 컴포넌트 ---
 export default function OrderManagementPage() {
-  const [orders, setOrders] = useState<OrderTableDataType[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 6, total: 0 });
-  const [filters, setFilters] = useState<Record<string, any>>({});
-  
-  const [selectedOrder, setSelectedOrder] = useState<OrderTableDataType | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
-  
-  const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
+  const [form] = Form.useForm();
 
-  const fetchOrders = useCallback(async (page: number, currentFilters: Record<string, any>) => {
+  const [orders, setOrders] = useState<OrderListResponse[]>([]);
+  const [filters, setFilters] = useState({
+    region: undefined as string | undefined,
+    status: undefined as OrderStatus | undefined,
+    startDate: undefined as dayjs.Dayjs | undefined,
+    endDate: undefined as dayjs.Dayjs | undefined,
+  });
+  const [statistics, setStatistics] = useState({
+    totalOrders: 0,
+    totalProcessing: 0,
+    totalShipping: 0,
+    totalAmount: 0,
+  });
+
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [total, setTotal] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const fetchStatistics = async () => {
+    try {
+      const res = await instance.get('/orders/admin/orders');
+      // LOG: 테스트용 로그
+      console.log('✨ 전체 발주 요청 목록 로딩 응답:', res.data);
+
+      if (res.data.success) {
+        const totalOrders = res.data.data.length;
+        const calculatedStatistics = res.data.data.reduce(
+          (acc: any, order: OrderListResponse) => {
+            if (order.status === ORDER_STATUS.PROCESSING) {
+              acc.totalProcessing += 1;
+            } else if (order.status === ORDER_STATUS.SHIPPING) {
+              acc.totalShipping += 1;
+            }
+            if (order.status !== ORDER_STATUS.REJECTED) {
+              acc.totalAmount += order.totalPrice || 0;
+            }
+            return acc;
+          },
+          { totalOrders: 0, totalProcessing: 0, totalShipping: 0, totalAmount: 0 },
+        );
+        setStatistics({ ...calculatedStatistics, totalOrders: totalOrders });
+      }
+    } catch (e: any) {
+      console.error('전체 발주 요청 목록 로딩 실패:', e);
+      messageApi.error(e.message || '전체 발주 요청 목록 로딩 중 오류가 발생했습니다.');
+    }
+  };
+
+  const fetchFilteredOrders = async () => {
     setLoading(true);
     try {
-      const { branch, date, status } = currentFilters;
-      const pharmacyName = Array.isArray(branch) && branch.length > 0 ? branch[branch.length - 1] : undefined;
-      
-      const params = {
-        page: page - 1,
-        size: pagination.pageSize,
-        pharmacyName,
-        status,
-        // TODO: 백엔드에서 날짜 필터링 지원 시 추가
-        // startDate: date ? date[0].format('YYYY-MM-DD') : undefined,
-        // endDate: date ? date[1].format('YYYY-MM-DD') : undefined,
-      };
+      const res = await instance.get('/orders/admin/orders', {
+        params: {
+          page: currentPage - 1,
+          size: PAGE_SIZE,
+          region: filters.region,
+          status: filters.status,
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+        },
+      });
+      // LOG: 테스트용 로그
+      console.log('✨ 발주 요청 목록 로딩 응답:', res.data);
 
-      // [수정] API 호출 주소 변경 및 응답 데이터 안정성 강화
-      const response = await instance.get('/orders/admin/orders', { params });
-      const responseData = response.data || {};
-      const orderList = responseData.data || [];
-      const totalElements = responseData.totalElements || 0;
-
-      const fetchedOrders = orderList.map((order: Order) => ({
-        ...order,
-        key: order.orderId,
-        productSummary:
-          order.items.length > 0
-            ? `${order.items[0].productName}${order.items.length > 1 ? ` 외 ${order.items.length - 1}건` : ''}`
-            : '주문 항목 없음',
-      }));
-
-      setOrders(fetchedOrders);
-      setPagination(prev => ({ ...prev, current: page, total: totalElements }));
-
-    } catch (e) {
-      console.error('발주 목록 불러오기 실패:', e);
-      messageApi.error('주문 데이터를 불러오는 데 실패했습니다.');
+      if (res.data.success) {
+        const { data, totalElements } = res.data;
+        setOrders(data);
+        setTotal(totalElements);
+      }
+    } catch (e: any) {
+      console.error('발주 요청 목록 로딩 실패:', e);
+      messageApi.error(e.message || '발주 요청 목록 로딩 중 오류가 발생했습니다.');
+      setOrders([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [pagination.pageSize, messageApi]);
+  };
 
   useEffect(() => {
-    fetchOrders(1, {});
+    fetchStatistics();
   }, []);
 
-  const handleTableChange: TableProps<OrderTableDataType>['onChange'] = (newPagination) => {
-    fetchOrders(newPagination.current!, filters);
-  };
-  
-  const handleFilterSearch = () => {
+  useEffect(() => {
+    fetchFilteredOrders();
+  }, [currentPage, filters]);
+
+  const handleSearch = () => {
     const formValues = form.getFieldsValue();
-    setFilters(formValues);
-    fetchOrders(1, formValues);
+    const [startDate, endDate] = formValues.date || [undefined, undefined];
+    setFilters({
+      region: formValues.region,
+      status: formValues.status,
+      startDate,
+      endDate,
+    });
+    setCurrentPage(1);
   };
 
-  const handleFilterReset = () => {
+  const handleReset = () => {
     form.resetFields();
-    setFilters({});
-    fetchOrders(1, {});
+    setFilters({ region: undefined, status: undefined, startDate: undefined, endDate: undefined });
+    setCurrentPage(1);
   };
 
-  const handleStatusUpdate = async (orderId: number, newStatus: Order['status']) => {
+  const handleUpdate = async (orderId: number, action: string) => {
     try {
-      if (newStatus === 'APPROVED') {
-        await instance.post(`/orders/${orderId}/approve`);
-      } else if (newStatus === 'CANCELED') {
-        await instance.patch(`/orders/${orderId}/reject`);
+      let res: any;
+      switch (action) {
+        case 'APPROVE':
+          res = await instance.post(`/orders/${orderId}/approve`);
+          break;
+        case 'REJECT':
+          res = await instance.post(`/orders/${orderId}/reject`);
+          break;
+        case 'PROCESS':
+          res = await instance.patch(`/orders/${orderId}`, { status: 'PROCESSING' });
+          break;
+        case 'SHIP':
+          res = await instance.patch(`/orders/${orderId}`, { status: 'SHIPPING' });
+          break;
+        case 'COMPLETE':
+          res = await instance.patch(`/orders/${orderId}`, { status: 'COMPLETED' });
+          break;
       }
-      messageApi.success('상태가 변경되었습니다.');
-      fetchOrders(pagination.current, filters); // 목록 새로고침
-    } catch (error) {
-      console.error('주문 상태 업데이트 실패:', error);
-      messageApi.error('상태 변경에 실패했습니다.');
+      // LOG: 테스트용 로그
+      console.log('✨ 주문 상태 업데이트 응답:', res.data);
+
+      if (res.data.success) {
+        messageApi.success('주문 상태가 변경되었습니다.');
+        fetchStatistics();
+        fetchFilteredOrders();
+      }
+    } catch (e: any) {
+      console.error('주문 상태 변경 실패:', e);
+      messageApi.error(e.message || '주문 상태 변경 중 오류가 발생했습니다.');
     }
   };
 
-  const handleRowClick = (record: OrderTableDataType) => {
-    setSelectedOrder(record);
-    setModalVisible(true);
+  const renderStatusTagWithActions = (record: OrderListResponse) => {
+    if (record.status === ORDER_STATUS.REQUESTED) {
+      return (
+        <Popconfirm
+          title="주문 승인 / 반려"
+          description="주문을 승인 또는 반려하시겠습니까?"
+          okText="승인"
+          cancelText="반려"
+          onConfirm={(e) => {
+            e?.stopPropagation();
+            handleUpdate(record.orderId, 'APPROVE');
+          }}
+          onCancel={(e) => {
+            e?.stopPropagation();
+            handleUpdate(record.orderId, 'REJECT');
+          }}
+        >
+          <span onClick={(e) => e.stopPropagation()}>{getStatusTag(record.status, true)}</span>
+        </Popconfirm>
+      );
+    }
+
+    let nextAction = '';
+    let confirmDescription = '';
+
+    switch (record.status) {
+      case ORDER_STATUS.APPROVED:
+        nextAction = 'PROCESS';
+        confirmDescription = '처리중으로 변경하시겠습니까?';
+        break;
+      case ORDER_STATUS.PROCESSING:
+        nextAction = 'SHIP';
+        confirmDescription = '배송중으로 변경하시겠습니까?';
+        break;
+      case ORDER_STATUS.SHIPPING:
+        nextAction = 'COMPLETE';
+        confirmDescription = '완료로 변경하시겠습니까?';
+        break;
+      default:
+        return getStatusTag(record.status, false);
+    }
+
+    return (
+      <Popconfirm
+        title="주문 상태 변경"
+        description={confirmDescription}
+        onConfirm={(e) => {
+          e?.stopPropagation();
+          handleUpdate(record.orderId, nextAction);
+        }}
+        onCancel={(e) => {
+          e?.stopPropagation();
+        }}
+        okText="변경"
+        cancelText="취소"
+      >
+        <span onClick={(e) => e.stopPropagation()}>{getStatusTag(record.status, true)}</span>
+      </Popconfirm>
+    );
   };
 
-  const columns: TableProps<OrderTableDataType>['columns'] = [
-    { title: '주문번호', dataIndex: 'orderId', key: 'orderId', width: 100 },
-    { title: '지점', dataIndex: 'pharmacyName', key: 'pharmacyName', width: 120 },
-    { title: '요청일자', dataIndex: 'createdAt', key: 'createdAt', width: 150, render: (text) => new Date(text).toLocaleDateString() },
-    { title: '의약품', dataIndex: 'productSummary', key: 'productSummary', width: 200 },
-    { title: '주문 금액', dataIndex: 'totalPrice', key: 'totalPrice', width: 120, render: (v) => `${v.toLocaleString()}원` },
-    { title: '상태', dataIndex: 'status', key: 'status', width: 100, render: (status: Order['status'], record) =>
-        status === 'REQUESTED' ? (
-          <Button type="primary" size="small" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(record.orderId, 'APPROVED'); }}>
-            승인
-          </Button>
-        ) : (
-          getStatusTag(status)
-        ),
+  const tableColumns: TableProps<OrderListResponse>['columns'] = [
+    { title: '주문번호', dataIndex: 'orderId', key: 'orderId' },
+    { title: '지점명', dataIndex: 'pharmacyName', key: 'pharmacyName' },
+    {
+      title: '주문요약',
+      key: 'orderSummary',
+      render: (_, record) => {
+        if (record.items.length > 1) {
+          return `${record.items[0].productName} 외 ${record.items.length - 1}건`;
+        } else {
+          return `${record.items[0].productName}`;
+        }
+      },
+    },
+    {
+      title: '주문금액',
+      dataIndex: 'totalPrice',
+      key: 'totalPrice',
+      render: (value) => `${value.toLocaleString()}원`,
+    },
+    {
+      title: '요청일시',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (value) => dayjs(value).format('YYYY. MM. DD. HH:mm'),
+    },
+    {
+      title: '상태',
+      dataIndex: 'status',
+      key: 'status',
+      render: (_, record) => renderStatusTagWithActions(record),
     },
   ];
+
+  const expandedRowRender = (record: OrderListResponse) => {
+    return (
+      <>
+        <Table
+          bordered={true}
+          dataSource={record.items}
+          columns={[
+            { title: '제품명', dataIndex: 'productName', key: 'productName' },
+            { title: '수량', dataIndex: 'quantity', key: 'quantity' },
+            {
+              title: '단가',
+              dataIndex: 'unitPrice',
+              key: 'unitPrice',
+              render: (value) => `${value.toLocaleString()}원`,
+            },
+            {
+              title: '소계',
+              dataIndex: 'subtotalPrice',
+              key: 'subtotalPrice',
+              render: (value) => `${value.toLocaleString()}원`,
+            },
+          ]}
+          pagination={false}
+          rowKey={(item) => item.productName}
+          size="small"
+          summary={() => (
+            <Table.Summary fixed>
+              <Table.Summary.Row>
+                <Table.Summary.Cell index={0} colSpan={2} />
+                <Table.Summary.Cell index={1}>합계</Table.Summary.Cell>
+                <Table.Summary.Cell index={2}>
+                  {record.totalPrice.toLocaleString()}원
+                </Table.Summary.Cell>
+              </Table.Summary.Row>
+            </Table.Summary>
+          )}
+        />
+      </>
+    );
+  };
 
   return (
     <>
       {contextHolder}
-      <Content style={{ margin: '24px', padding: '24px' }}>
-        <Row justify="space-between" align="middle" style={{ marginBottom: '30px' }}>
-          <Col>
-            <Text strong style={{ fontSize: '30px' }}>발주 조회/승인</Text>
-          </Col>
-        </Row>
+      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+        발주 요청 관리
+      </Typography.Title>
 
-        <Form layout="vertical" form={form} onFinish={handleFilterSearch}>
-          <Row justify="space-between" style={{ padding: '5px 50px' }}>
-            <Space>
-              <Form.Item label="지점명" name="branch">
-                <Cascader options={geoOptions} placeholder="지역 선택" />
-              </Form.Item>
-              <Form.Item label="상태" name="status">
-                <Select allowClear options={statusOptions} placeholder="상태 선택" style={{ width: 150 }} />
-              </Form.Item>
-              <Form.Item label="기간" name="date">
-                <DatePicker.RangePicker placeholder={['시작일', '종료일']} style={{ width: 400 }} />
-              </Form.Item>
-            </Space>
-            <Form.Item label=" ">
-              <Button onClick={handleFilterReset}>옵션 초기화</Button>
-              <Button type="primary" htmlType="submit" style={{ marginLeft: 8 }}>발주 조회</Button>
-            </Form.Item>
-          </Row>
-        </Form>
+      <Row gutter={16} style={{ marginBottom: '24px' }}>
+        <Col span={6}>
+          <Card>
+            <Statistic title="당월 발주 요청" value={statistics.totalOrders} />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic title="처리중" value={statistics.totalProcessing} />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic title="배송중" value={statistics.totalShipping} />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic title="당월 발주 총액" value={statistics.totalAmount} suffix="원" />
+          </Card>
+        </Col>
+      </Row>
 
-        <Row justify="center" style={{ marginTop: 20 }}>
-          <Col span={22}>
-            <Table
-              columns={columns}
-              dataSource={orders}
-              pagination={pagination}
-              loading={loading}
-              onChange={handleTableChange}
-              onRow={(record) => ({ onClick: () => handleRowClick(record) })}
-              rowKey="orderId"
-            />
-          </Col>
-        </Row>
+      <Form layout="vertical" form={form} onFinish={handleSearch}>
+        <Space wrap align="end">
+          <Form.Item label="지역" name="region">
+            <Cascader options={regionOptions} placeholder="지역 선택" />
+          </Form.Item>
+          <Form.Item label="상태" name="status">
+            <Select allowClear options={statusOptions} placeholder="상태 선택" />
+          </Form.Item>
+          <Form.Item label="기간" name="date">
+            <DatePicker.RangePicker placeholder={['시작일', '종료일']} />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit">
+              조회
+            </Button>
+          </Form.Item>
+          <Form.Item>
+            <Button onClick={handleReset}>초기화</Button>
+          </Form.Item>
+        </Space>
+      </Form>
 
-        <Modal
-          title="발주 상세 정보"
-          open={modalVisible}
-          closable={false}
-          onCancel={() => setModalVisible(false)}
-          footer={[
-            <Button key="close" onClick={() => setModalVisible(false)}>닫기</Button>,
-            selectedOrder?.status === 'REQUESTED' && (
-              <Button key="approve" type="primary" onClick={() => {
-                  if (selectedOrder) {
-                    handleStatusUpdate(selectedOrder.orderId, 'APPROVED');
-                    setModalVisible(false);
-                  }
-              }}>
-                승인
-              </Button>
-            ),
-          ]}
-          width={800}
-        >
-          {selectedOrder && (
-            <Descriptions bordered column={2} size="middle">
-              <Descriptions.Item label="주문번호" span={1}>{selectedOrder.orderId}</Descriptions.Item>
-              <Descriptions.Item label="지점명" span={1}>{selectedOrder.pharmacyName}</Descriptions.Item>
-              <Descriptions.Item label="요청일자" span={1}>{new Date(selectedOrder.createdAt).toLocaleString()}</Descriptions.Item>
-              <Descriptions.Item label="상태" span={2}>{getStatusTag(selectedOrder.status)}</Descriptions.Item>
-              <Descriptions.Item label="주문 항목" span={2}>
-                <Table
-                  dataSource={selectedOrder.items}
-                  columns={[
-                    { title: '제품명', dataIndex: 'productName', key: 'productName' },
-                    { title: '수량', dataIndex: 'quantity', key: 'quantity' },
-                    { title: '단가', dataIndex: 'unitPrice', key: 'unitPrice', render: (v) => `${v.toLocaleString()}원` },
-                    { title: '소계', dataIndex: 'subtotalPrice', key: 'subtotalPrice', render: (v) => `${v.toLocaleString()}원` },
-                  ]}
-                  pagination={false}
-                  rowKey="productId"
-                  size="small"
-                />
-              </Descriptions.Item>
-              <Descriptions.Item label="총 주문 금액" span={2}>
-                <Text strong style={{ fontSize: 16 }}>{`${selectedOrder.totalPrice.toLocaleString()}원`}</Text>
-              </Descriptions.Item>
-            </Descriptions>
-          )}
-        </Modal>
-      </Content>
+      <Table
+        columns={tableColumns}
+        dataSource={orders}
+        loading={loading}
+        rowKey={(record) => record.orderId}
+        pagination={{
+          position: ['bottomCenter'],
+          pageSize: PAGE_SIZE,
+          total: total,
+          current: currentPage,
+          onChange: (page) => setCurrentPage(page),
+        }}
+        expandable={{
+          expandedRowRender,
+          expandRowByClick: true,
+          expandIcon: () => null,
+        }}
+      />
     </>
   );
 }
