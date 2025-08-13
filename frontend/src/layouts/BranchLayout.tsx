@@ -12,12 +12,17 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { ConfigProvider, Divider, Dropdown, Flex, Layout, Menu, Space, Typography } from 'antd';
+import DOMPurify from 'dompurify';
 import { useRef } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import Chatbot from '../components/Chatbot';
 import { useAuthStore } from '../stores/authStore';
 import { PHARMACY_STATUS, USER_ROLE, type Pharmacy } from '../types/profile.type';
 const { Sider, Header, Content, Footer } = Layout;
+
+// HTML 파일들을 텍스트로 import
+import privacyHtml from '../assets/privacy.html?raw';
+import termsHtml from '../assets/terms.html?raw';
 
 // Design Token
 const theme = {
@@ -68,9 +73,44 @@ export default function BranchLayout() {
   const pharmacy = user?.role === USER_ROLE.BRANCH ? (profile as Pharmacy) : null;
 
   // 이용약관과 개인정보처리방침 새 창으로 열기
-  const openWindow = (type: 'terms' | 'privacy') => {
-    const url = type === 'terms' ? '/terms.html' : '/privacy.html';
-    window.open(url, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+  const openTermsWindow = () => {
+    const sanitizedHtml = DOMPurify.sanitize(termsHtml);
+    // UTF-8 BOM 추가하여 인코딩 확실히 처리
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + sanitizedHtml], { type: 'text/html; charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const newWindow = window.open(
+      url,
+      '_blank',
+      'width=800,height=600,scrollbars=yes,resizable=yes',
+    );
+
+    // 메모리 정리를 위해 URL 해제 (창이 닫힐 때)
+    if (newWindow) {
+      newWindow.addEventListener('beforeunload', () => {
+        URL.revokeObjectURL(url);
+      });
+    }
+  };
+
+  const openPrivacyWindow = () => {
+    const sanitizedHtml = DOMPurify.sanitize(privacyHtml);
+    // UTF-8 BOM 추가하여 인코딩 확실히 처리
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + sanitizedHtml], { type: 'text/html; charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const newWindow = window.open(
+      url,
+      '_blank',
+      'width=800,height=600,scrollbars=yes,resizable=yes',
+    );
+
+    // 메모리 정리를 위해 URL 해제 (창이 닫힐 때)
+    if (newWindow) {
+      newWindow.addEventListener('beforeunload', () => {
+        URL.revokeObjectURL(url);
+      });
+    }
   };
 
   // 아바타 메뉴 아이템
@@ -183,11 +223,11 @@ export default function BranchLayout() {
             <Footer style={{ textAlign: 'center' }}>
               © 2025 Team yeahyak
               <Divider type="vertical" />
-              <Typography.Link onClick={() => openWindow('terms')} style={{ color: '#000000' }}>
+              <Typography.Link onClick={openTermsWindow} style={{ color: '#000000' }}>
                 이용약관
               </Typography.Link>
               <Divider type="vertical" />
-              <Typography.Link onClick={() => openWindow('privacy')} style={{ color: '#000000' }}>
+              <Typography.Link onClick={openPrivacyWindow} style={{ color: '#000000' }}>
                 개인정보처리방침
               </Typography.Link>
             </Footer>

@@ -1,8 +1,10 @@
 import { Checkbox, Form, Modal, Typography } from 'antd';
+import DOMPurify from 'dompurify';
 import { useState } from 'react';
 
-const TERMS_CONTENT = '이용약관 내용...';
-const PRIVACY_CONTENT = '개인정보 수집 및 이용 내용...';
+// HTML 파일들을 텍스트로 import
+import privacyHtml from '../assets/privacy.html?raw';
+import termsHtml from '../assets/terms.html?raw';
 
 export default function TermsAndPrivacyCheckbox() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -12,10 +14,10 @@ export default function TermsAndPrivacyCheckbox() {
   const showModal = (title: 'terms' | 'privacy') => {
     if (title === 'terms') {
       setModalTitle('서비스 이용약관');
-      setModalContent(TERMS_CONTENT);
+      setModalContent(termsHtml);
     } else {
       setModalTitle('개인정보 수집 및 이용');
-      setModalContent(PRIVACY_CONTENT);
+      setModalContent(privacyHtml);
     }
     setIsModalOpen(true);
   };
@@ -71,9 +73,23 @@ export default function TermsAndPrivacyCheckbox() {
         open={isModalOpen}
         onCancel={handleModalClose}
         footer={null}
-        style={{ maxHeight: '400px', overflowY: 'auto', whiteSpace: 'pre-wrap' }}
+        width={800}
+        styles={{
+          body: {
+            maxHeight: '60vh',
+
+            overflowY: 'auto',
+            scrollbarWidth: 'thin',
+          },
+        }}
+        destroyOnHidden
       >
-        {modalContent}
+        <div
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(modalContent) }}
+          style={{
+            lineHeight: '1.8',
+          }}
+        />
       </Modal>
     </>
   );
