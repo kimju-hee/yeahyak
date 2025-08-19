@@ -30,9 +30,9 @@ public class AuthController {
     private final JwtUtil jwtUtil;
 
     @PostMapping("/signup")
-    public ResponseEntity<String> signup(@Valid @RequestBody SignupRequest request) {
+    public ResponseEntity<ApiResponse<String>> signup(@Valid @RequestBody SignupRequest request) {
         authService.register(request);
-        return ResponseEntity.ok("회원가입이 완료되었습니다. 관리자의 승인을 기다립니다.");
+        return ResponseEntity.ok(new ApiResponse<>(true, ""));
     }
 
     @PostMapping("/admin/signup")
@@ -69,41 +69,8 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
-
         LoginResponse loginResponse = authService.login(request);
-        String email = loginResponse.getUser().getEmail();
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-
-        String accessToken = jwtUtil.createAccessToken(user);
-        String refreshToken = jwtUtil.createRefreshToken(user);
-
-        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .maxAge(7 * 24 * 60 * 60)
-                .build();
-
-        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
-
-        return ResponseEntity.ok()
-                .body(Map.of(
-                        "success", true,
-                        "data", Map.of(
-                                "accessToken", accessToken,
-                                "user", loginResponse.getUser(),
-                                "profile", loginResponse.getProfile()
-                        )
-                ));
-    }
-
-    @PostMapping("/admin/login")
-    public ResponseEntity<?> adminLogin(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
-        AdminLoginResponse loginResponse = authService.adminLogin(request);
-
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(loginResponse.getUser().getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
         String accessToken = jwtUtil.createAccessToken(user);
@@ -122,7 +89,13 @@ public class AuthController {
                 "success", true,
                 "data", Map.of(
                         "accessToken", accessToken,
-                        "user", loginResponse.getUser(),
+                        "user", Map.of(
+                                "userId", user.getUserId(),
+                                "email", user.getEmail(),
+                                "role", user.getUserRole().name(),
+                                "point", user.getPoint(),
+                                "creditStatus", user.getCreditStatus().name()
+                        ),
                         "profile", loginResponse.getProfile()
                 )
         ));
@@ -178,6 +151,40 @@ public class AuthController {
                         "detailAddress", updatedProfile.getDetailAddress(),
                         "contact", updatedProfile.getContact(),
                         "status", updatedProfile.getStatus()
+                )
+        ));
+    }
+
+    @PostMapping("/admin/login")
+    public ResponseEntity<?> adminLogin(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+        AdminLoginResponse loginResponse = authService.adminLogin(request);
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        String accessToken = jwtUtil.createAccessToken(user);
+        String refreshToken = jwtUtil.createRefreshToken(user);
+
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", Map.of(
+                        "accessToken", accessToken,
+                        "user", Map.of(
+                                "userId", user.getUserId(),
+                                "email", user.getEmail(),
+                                "role", user.getUserRole().name(),
+                                "point", user.getPoint(),
+                                "creditStatus", user.getCreditStatus().name() // 본사도 포함
+                        ),
+                        "profile", loginResponse.getProfile()
                 )
         ));
     }
