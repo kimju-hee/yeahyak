@@ -32,9 +32,26 @@ public class CreditAdminController {
     }
 
     @GetMapping("/pending")
-    public ResponseEntity<?> pending() {
-        return ResponseEntity.ok(Map.of("success", true, "data", creditService.getPendingCredits()));
+    public ResponseEntity<?> pending(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        var pendingPage = creditService.getPendingCredits(page, size);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", Map.of(
+                        "content", pendingPage.getContent(),
+                        "page", pendingPage.getNumber(),
+                        "size", pendingPage.getSize(),
+                        "totalElements", pendingPage.getTotalElements(),
+                        "totalPages", pendingPage.getTotalPages(),
+                        "last", pendingPage.isLast()
+                )
+        ));
     }
+
+
 
     @PostMapping("/approve/{userId}")
     public ResponseEntity<?> approve(@PathVariable Long userId, @RequestParam(required = false) String note) {

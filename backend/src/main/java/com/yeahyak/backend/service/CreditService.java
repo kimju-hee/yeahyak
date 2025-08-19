@@ -5,6 +5,9 @@ import com.yeahyak.backend.entity.enums.CreditStatus;
 import com.yeahyak.backend.repository.PharmacyRepository;
 import com.yeahyak.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,10 +24,14 @@ public class CreditService {
     private final PharmacyRepository pharmacyRepository;
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> getPendingCredits() {
-        var a = userRepository.findByPointLessThan(0);
-        var b = userRepository.findByCreditStatus(CreditStatus.SETTLEMENT_REQUIRED);
-        var merged = new LinkedHashMap<Long, User>();
+    public org.springframework.data.domain.Page<Map<String, Object>> getPendingCredits(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        // 음수 포인트 사용자 & 미정산 사용자 둘 다 조회
+        List<User> a = userRepository.findByPointLessThan(0);
+        List<User> b = userRepository.findByCreditStatus(CreditStatus.SETTLEMENT_REQUIRED);
+
+        Map<Long, User> merged = new LinkedHashMap<>();
         a.forEach(u -> merged.put(u.getUserId(), u));
         b.forEach(u -> merged.put(u.getUserId(), u));
 
@@ -39,7 +46,13 @@ public class CreditService {
             row.put("creditStatus", u.getCreditStatus().name());
             result.add(row);
         }
-        return result;
+
+        // 수동으로 페이지네이션 적용
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), result.size());
+        List<Map<String, Object>> pageContent = result.subList(start, end);
+
+        return new PageImpl<>(pageContent, pageable, result.size());
     }
 
     @Transactional
