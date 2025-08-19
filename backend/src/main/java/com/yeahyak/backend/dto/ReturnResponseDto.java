@@ -19,5 +19,6 @@ public class ReturnResponseDto {
     private LocalDateTime updatedAt;
     private int totalPrice;
     private String status;
+    private String reason;
     private List<ReturnItemResponseDto> items;
 }

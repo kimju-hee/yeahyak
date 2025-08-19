@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import com.yeahyak.backend.entity.enums.InventoryDivision;
 
 @Service
 @RequiredArgsConstructor
@@ -84,7 +83,6 @@ public class ReturnService {
                     .productId(product.getProductId())
                     .productName(product.getProductName())
                     .manufacturer(product.getManufacturer())
-                    .reason(dto.getReason())
                     .quantity(qty)
                     .unitPrice(itemDto.getUnitPrice())
                     .subtotalPrice(subtotal)
@@ -95,7 +93,6 @@ public class ReturnService {
         returnRepository.save(returns);
         returnItemsRepository.saveAll(returnItemList);
 
-        // ✅ 반품 "요청" 등록 시점 스냅샷 기록(RETURN_IN) — 재고 변경 없음
         for (ReturnItems ri : returnItemList) {
             Product product = ri.getProduct();
             int snapshot = product.getStock() == null ? 0 : product.getStock();
@@ -103,7 +100,7 @@ public class ReturnService {
                     .product(product)
                     .division(InventoryDivision.RETURN_IN)
                     .quantity(ri.getQuantity())
-                    .stock(snapshot) // 현재 재고 스냅샷
+                    .stock(snapshot)
                     .note(pharmacy.getPharmacyName())
                     .build());
         }
@@ -116,6 +113,7 @@ public class ReturnService {
                 .createdAt(returns.getCreatedAt())
                 .totalPrice(total)
                 .status(returns.getStatus().name())
+                .reason(dto.getReason()) // ⬅️ 최상위에만 reason
                 .items(itemResponses)
                 .build();
     }
@@ -163,7 +161,6 @@ public class ReturnService {
                             .productId(item.getProduct().getProductId())
                             .productName(item.getProduct().getProductName())
                             .manufacturer(item.getProduct().getManufacturer())
-                            .reason(ret.getReason())
                             .quantity(item.getQuantity())
                             .unitPrice(item.getUnitPrice())
                             .subtotalPrice(item.getSubtotalPrice())
@@ -176,8 +173,10 @@ public class ReturnService {
                     .pharmacyName(ret.getPharmacy().getPharmacyName())
                     .orderId(null)
                     .createdAt(ret.getCreatedAt())
+                    .updatedAt(ret.getUpdatedAt())
                     .totalPrice(ret.getTotalPrice())
                     .status(ret.getStatus().name())
+                    .reason(ret.getReason())
                     .items(itemDtos)
                     .build();
         }).toList();
@@ -244,7 +243,6 @@ public class ReturnService {
                         .productId(item.getProduct().getProductId())
                         .productName(item.getProduct().getProductName())
                         .manufacturer(item.getProduct().getManufacturer())
-                        .reason(returns.getReason())
                         .quantity(item.getQuantity())
                         .unitPrice(item.getUnitPrice())
                         .subtotalPrice(item.getSubtotalPrice())
@@ -260,6 +258,7 @@ public class ReturnService {
                 .updatedAt(returns.getUpdatedAt())
                 .status(returns.getStatus().name())
                 .totalPrice(returns.getTotalPrice())
+                .reason(returns.getReason())
                 .items(itemDtos)
                 .build();
     }
@@ -274,13 +273,13 @@ public class ReturnService {
         returns.setStatus(ReturnStatus.REJECTED);
         returns.setUpdatedAt(LocalDateTime.now());
     }
+
     @Transactional
     public void deleteReturn(Long returnId) {
         Returns returns = returnRepository.findById(returnId)
                 .orElseThrow(() -> new RuntimeException("반품 내역을 찾을 수 없습니다."));
 
         returnItemsRepository.deleteAllByReturns(returns);
-
         returnRepository.delete(returns);
     }
 

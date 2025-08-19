@@ -11,7 +11,6 @@ public class ReturnItemResponseDto {
     private Long productId;
     private String productName;
     private String manufacturer;
-    private String reason;
     private int quantity;
     private int unitPrice;
     private int subtotalPrice;
