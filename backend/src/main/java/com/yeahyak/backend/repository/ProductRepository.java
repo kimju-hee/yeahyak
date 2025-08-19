@@ -8,6 +8,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("""
@@ -41,4 +43,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
          WHERE p.productId = :id
     """)
     int restoreStock(@Param("id") Long productId, @Param("qty") int quantity);
+
+    List<Product> findByProductCodeIn(List<String> codes);
 }
