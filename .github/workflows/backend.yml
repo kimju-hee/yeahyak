@@ -88,10 +88,11 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           script_stop: true
-          # 원격으로 보낼 환경변수 목록 (원격 셸에 그대로 export됨)
+          # 원격으로 export 할 환경변수 목록
           envs: TZ,SPRING_PROFILES_ACTIVE,SERVER_PORT,AI_SERVICE_URL,DB_URL,DB_USERNAME,DB_PASSWORD,BLOB_ENDPOINT,BLOB_CONTAINER,BLOB_CONN_STR
           script: |
-            set -Eeuo pipefail
+            # dash(/bin/sh) 호환: -E, pipefail 미사용
+            set -eu
             trap 'echo "FAILED at line $LINENO"; exit 1' ERR
 
             LOGIN_SERVER="${{ env.LOGIN_SERVER }}"
@@ -101,21 +102,24 @@ jobs:
             HOST_PORT="8080"
             CONTAINER_PORT="8080"
 
-            # 0) 원본 시크릿이 원격 셸로 전달되었는지 확인
+            # 0) 원본 시크릿 전달 여부 확인
             for v in DB_URL DB_USERNAME DB_PASSWORD BLOB_ENDPOINT BLOB_CONTAINER BLOB_CONN_STR; do
               [ -z "${!v:-}" ] && echo "ERROR: missing env $v" && exit 1
             done
 
-            # 1) DB_/BLOB_ → SPRING_/AZURE_STORAGE_ 로 매핑(export)
-            export SPRING_DATASOURCE_URL="$DB_URL"
-            export SPRING_DATASOURCE_USERNAME="$DB_USERNAME"
-            export SPRING_DATASOURCE_PASSWORD="$DB_PASSWORD"
+            # 1) DB_/BLOB_ → SPRING_/AZURE_STORAGE_ 매핑
+            SPRING_DATASOURCE_URL="$DB_URL"
+            SPRING_DATASOURCE_USERNAME="$DB_USERNAME"
+            SPRING_DATASOURCE_PASSWORD="$DB_PASSWORD"
 
-            export AZURE_STORAGE_BLOB_ENDPOINT="$BLOB_ENDPOINT"
-            export AZURE_STORAGE_CONTAINER_NAME="$BLOB_CONTAINER"
-            export AZURE_STORAGE_CONNECTION_STRING="$BLOB_CONN_STR"
+            AZURE_STORAGE_BLOB_ENDPOINT="$BLOB_ENDPOINT"
+            AZURE_STORAGE_CONTAINER_NAME="$BLOB_CONTAINER"
+            AZURE_STORAGE_CONNECTION_STRING="$BLOB_CONN_STR"
 
-            # 2) 필수 env 존재 확인 (매핑 후)
+            export SPRING_DATASOURCE_URL SPRING_DATASOURCE_USERNAME SPRING_DATASOURCE_PASSWORD
+            export AZURE_STORAGE_BLOB_ENDPOINT AZURE_STORAGE_CONTAINER_NAME AZURE_STORAGE_CONNECTION_STRING
+
+            # 2) 매핑된 변수 확인
             for v in SPRING_DATASOURCE_URL SPRING_DATASOURCE_USERNAME SPRING_DATASOURCE_PASSWORD AZURE_STORAGE_BLOB_ENDPOINT AZURE_STORAGE_CONTAINER_NAME AZURE_STORAGE_CONNECTION_STRING; do
               [ -z "${!v:-}" ] && echo "ERROR: missing env $v" && exit 1
             done
@@ -130,7 +134,7 @@ jobs:
             INUSE_IDS=$(docker ps --format '{{.ID}} {{.Ports}}' | awk '/(0\.0\.0\.0|127\.0\.0\.1):8080->8080\/tcp/ {print $1}')
             [ -n "$INUSE_IDS" ] && docker rm -f $INUSE_IDS || true
 
-            # 5) 컨테이너 재실행 (호스트 환경변수 그대로 전달: -e VAR)
+            # 5) 컨테이너 재실행 (호스트 env 그대로 -e VAR 로 전달)
             docker run -d --name "$CONTAINER_NAME" \
               --restart unless-stopped \
               --network yeahyak-net \
@@ -150,7 +154,7 @@ jobs:
             docker image prune -f
             docker logout "$LOGIN_SERVER" || true
         env:
-          # 여기 값들이 GitHub 러너 → 원격 셸로 전달됨(특수문자 안전)
+          # 이 값들이 GitHub 러너 → 원격 셸로 전달됨(특수문자 안전)
           TZ: Asia/Seoul
           SPRING_PROFILES_ACTIVE: prod
           SERVER_PORT: "8080"
