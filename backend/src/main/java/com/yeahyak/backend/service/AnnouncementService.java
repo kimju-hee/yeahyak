@@ -9,9 +9,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -70,4 +77,19 @@ public class AnnouncementService {
                 .findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(keyword, keyword, pageable);
     }
 
+    public String storeFile(MultipartFile file) {
+        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+
+
+        Path uploadPath = Paths.get("uploads").toAbsolutePath().normalize();
+        try {
+            Files.createDirectories(uploadPath);
+            Path target = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new RuntimeException("파일 저장 실패", e);
+        }
+
+        return "/uploads/" + fileName;
+    }
 }
