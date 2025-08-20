@@ -2,11 +2,11 @@ name: deploy-frontend (deploy)
 
 on:
   push:
-    branches: [deploy]              # ✅ deploy에 push/merge되면 자동 실행
+    branches: [deploy]             # ✅ deploy에 push/merge되면 자동 실행
     paths:
-      - 'frontend/**'               # ✅ 프런트 변경 있을 때만
+      - 'frontend/**'                # ✅ 프런트 변경 있을 때만
       - '.github/workflows/frontend.yml'
-  # workflow_dispatch:              # 필요 시 수동 실행 복구
+  # workflow_dispatch:               # 필요 시 수동 실행 복구
 
 env:
   IMAGE: ${{ secrets.ACR_LOGIN_SERVER }}/yeahyak-frontend:deploy
@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}     # 현재 푸시된 브랜치(deploy) 기준
+          ref: ${{ github.ref }}      # 현재 푸시된 브랜치(deploy) 기준
 
       - name: Login ACR
         uses: docker/login-action@v3
@@ -65,11 +65,10 @@ jobs:
             cd /opt/yeahyak
             docker login ${{ secrets.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }}
 
-            # compose에 deploy 이미지가 없으면 1회 치환
-            grep -q 'yeahyak-frontend:deploy' docker-compose.yml || \
-              sed -i 's#nginxdemos/hello#${{ secrets.ACR_LOGIN_SERVER }}/yeahyak-frontend:deploy#' docker-compose.yml
+            # ✅ docker-compose.yml 안의 프런트 이미지를 어떤 태그든 무조건 :deploy 로 통일
+            sed -i -E "s#${{ secrets.ACR_LOGIN_SERVER }}/yeahyak-frontend:[^[:space:]]+#${{ secrets.ACR_LOGIN_SERVER }}/yeahyak-frontend:deploy#g" docker-compose.yml
 
-            # 최신 이미지 기준으로 컨테이너 교체
+            # 최신 이미지 받고 컨테이너 교체
             docker compose pull frontend || true
             docker compose rm -sf frontend || true
             docker compose up -d --no-deps --force-recreate frontend
