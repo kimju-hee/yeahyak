@@ -88,10 +88,12 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           script_stop: true
-          # 원격으로 전달할 환경변수 목록 (쉘 해석 없이 그대로 export)
-          envs: TZ,SPRING_PROFILES_ACTIVE,SERVER_PORT,AI_SERVICE_URL,SPRING_DATASOURCE_URL,SPRING_DATASOURCE_USERNAME,SPRING_DATASOURCE_PASSWORD,AZURE_STORAGE_BLOB_ENDPOINT,AZURE_STORAGE_CONTAINER_NAME,AZURE_STORAGE_CONNECTION_STRING
+          # 원격으로 보낼 환경변수 목록 (반드시 여기에 나열해야 원격 셸에 export 됩니다)
+          envs: TZ,SPRING_PROFILES_ACTIVE,SERVER_PORT,AI_SERVICE_URL,DB_URL,DB_USERNAME,DB_PASSWORD,BLOB_ENDPOINT,BLOB_CONTAINER,BLOB_CONN_STR
           script: |
-            set -e
+            set -Eeuo pipefail
+            trap 'echo "FAILED at line $LINENO"; exit 1' ERR
+
             LOGIN_SERVER="${{ env.LOGIN_SERVER }}"
             IMAGE="${LOGIN_SERVER}/backend:latest"
             CONTAINER_NAME="yeahyak-backend"
@@ -99,22 +101,31 @@ jobs:
             HOST_PORT="8080"
             CONTAINER_PORT="8080"
 
-            # 필수 env 존재 확인 (이미 원격 셸에 export 되어 있음)
+            # 1) DB_/BLOB_ → SPRING_/AZURE_STORAGE_ 로 매핑(export)
+            export SPRING_DATASOURCE_URL="$DB_URL"
+            export SPRING_DATASOURCE_USERNAME="$DB_USERNAME"
+            export SPRING_DATASOURCE_PASSWORD="$DB_PASSWORD"
+
+            export AZURE_STORAGE_BLOB_ENDPOINT="$BLOB_ENDPOINT"
+            export AZURE_STORAGE_CONTAINER_NAME="$BLOB_CONTAINER"
+            export AZURE_STORAGE_CONNECTION_STRING="$BLOB_CONN_STR"
+
+            # 2) 필수 env 존재 확인
             for v in SPRING_DATASOURCE_URL SPRING_DATASOURCE_USERNAME SPRING_DATASOURCE_PASSWORD AZURE_STORAGE_BLOB_ENDPOINT AZURE_STORAGE_CONTAINER_NAME AZURE_STORAGE_CONNECTION_STRING; do
               [ -z "${!v}" ] && echo "ERROR: missing env $v" && exit 1
             done
 
-            # ACR 로그인 & 최신 이미지 pull
+            # 3) ACR 로그인 & 최신 이미지 pull
             echo "${{ secrets.ACR_PASSWORD }}" | docker login "$LOGIN_SERVER" -u "${{ secrets.ACR_USERNAME }}" --password-stdin
             docker pull "$IMAGE"
 
-            # 네트워크 생성(있으면 통과) 및 기존 컨테이너/포트 정리
+            # 4) 네트워크/컨테이너 정리
             docker network create yeahyak-net >/dev/null 2>&1 || true
             docker rm -f "$CONTAINER_NAME" || true
             INUSE_IDS=$(docker ps --format '{{.ID}} {{.Ports}}' | awk '/(0\.0\.0\.0|127\.0\.0\.1):8080->8080\/tcp/ {print $1}')
             [ -n "$INUSE_IDS" ] && docker rm -f $INUSE_IDS || true
 
-            # 컨테이너 재실행 (127.0.0.1:8080 -> 8080/tcp)
+            # 5) 재실행 (값은 호스트 환경에서 그대로 가져가도록 -e VAR 만 표기)
             docker run -d --name "$CONTAINER_NAME" \
               --restart unless-stopped \
               --network yeahyak-net \
@@ -134,16 +145,17 @@ jobs:
             docker image prune -f
             docker logout "$LOGIN_SERVER" || true
         env:
-          # 여기 값들이 원격으로 그대로 전달됨 (특수문자 안전)
+          # 여기 값들이 GitHub 러너 → 원격 셸로 전달됨(특수문자 안전)
           TZ: Asia/Seoul
           SPRING_PROFILES_ACTIVE: prod
           SERVER_PORT: "8080"
           AI_SERVICE_URL: http://yeahyak-ai:8080
 
-          SPRING_DATASOURCE_URL: ${{ secrets.DB_URL }}
-          SPRING_DATASOURCE_USERNAME: ${{ secrets.DB_USERNAME }}
-          SPRING_DATASOURCE_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_URL: ${{ secrets.DB_URL }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 
-          AZURE_STORAGE_BLOB_ENDPOINT: ${{ secrets.BLOB_ENDPOINT }}
-          AZURE_STORAGE_CONTAINER_NAME: ${{ secrets.BLOB_CONTAINER }}
-          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.BLOB_CONN_STR }}
+          BLOB_ENDPOINT: ${{ secrets.BLOB_ENDPOINT }}
+          BLOB_CONTAINER: ${{ secrets.BLOB_CONTAINER }}
+          BLOB_CONN_STR: ${{ secrets.BLOB_CONN_STR }}
+
