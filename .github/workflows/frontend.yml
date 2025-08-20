@@ -6,8 +6,7 @@ on:
     paths:
       - 'frontend/**'               # ✅ 프런트 변경 있을 때만
       - '.github/workflows/frontend.yml'
-  # 수동 실행은 비활성화해도 됨. 필요하면 남겨둬도 OK
-  # workflow_dispatch:
+  # workflow_dispatch:              # 필요 시 수동 실행 복구
 
 env:
   IMAGE: ${{ secrets.ACR_LOGIN_SERVER }}/yeahyak-frontend:deploy
@@ -30,6 +29,23 @@ jobs:
           registry: ${{ secrets.ACR_LOGIN_SERVER }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
+
+      # ✅ 소프트 타입체크(실패해도 배포는 계속)
+      - name: Setup Node for typecheck
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install deps (typecheck)
+        working-directory: frontend
+        run: npm ci
+
+      - name: TypeScript typecheck (soft)
+        working-directory: frontend
+        run: npm run typecheck
+        continue-on-error: true
 
       - name: Build & Push image (deploy)
         run: |

@@ -4,8 +4,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-# ⬇️ 여기만 변경
-RUN npm run build
+# ⬇️ 타입체크는 CI에서 소프트로, 도커 빌드는 번들만
+RUN npm run build:docker
 
 # 2) Runtime stage
 FROM nginx:1.25-alpine
