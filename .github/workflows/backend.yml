@@ -86,9 +86,9 @@ jobs:
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
+          key: ${{ secrets.MY_VM_SSH_KEY || secrets.VM_SSH_KEY }}
           script_stop: true
-          # 원격으로 export 할 환경변수 목록 (이름만 나열)
+          # 원격으로 export 할 환경변수 목록
           envs: TZ,SPRING_PROFILES_ACTIVE,SERVER_PORT,AI_SERVICE_URL,DB_URL,DB_USERNAME,DB_PASSWORD,BLOB_ENDPOINT,BLOB_CONTAINER,BLOB_CONN_STR
           script: |
             # /bin/sh(dash) 호환
@@ -101,44 +101,57 @@ jobs:
             HOST_PORT="8080"
             CONTAINER_PORT="8080"
 
-            # 함수: 변수값 안전 조회 (POSIX)
-            getvar() { eval "printf %s \"\${$1-}\""; }
-
-            # 0) 원본 시크릿 전달 여부 확인
-            for v in DB_URL DB_USERNAME DB_PASSWORD BLOB_ENDPOINT BLOB_CONTAINER BLOB_CONN_STR; do
-              val="$(getvar "$v")"
+            # 필수 원본 시크릿 존재 확인
+            req_vars="DB_URL DB_USERNAME DB_PASSWORD BLOB_ENDPOINT BLOB_CONTAINER BLOB_CONN_STR"
+            for v in $req_vars; do
+              eval "val=\${$v-}"
               [ -n "$val" ] || { echo "ERROR: missing env $v"; exit 1; }
             done
 
-            # 1) DB_/BLOB_ → SPRING_/AZURE_STORAGE_ 매핑(export)
-            SPRING_DATASOURCE_URL="$(getvar DB_URL)"
-            SPRING_DATASOURCE_USERNAME="$(getvar DB_USERNAME)"
-            SPRING_DATASOURCE_PASSWORD="$(getvar DB_PASSWORD)"
+            # 시크릿에 붙은 개행/CR 제거(안전)
+            DB_PASSWORD_CLEAN=$(printf '%s' "$DB_PASSWORD" | tr -d '\r')
+            DB_URL_CLEAN=$(printf '%s' "$DB_URL" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")
 
-            AZURE_STORAGE_BLOB_ENDPOINT="$(getvar BLOB_ENDPOINT)"
-            AZURE_STORAGE_CONTAINER_NAME="$(getvar BLOB_CONTAINER)"
-            AZURE_STORAGE_CONNECTION_STRING="$(getvar BLOB_CONN_STR)"
+            # JDBC URL에서 host/port/db 추출
+            DB_HOST=$(printf '%s' "$DB_URL_CLEAN" | sed -nE 's|^jdbc:mysql://([^:/?]+).*|\1|p')
+            DB_PORT=$(printf '%s' "$DB_URL_CLEAN" | sed -nE 's|^jdbc:mysql://[^:/?]+:([0-9]+).*|\1|p')
+            DB_NAME=$(printf '%s' "$DB_URL_CLEAN" | sed -nE 's|^jdbc:mysql://[^/]+/([^?]+).*|\1|p')
+            [ -n "$DB_PORT" ] || DB_PORT=3306
+
+            echo "[CHECK] DB host=$DB_HOST port=$DB_PORT db=$DB_NAME (from DB_URL)"
+
+            # 배포 전 DB 프리플라이트(비번 미노출)
+            if ! MYSQL_PWD="$DB_PASSWORD_CLEAN" mysql --ssl-mode=REQUIRED \
+                 -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -D "$DB_NAME" -e "SELECT 1" >/dev/null 2>&1; then
+              echo "ERROR: DB preflight connection failed. (username/password/권한/URL 확인 필요)"
+              echo "힌트: VM에서 직접 테스트 →"
+              echo "  MYSQL_PWD='******' mysql --ssl-mode=REQUIRED -h $DB_HOST -P $DB_PORT -u $DB_USERNAME -D $DB_NAME -e 'SELECT 1'"
+              exit 1
+            fi
+
+            # 애플리케이션용 ENV 매핑
+            SPRING_DATASOURCE_URL="$DB_URL_CLEAN"
+            SPRING_DATASOURCE_USERNAME="$DB_USERNAME"
+            SPRING_DATASOURCE_PASSWORD="$DB_PASSWORD_CLEAN"
+
+            AZURE_STORAGE_BLOB_ENDPOINT="$BLOB_ENDPOINT"
+            AZURE_STORAGE_CONTAINER_NAME="$BLOB_CONTAINER"
+            AZURE_STORAGE_CONNECTION_STRING="$BLOB_CONN_STR"
 
             export SPRING_DATASOURCE_URL SPRING_DATASOURCE_USERNAME SPRING_DATASOURCE_PASSWORD
             export AZURE_STORAGE_BLOB_ENDPOINT AZURE_STORAGE_CONTAINER_NAME AZURE_STORAGE_CONNECTION_STRING
 
-            # 2) 매핑된 변수 확인
-            for v in SPRING_DATASOURCE_URL SPRING_DATASOURCE_USERNAME SPRING_DATASOURCE_PASSWORD AZURE_STORAGE_BLOB_ENDPOINT AZURE_STORAGE_CONTAINER_NAME AZURE_STORAGE_CONNECTION_STRING; do
-              val="$(getvar "$v")"
-              [ -n "$val" ] || { echo "ERROR: missing env $v"; exit 1; }
-            done
-
-            # 3) ACR 로그인 & 최신 이미지 pull
+            # ACR 로그인 & 최신 이미지 pull
             echo "${{ secrets.ACR_PASSWORD }}" | docker login "$LOGIN_SERVER" -u "${{ secrets.ACR_USERNAME }}" --password-stdin
             docker pull "$IMAGE"
 
-            # 4) 네트워크/컨테이너 정리
+            # 네트워크/컨테이너 정리
             docker network create yeahyak-net >/dev/null 2>&1 || true
             docker rm -f "$CONTAINER_NAME" || true
             INUSE_IDS=$(docker ps --format '{{.ID}} {{.Ports}}' | awk '/(0\.0\.0\.0|127\.0\.0\.1):8080->8080\/tcp/ {print $1}')
             [ -n "$INUSE_IDS" ] && docker rm -f $INUSE_IDS || true
 
-            # 5) 컨테이너 재실행 (호스트 env 그대로 -e VAR 로 전달)
+            # 재실행 (호스트 env 그대로 전달: -e VAR)
             docker run -d --name "$CONTAINER_NAME" \
               --restart unless-stopped \
               --network yeahyak-net \
@@ -158,7 +171,6 @@ jobs:
             docker image prune -f
             docker logout "$LOGIN_SERVER" || true
         env:
-          # 이 값들이 GitHub 러너 → 원격 셸로 전달됨(특수문자 안전)
           TZ: Asia/Seoul
           SPRING_PROFILES_ACTIVE: prod
           SERVER_PORT: "8080"
