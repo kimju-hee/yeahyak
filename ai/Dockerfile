@@ -1,34 +1,22 @@
+# 파이썬 3.11-slim 이미지를 기반으로 사용
 FROM python:3.11-slim
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    TZ=Asia/Seoul \
-    PORT=5000
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc g++ libgomp1 \
- && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# 1) 파이썬 의존성 설치
+# 시스템 패키지
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libgomp1 \
+ && rm -rf /var/lib/apt/lists/*
+
+# ✅ 컨텍스트가 ai/ 이므로 파일명만 쓰면 됨
 COPY requirements.txt ./requirements.txt
-RUN pip install --upgrade pip \
- && pip install -r requirements.txt \
- && pip install gunicorn==21.2.0
+RUN pip install --no-cache-dir -r requirements.txt
 
-# 2) 애플리케이션 복사
-COPY gateway.py         ./gateway.py
-COPY epidemic_summary/  ./epidemic_summary/
-COPY summarizer/        ./summarizer/
-COPY summarize_law/     ./summarize_law/
-COPY FAQ_chatbot/       ./FAQ_chatbot/
-COPY QnA_chatbot/       ./QnA_chatbot/
-COPY order_forecast/    ./order_forecast/
-COPY repository/        ./repository/
+# ✅ 소스 복사
+COPY . /app/
 
-EXPOSE 5000
+EXPOSE 8080
+ENV PORT=8080
 
-# Flask WSGI 실행 (gateway.py 안에 app = Flask(__name__) 가정)
-CMD ["gunicorn","-w","2","-k","gthread","-t","120","-b","0.0.0.0:5000","gateway:app"]
+CMD ["gunicorn", "-b", "0.0.0.0:8080", "gateway:app", "--workers", "1", "--timeout", "180"]
