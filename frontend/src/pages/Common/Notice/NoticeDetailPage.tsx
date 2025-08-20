@@ -1,7 +1,7 @@
 import type { DescriptionsProps } from 'antd';
 import { Button, Card, Descriptions, Flex, message, Space, Typography } from 'antd';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { instance } from '../../../api/api';
 import { useAuthStore } from '../../../stores/authStore';
@@ -20,8 +20,8 @@ export default function NoticeDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const user = useAuthStore((state) => state.user) as User;
-  const basePath = user.role === USER_ROLE.BRANCH ? '/branch' : '/hq';
+  const user = useAuthStore((state) => state.user) as User | undefined;
+  const basePath = user?.role === USER_ROLE.BRANCH ? '/branch' : '/hq';
 
   const [notice, setNotice] = useState<Announcement>();
   const [loading, setLoading] = useState(false);
@@ -47,6 +47,32 @@ export default function NoticeDetailPage() {
   useEffect(() => {
     fetchNotice();
   }, [id]);
+
+  const displayName = useMemo(() => {
+    const url = notice?.attachmentUrl || '';
+    try {
+      if (url.startsWith('data:')) {
+        // data:<mime>;name=<encoded>;base64,...
+        const m = /^data:[^;]*(?:;name=([^;]*))?;base64,/.exec(url);
+        if (m?.[1]) return decodeURIComponent(m[1]);
+        const m2 = /^data:([^;]+)/.exec(url);
+        const ext =
+          (m2?.[1] || '').includes('pdf') ? 'pdf' :
+          (m2?.[1] || '').includes('plain') ? 'txt' :
+          'bin';
+        return `첨부파일.${ext}`;
+      } else if (url) {
+        const u = new URL(url, window.location.origin);
+        const filename = u.searchParams.get('filename');
+        if (filename) return decodeURIComponent(filename);
+        const last = u.pathname.split('/').filter(Boolean).pop();
+        return last || '첨부파일';
+      }
+      return '첨부파일';
+    } catch {
+      return '첨부파일';
+    }
+  }, [notice?.attachmentUrl]);
 
   if (!notice) return <Typography.Text>해당 공지사항을 찾을 수 없습니다.</Typography.Text>;
 
@@ -90,8 +116,13 @@ export default function NoticeDetailPage() {
       key: 'attachmentUrl',
       label: '첨부파일',
       children: (
-        <a href={notice.attachmentUrl} target="_blank" rel="noopener noreferrer">
-          {notice.attachmentUrl}
+        <a
+          href={notice.attachmentUrl}
+          download={displayName}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {displayName}
         </a>
       ),
       span: 2,
@@ -115,7 +146,7 @@ export default function NoticeDetailPage() {
 
       <Card style={{ marginBottom: '24px', padding: '24px' }}>
         <Typography>
-          <div dangerouslySetInnerHTML={{ __html: notice.content }} />
+          <div dangerouslySetInnerHTML={{ __html: notice?.content ?? '' }} />
         </Typography>
       </Card>
 
@@ -124,7 +155,7 @@ export default function NoticeDetailPage() {
           목록
         </Button>
 
-        {user.role === USER_ROLE.ADMIN && (
+        {user?.role === USER_ROLE.ADMIN && (
           <Space wrap>
             <Button type="text" danger onClick={handleDelete}>
               삭제

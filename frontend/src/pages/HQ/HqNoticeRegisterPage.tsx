@@ -41,13 +41,46 @@ export default function HqNoticeRegisterPage() {
     );
   };
 
-  const handleChange: UploadProps['onChange'] = ({ fileList }) => {
+  // (추가) 파일을 Base64(Data URL)로 변환
+  const toBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleChange: UploadProps['onChange'] = async ({ fileList }) => {
     setFileList(fileList);
     const f = fileList[0];
-    form.setFieldsValue({ attachmentUrl: f?.name || '' });
 
     const size = f?.originFileObj ? (f.originFileObj as File).size : 0;
     setIsAiBlocked(size > MAX_FILE_MB * 1024 * 1024);
+
+    if (!f?.originFileObj) {
+      form.setFieldsValue({ attachmentUrl: '' });
+      return;
+    }
+
+    try {
+      const base64 = await toBase64(f.originFileObj as File);
+      let withName = base64;
+      const i = base64.indexOf(';base64,');
+      if (i > -1) {
+        const head = base64.slice(0, i);
+        const body = base64.slice(i);
+        const encodedName = encodeURIComponent(f.name);
+        withName = `${head};name=${encodedName}${body}`;
+      }
+      form.setFieldsValue({ attachmentUrl: withName });
+      messageApi.success('파일이 추가되었습니다.');
+    } catch (e: any) {
+      console.error('첨부 처리 실패:', e);
+      messageApi.error(e?.message || '파일 처리 중 오류가 발생했습니다.');
+      form.setFieldsValue({ attachmentUrl: '' });
+      setFileList([]);
+      setIsAiBlocked(false);
+    }
   };
 
   const handleRemove = () => {

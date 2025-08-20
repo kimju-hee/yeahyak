@@ -52,6 +52,38 @@ export default function HqNoticeEditPage() {
     return exts.some((e) => n.endsWith(e));
   };
 
+  const toBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const extractDisplayName = (url: string) => {
+    try {
+      if (!url) return '첨부파일';
+      if (url.startsWith('data:')) {
+        const m = /^data:[^;]*(?:;name=([^;]*))?;base64,/.exec(url);
+        if (m?.[1]) return decodeURIComponent(m[1]);
+        const m2 = /^data:([^;]+)/.exec(url);
+        const ext =
+          (m2?.[1] || '').includes('pdf') ? 'pdf' :
+          (m2?.[1] || '').includes('plain') ? 'txt' :
+          'bin';
+        return `첨부파일.${ext}`;
+      } else {
+        const u = new URL(url, window.location.origin);
+        const filename = u.searchParams.get('filename');
+        if (filename) return decodeURIComponent(filename);
+        const last = u.pathname.split('/').filter(Boolean).pop();
+        return last || '첨부파일';
+      }
+    } catch {
+      return '첨부파일';
+    }
+  };
+
   const fetchNotice = async () => {
     setLoading(true);
     try {
@@ -71,7 +103,7 @@ export default function HqNoticeEditPage() {
           setFileList([
             {
               uid: '-1',
-              name: notice.attachmentUrl.split('/').pop() || '첨부파일',
+              name: extractDisplayName(notice.attachmentUrl),
               status: 'done',
               url: notice.attachmentUrl,
             },
@@ -90,14 +122,36 @@ export default function HqNoticeEditPage() {
     fetchNotice();
   }, [id]);
 
-  const handleChange: UploadProps['onChange'] = ({ fileList }) => {
+  const handleChange: UploadProps['onChange'] = async ({ fileList }) => {
     setFileList(fileList);
     const f = fileList[0];
-    const attachmentUrl = f ? (f.originFileObj ? f.name : f.url || '') : '';
-    form.setFieldsValue({ attachmentUrl });
 
     const size = f?.originFileObj ? (f.originFileObj as File).size : 0;
     setIsAiBlocked(size > MAX_FILE_MB * 1024 * 1024);
+
+    if (!f?.originFileObj) {
+      return;
+    }
+
+    try {
+      const base64 = await toBase64(f.originFileObj as File);
+      let withName = base64;
+      const i = base64.indexOf(';base64,');
+      if (i > -1) {
+        const head = base64.slice(0, i);
+        const body = base64.slice(i);
+        const encodedName = encodeURIComponent(f.name);
+        withName = `${head};name=${encodedName}${body}`;
+      }
+      form.setFieldsValue({ attachmentUrl: withName });
+      messageApi.success('파일이 추가되었습니다.');
+    } catch (e: any) {
+      console.error('첨부 처리 실패:', e);
+      messageApi.error(e?.message || '파일 처리 중 오류가 발생했습니다.');
+      form.setFieldsValue({ attachmentUrl: '' });
+      setFileList([]);
+      setIsAiBlocked(false);
+    }
   };
 
   const handleRemove = () => {
@@ -151,13 +205,14 @@ export default function HqNoticeEditPage() {
     // LOG: 테스트용 로그
     console.log('✨ AI 문서 요약:', res.data);
     if (res.data.success) {
-      if (watchedType === ANNOUNCEMENT_TYPE.EPIDEMIC) {
-        form.setFieldsValue({ content: res.data.data.notice });
-      } else {
-        form.setFieldsValue({ content: res.data.data.summary });
-      }
+      const raw = watchedType === ANNOUNCEMENT_TYPE.EPIDEMIC
+        ? res.data.data.notice
+        : res.data.data.summary;
+
+      form.setFieldsValue({ content: toCleanHtml(raw) });
       messageApi.success('AI가 문서를 요약했습니다!');
     }
+
   } catch (e: any) {
     console.error('AI 문서 요약 실패:', e);
     messageApi.error(e.message || 'AI 문서 요약 중 오류가 발생했습니다.');
