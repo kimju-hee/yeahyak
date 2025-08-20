@@ -73,8 +73,9 @@ public class AnnouncementService {
         return announcementRepository.save(original);
     }
     public Page<Announcement> searchAnnouncements(String keyword, Pageable pageable) {
-        return announcementRepository
-                .findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(keyword, keyword, pageable);
+        return announcementRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
+                keyword, keyword, pageable
+        );
     }
 
     public String storeFile(MultipartFile file) {

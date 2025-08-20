@@ -70,7 +70,7 @@ public class AnnouncementController {
         Page<Announcement> pagedResult;
 
         if (keyword != null && !keyword.isEmpty()) {
-            pagedResult = announcementService.searchAnnouncements(keyword, pageable);  // ✅ keyword 검색 시 호출
+            pagedResult = announcementService.searchAnnouncements(keyword, pageable);
         } else {
             pagedResult = announcementService.findAllPaged(page, size, type);
         }
