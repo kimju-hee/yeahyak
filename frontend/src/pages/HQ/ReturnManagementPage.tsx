@@ -5,9 +5,6 @@ import {
   Col,
   DatePicker,
   Form,
-  Input,
-  message,
-  Modal,
   Popconfirm,
   Row,
   Select,
@@ -16,77 +13,25 @@ import {
   Table,
   Tag,
   Typography,
+  message,
   type TableProps,
 } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
-import { instance } from '../../api/api';
-import { ORDER_STATUS } from '../../types/order.type';
-import { RETURN_STATUS, type ReturnResponse, type ReturnStatus } from '../../types/return.type';
-
-// TODO: 지역이나 기간으로 필터링 기능 추가? 고민중
-
-const regionOptions = [
-  {
-    value: '수도권',
-    label: '수도권',
-    children: [
-      { value: '서울', label: '서울' },
-      { value: '인천', label: '인천' },
-      { value: '경기', label: '경기' },
-    ],
-  },
-  { value: '강원', label: '강원' },
-  {
-    value: '충청',
-    label: '충청',
-    children: [
-      { value: '대전', label: '대전' },
-      { value: '세종', label: '세종' },
-      { value: '충북', label: '충북' },
-      { value: '충남', label: '충남' },
-    ],
-  },
-  {
-    value: '영남',
-    label: '영남',
-    children: [
-      { value: '부산', label: '부산' },
-      { value: '대구', label: '대구' },
-      { value: '울산', label: '울산' },
-      { value: '경북', label: '경북' },
-      { value: '경남', label: '경남' },
-    ],
-  },
-  {
-    value: '호남',
-    label: '호남',
-    children: [
-      { value: '광주', label: '광주' },
-      { value: '전북', label: '전북' },
-      { value: '전남', label: '전남' },
-    ],
-  },
-  { value: '제주', label: '제주' },
-];
-
-const statusOptions = [
-  { value: RETURN_STATUS.REQUESTED, label: '대기' },
-  { value: RETURN_STATUS.APPROVED, label: '승인' },
-  { value: RETURN_STATUS.PROCESSING, label: '처리중' },
-  { value: RETURN_STATUS.COMPLETED, label: '완료' },
-  { value: RETURN_STATUS.REJECTED, label: '반려' },
-];
+import { returnAPI } from '../../api';
+import {
+  DATE_FORMAT,
+  PAGE_SIZE,
+  REGION_OPTIONS,
+  RETURN_STATUS_COLORS,
+  RETURN_STATUS_OPTIONS,
+  RETURN_STATUS_TEXT,
+} from '../../constants';
+import { RETURN_STATUS, type Return, type ReturnStatus } from '../../types';
 
 const getStatusTag = (status: ReturnStatus, isClickable: boolean) => {
-  const statusColorMap: Record<ReturnStatus, { color: string; text: string }> = {
-    [RETURN_STATUS.REQUESTED]: { color: 'orange', text: '대기' },
-    [RETURN_STATUS.APPROVED]: { color: 'blue', text: '승인' },
-    [RETURN_STATUS.PROCESSING]: { color: 'blue', text: '처리중' },
-    [RETURN_STATUS.COMPLETED]: { color: 'green', text: '완료' },
-    [RETURN_STATUS.REJECTED]: { color: 'default', text: '반려' },
-  };
-  const { color, text } = statusColorMap[status];
+  const color = RETURN_STATUS_COLORS[status];
+  const text = RETURN_STATUS_TEXT[status];
   return (
     <Tag bordered={true} color={color} style={isClickable ? { cursor: 'pointer' } : {}}>
       {text}
@@ -94,13 +39,11 @@ const getStatusTag = (status: ReturnStatus, isClickable: boolean) => {
   );
 };
 
-const PAGE_SIZE = 10;
-
 export default function ReturnManagementPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
 
-  const [returns, setReturns] = useState<ReturnResponse[]>([]);
+  const [returns, setReturns] = useState<Return[]>([]);
   const [filters, setFilters] = useState({
     region: undefined as string | undefined,
     status: undefined as ReturnStatus | undefined,
@@ -112,9 +55,6 @@ export default function ReturnManagementPage() {
     totalProcessing: 0,
     totalAmount: 0,
   });
-  const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
-  const [rejectReason, setRejectReason] = useState<string>('');
-  const [selectedReturnId, setSelectedReturnId] = useState<number | null>(null);
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [total, setTotal] = useState<number>(0);
@@ -122,14 +62,12 @@ export default function ReturnManagementPage() {
 
   const fetchStatistics = async () => {
     try {
-      const res = await instance.get('/admin/returns');
-      // LOG: 테스트용 로그
-      console.log('✨ 전체 반품 요청 목록 로딩 응답:', res.data);
+      const res = await returnAPI.getAdminReturns();
 
-      if (res.data.success) {
-        const totalReturns = res.data.data.length;
-        const calculatedStatistics = res.data.data.reduce(
-          (acc: any, ret: ReturnResponse) => {
+      if (res.success) {
+        const totalReturns = res.data.length;
+        const calculatedStatistics = res.data.reduce(
+          (acc: any, ret: Return) => {
             if (ret.status === RETURN_STATUS.PROCESSING) {
               acc.totalProcessing += 1;
             }
@@ -144,34 +82,32 @@ export default function ReturnManagementPage() {
       }
     } catch (e: any) {
       console.error('전체 반품 요청 목록 로딩 실패:', e);
-      messageApi.error(e.message || '전체 반품 요청 목록 로딩 중 오류가 발생했습니다.');
+      messageApi.error(
+        e.response?.data?.message || '전체 반품 요청 목록 로딩 중 오류가 발생했습니다.',
+      );
     }
   };
 
-  const fetchFilteredReturns = async () => {
+  const fetchReturns = async () => {
     setLoading(true);
     try {
-      const res = await instance.get('/admin/returns', {
-        params: {
-          page: currentPage - 1,
-          size: PAGE_SIZE,
-          region: filters.region,
-          status: filters.status,
-          startDate: filters.startDate,
-          endDate: filters.endDate,
-        },
+      const res = await returnAPI.getAdminReturns({
+        page: currentPage - 1,
+        size: PAGE_SIZE,
+        // region: filters.region,
+        status: filters.status,
+        // startDate: filters.startDate,
+        // endDate: filters.endDate,
       });
-      // LOG: 테스트용 로그
-      console.log('✨ 반품 요청 목록 로딩 응답:', res.data);
 
-      if (res.data.success) {
-        const { data, totalElements } = res.data;
+      if (res.success) {
+        const { data, totalElements } = res;
         setReturns(data);
         setTotal(totalElements);
       }
     } catch (e: any) {
       console.error('반품 요청 목록 로딩 실패:', e);
-      messageApi.error(e.message || '반품 요청 목록 로딩 중 오류가 발생했습니다.');
+      messageApi.error(e.response?.data?.message || '반품 요청 목록 로딩 중 오류가 발생했습니다.');
       setReturns([]);
       setTotal(0);
     } finally {
@@ -184,7 +120,7 @@ export default function ReturnManagementPage() {
   }, []);
 
   useEffect(() => {
-    fetchFilteredReturns();
+    fetchReturns();
   }, [currentPage, filters]);
 
   const handleSearch = () => {
@@ -210,31 +146,32 @@ export default function ReturnManagementPage() {
       let res: any;
       switch (action) {
         case 'APPROVE':
-          res = await instance.patch(`/admin/returns/${returnId}/approve`);
+          res = await returnAPI.approveReturn(returnId);
+          break;
+        case 'REJECT':
+          res = await returnAPI.rejectReturn(returnId);
           break;
         case 'PROCESS':
-          res = await instance.patch(`/admin/returns/${returnId}`, { status: 'PROCESSING' });
+          res = await returnAPI.updateReturnStatus(returnId, { status: RETURN_STATUS.PROCESSING });
           break;
         case 'COMPLETE':
-          res = await instance.patch(`/admin/returns/${returnId}`, { status: 'COMPLETED' });
+          res = await returnAPI.updateReturnStatus(returnId, { status: RETURN_STATUS.COMPLETED });
           break;
       }
-      // LOG: 테스트용 로그
-      console.log('✨ 반품 상태 업데이트 응답:', res.data);
 
       if (res.data.success) {
         messageApi.success('반품 상태가 변경되었습니다.');
         fetchStatistics();
-        fetchFilteredReturns();
+        fetchReturns();
       }
     } catch (e: any) {
       console.error('반품 상태 변경 실패:', e);
-      messageApi.error(e.message || '반품 상태 변경 중 오류가 발생했습니다.');
+      messageApi.error(e.response?.data?.message || '반품 상태 변경 중 오류가 발생했습니다.');
     }
   };
 
-  const renderStatusTagWithActions = (record: ReturnResponse) => {
-    if (record.status === ORDER_STATUS.REQUESTED) {
+  const renderStatusTagWithActions = (record: Return) => {
+    if (record.status === RETURN_STATUS.REQUESTED) {
       return (
         <Popconfirm
           title="반품 승인 / 반려"
@@ -247,8 +184,7 @@ export default function ReturnManagementPage() {
           }}
           onCancel={(e) => {
             e?.stopPropagation();
-            setSelectedReturnId(record.returnId);
-            setIsModalVisible(true);
+            handleUpdate(record.returnId, 'REJECT');
           }}
         >
           <span onClick={(e) => e.stopPropagation()}>{getStatusTag(record.status, true)}</span>
@@ -260,17 +196,18 @@ export default function ReturnManagementPage() {
     let confirmDescription = '';
 
     switch (record.status) {
-      case ORDER_STATUS.APPROVED:
+      case RETURN_STATUS.APPROVED:
         nextAction = 'PROCESS';
         confirmDescription = '처리중으로 변경하시겠습니까?';
         break;
-      case ORDER_STATUS.PROCESSING:
+      case RETURN_STATUS.PROCESSING:
         nextAction = 'COMPLETE';
         confirmDescription = '완료로 변경하시겠습니까?';
         break;
       default:
         return getStatusTag(record.status, false);
     }
+
     return (
       <Popconfirm
         title="반품 상태 변경"
@@ -290,29 +227,7 @@ export default function ReturnManagementPage() {
     );
   };
 
-  const handleReject = async () => {
-    try {
-      const res = await instance.patch(`/admin/returns/${selectedReturnId}/reject`, {
-        reason: rejectReason,
-      });
-      // LOG: 테스트용 로그
-      console.log('✨ 반품 반려 응답:', res.data);
-
-      if (res.data.success) {
-        messageApi.success('반품이 반려되었습니다.');
-        setIsModalVisible(false);
-        setRejectReason('');
-        setSelectedReturnId(null);
-        fetchStatistics();
-        fetchFilteredReturns();
-      }
-    } catch (e: any) {
-      console.error('반품 반려 실패:', e);
-      messageApi.error(e.message || '반품 반려 중 오류가 발생했습니다.');
-    }
-  };
-
-  const tableColumns: TableProps<ReturnResponse>['columns'] = [
+  const tableColumns: TableProps<Return>['columns'] = [
     { title: '반품번호', dataIndex: 'returnId', key: 'returnId' },
     { title: '주문번호', dataIndex: 'orderId', key: 'orderId' },
     { title: '지점명', dataIndex: 'pharmacyName', key: 'pharmacyName' },
@@ -338,7 +253,7 @@ export default function ReturnManagementPage() {
       title: '요청일시',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (value) => dayjs(value).format('YYYY. MM. DD. HH:mm'),
+      render: (value) => dayjs(value).format(DATE_FORMAT.DEFAULT),
     },
 
     {
@@ -349,7 +264,7 @@ export default function ReturnManagementPage() {
     },
   ];
 
-  const expandedRowRender = (record: ReturnResponse) => {
+  const expandedRowRender = (record: Return) => {
     return (
       <>
         <Table
@@ -418,10 +333,10 @@ export default function ReturnManagementPage() {
       <Form layout="vertical" form={form} onFinish={handleSearch}>
         <Space wrap align="end">
           <Form.Item label="지역" name="region">
-            <Cascader options={regionOptions} placeholder="지역 선택" />
+            <Cascader options={REGION_OPTIONS} placeholder="지역 선택" />
           </Form.Item>
           <Form.Item label="상태" name="status">
-            <Select allowClear options={statusOptions} placeholder="상태 선택" />
+            <Select allowClear options={[...RETURN_STATUS_OPTIONS]} placeholder="상태 선택" />
           </Form.Item>
           <Form.Item label="기간" name="date">
             <DatePicker.RangePicker placeholder={['시작일', '종료일']} />
@@ -448,6 +363,7 @@ export default function ReturnManagementPage() {
           total: total,
           current: currentPage,
           onChange: (page) => setCurrentPage(page),
+          showSizeChanger: false,
         }}
         expandable={{
           expandedRowRender,
@@ -455,27 +371,6 @@ export default function ReturnManagementPage() {
           expandIcon: () => null,
         }}
       />
-
-      <Modal
-        title="반품 반려 사유 입력"
-        open={isModalVisible}
-        onOk={handleReject}
-        onCancel={() => {
-          setIsModalVisible(false);
-          setRejectReason('');
-          setSelectedReturnId(null);
-        }}
-        okText="반려"
-        cancelText="취소"
-        okButtonProps={{ disabled: !rejectReason }}
-      >
-        <Input.TextArea
-          placeholder="반려 사유를 입력하세요."
-          value={rejectReason}
-          onChange={(e) => setRejectReason(e.target.value)}
-          autoSize={{ maxRows: 2 }}
-        />
-      </Modal>
     </>
   );
 }
