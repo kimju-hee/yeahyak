@@ -33,7 +33,7 @@ export type BranchRejectResponse = ApiResponse<string>;
 export interface PendingCredit {
   userId: number; // 유저코드
   email: string; // 계정(이메일)
-  pharmacyId: string; // 지점코드 (추가)
+  pharmacyId: number; // 지점코드 (추가)
   pharmacyName: string; // 지점명
   point: number; // 미수잔액
   recentSettledDate?: string; // 최근정산일 (추가)

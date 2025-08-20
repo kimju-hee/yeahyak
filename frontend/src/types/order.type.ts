@@ -38,14 +38,14 @@ export interface OrderDetailItem extends OrderItem {
 }
 
 export interface OrderItemRequest {
-  productName: string;
+  productId: number;
   quantity: number;
   unitPrice: number;
   subtotalPrice: number;
 }
 
 export interface OrderCartItem extends OrderItemRequest {
-  productId: number;
+  productName: string;
   manufacturer: string;
   productImgUrl?: string;
 }
