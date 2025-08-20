@@ -31,6 +31,7 @@ import HqProfileEditPage from './pages/hq/HqProfileEditPage';
 import HqStockPage from './pages/hq/HqStockPage';
 import OrderManagementPage from './pages/hq/OrderManagementPage';
 import ReturnManagementPage from './pages/hq/ReturnManagementPage';
+import LandingPage from "./pages/common/LandingPage";
 
 export default function App() {
   return (
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="register" element={<RegisterPage />} />
         <Route path="hq-register" element={<HqRegisterPage />} />
         <Route path="logout" element={<LogoutPage />} />
+        <Route path="/landing" element={<LandingPage />} />
         {/* 에러 */}
         <Route path="403" element={<ForbiddenPage />} />
         <Route path="500" element={<ServerErrorPage />} />
