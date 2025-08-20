@@ -2,7 +2,7 @@ name: deploy-frontend (dev)
 
 on:
   push:
-    branches: [dev]          # dev에서만 실행
+    branches: [deploy]          # dev에서만 실행
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend.yml'
