@@ -12,7 +12,6 @@ interface AddressInputProps {
   addressName: string;
   detailAddressName: string;
   label: string;
-  required: boolean;
 }
 
 export default function AddressInput({
@@ -20,7 +19,6 @@ export default function AddressInput({
   addressName = '',
   detailAddressName = '',
   label = '주소',
-  required = true,
 }: AddressInputProps) {
   const form = Form.useFormInstance();
 
@@ -49,13 +47,14 @@ export default function AddressInput({
   };
 
   return (
-    <Form.Item label={label} required={required}>
+    <Form.Item label={label}>
       <Flex vertical gap={8}>
         <Flex gap={8}>
           <Form.Item
             name={postcodeName}
             noStyle
             rules={[{ required: true, message: '우편번호를 입력해주세요.' }]}
+            validateTrigger="onSubmit"
           >
             <Input readOnly placeholder="우편번호" />
           </Form.Item>
@@ -66,14 +65,11 @@ export default function AddressInput({
         name={addressName}
         noStyle
         rules={[{ required: true, message: '주소를 입력해주세요.' }]}
+        validateTrigger="onSubmit"
       >
         <Input readOnly placeholder="기본 주소" style={{ marginTop: 8 }} />
       </Form.Item>
-      <Form.Item
-        name={detailAddressName}
-        noStyle
-        rules={[{ required: true, message: '상세 주소를 입력해주세요.' }]}
-      >
+      <Form.Item name={detailAddressName} noStyle>
         <Input placeholder="상세 주소" style={{ marginTop: 8 }} />
       </Form.Item>
     </Form.Item>

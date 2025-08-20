@@ -1,9 +1,10 @@
-import { Button, Card, Form, Input, message, Typography } from 'antd';
+import { Button, Card, Flex, Form, Input, message, Typography } from 'antd';
 import { useEffect } from 'react';
-import { instance } from '../../api/api';
+import { profileAPI } from '../../api';
 import AddressInput from '../../components/AddressInput';
 import { useAuthStore } from '../../stores/authStore';
-import type { Pharmacy, PharmacyProfileUpdateRequest } from '../../types/profile.type';
+import type { BranchProfileUpdateRequest, Pharmacy } from '../../types/profile.type';
+import { formatBizRegNo, formatContact, handleNumberOnlyKeyDown } from '../../utils';
 
 export default function BranchProfileEditPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -12,36 +13,7 @@ export default function BranchProfileEditPage() {
   const profile = useAuthStore((state) => state.profile) as Pharmacy;
   const updateProfile = useAuthStore((state) => state.updateProfile);
 
-  // 연락처 포맷터
-  const formatContact = (value: number | string | undefined) => {
-    if (!value) return '';
-    const num = value.toString().replace(/\D/g, '');
-
-    // 02-000-0000 또는 02-0000-0000
-    if (num.startsWith('02')) {
-      if (num.length <= 2) return num;
-      if (num.length <= 6) return `${num.slice(0, 2)}-${num.slice(2)}`;
-      return num.length === 10
-        ? `${num.slice(0, 2)}-${num.slice(2, 6)}-${num.slice(6)}`
-        : `${num.slice(0, 2)}-${num.slice(2, 5)}-${num.slice(5)}`;
-    }
-
-    // 000-000-0000 또는 000-0000-0000
-    if (num.length <= 3) return num;
-    if (num.length <= 6) return `${num.slice(0, 3)}-${num.slice(3)}`;
-    return num.length === 11
-      ? `${num.slice(0, 3)}-${num.slice(3, 7)}-${num.slice(7)}`
-      : `${num.slice(0, 3)}-${num.slice(3, 6)}-${num.slice(6)}`;
-  };
-
-  // 사업자등록번호 포맷터 (000-00-00000)
-  const formatBizRegNo = (value: number | string | undefined) => {
-    if (!value) return '';
-    const num = value.toString().replace(/\D/g, '');
-    if (num.length <= 3) return num;
-    if (num.length <= 5) return `${num.slice(0, 3)}-${num.slice(3)}`;
-    return `${num.slice(0, 3)}-${num.slice(3, 5)}-${num.slice(5)}`;
-  };
+  Form.useWatch([], form);
 
   useEffect(() => {
     form.setFieldsValue({
@@ -55,24 +27,23 @@ export default function BranchProfileEditPage() {
     });
   }, [profile]);
 
-  const handleSubmit = async (values: Omit<PharmacyProfileUpdateRequest, 'status'>) => {
+  const handleSubmit = async (values: Omit<BranchProfileUpdateRequest, 'status'>) => {
     try {
-      const payload: PharmacyProfileUpdateRequest = {
+      const payload: BranchProfileUpdateRequest = {
         ...values,
         pharmacyId: profile.pharmacyId,
         userId: profile.userId,
         status: profile.status,
       };
-      const res = await instance.put(`/auth/update/${profile.pharmacyId}`, payload);
-      // LOG: 테스트용 로그
-      console.log('🧪 약국 정보 수정 응답:', res.data);
-      if (res.data.success) {
+      const response = await profileAPI.updateBranchProfile(payload);
+
+      if (response.success) {
         updateProfile(payload);
         messageApi.success('약국 정보가 수정되었습니다!');
       }
     } catch (e: any) {
       console.error('약국 정보 수정 실패:', e);
-      messageApi.error(e.message || '약국 정보 수정 중 오류가 발생했습니다.');
+      messageApi.error(e.response?.data?.message || '약국 정보 수정 중 오류가 발생했습니다.');
     }
   };
 
@@ -114,7 +85,6 @@ export default function BranchProfileEditPage() {
             addressName="address"
             detailAddressName="detailAddress"
             label="주소"
-            required={true}
           />
           <Form.Item
             name="contact"
@@ -131,31 +101,15 @@ export default function BranchProfileEditPage() {
                 const formattedValue = formatContact(e.target.value);
                 form.setFieldValue('contact', formattedValue);
               }}
-              onKeyDown={(e) => {
-                // 숫자, 백스페이스, 삭제, 탭, 화살표 키만 허용
-                if (
-                  !/[0-9]/.test(e.key) &&
-                  ![
-                    'Backspace',
-                    'Delete',
-                    'Tab',
-                    'ArrowLeft',
-                    'ArrowRight',
-                    'ArrowUp',
-                    'ArrowDown',
-                  ].includes(e.key)
-                ) {
-                  e.preventDefault();
-                }
-              }}
+              onKeyDown={handleNumberOnlyKeyDown}
             />
           </Form.Item>
 
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <Flex justify="center">
             <Button type="primary" htmlType="submit">
               수정
             </Button>
-          </div>
+          </Flex>
         </Form>
       </Card>
     </>

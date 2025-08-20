@@ -1,9 +1,15 @@
-import { Button, Card, Form, Input, message, Typography } from 'antd';
+import { Button, Card, Flex, Form, Input, message, Typography } from 'antd';
 import { useEffect } from 'react';
-import { instance } from '../../../api/api';
+import { authAPI } from '../../../api';
 import { useAuthStore } from '../../../stores/authStore';
 import type { PasswordChangeRequest } from '../../../types/auth.type';
 import type { User } from '../../../types/profile.type';
+import {
+  passwordConfirmRule,
+  passwordNotSameAsCurrentRule,
+  passwordNotSameAsIdRule,
+  passwordValidationRule,
+} from '../../../utils';
 
 export default function PasswordChangePage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -26,16 +32,15 @@ export default function PasswordChangePage() {
         currentPassword: values.currentPassword,
         newPassword: values.newPassword,
       };
-      const res = await instance.put('/auth/password', payload);
-      // LOG: 테스트용 로그
-      console.log('🧪 비밀번호 변경 응답:', res.data);
-      if (res.data.success) {
+      const res = await authAPI.changePassword(payload);
+
+      if (res.success) {
         messageApi.success('비밀번호가 변경되었습니다!');
         form.resetFields(['currentPassword', 'newPassword', 'confirmNewPassword']);
       }
     } catch (e: any) {
       console.error('비밀번호 변경 실패:', e);
-      messageApi.error(e.message || '비밀번호 변경 중 오류가 발생했습니다.');
+      messageApi.error(e.response?.data?.message || '비밀번호 변경 중 오류가 발생했습니다.');
     }
   };
 
@@ -47,7 +52,14 @@ export default function PasswordChangePage() {
       </Typography.Title>
 
       <Card style={{ width: '80%', padding: '8px', margin: '0 auto' }}>
-        <Form form={form} name="password-change" onFinish={handleSubmit}>
+        <Form
+          form={form}
+          name="password-change"
+          onFinish={handleSubmit}
+          labelCol={{ span: 6 }}
+          labelWrap
+          wrapperCol={{ span: 15, offset: -3 }}
+        >
           <Form.Item name="email" label="이메일">
             <Input disabled />
           </Form.Item>
@@ -61,30 +73,11 @@ export default function PasswordChangePage() {
           <Form.Item
             name="newPassword"
             label="새 비밀번호"
-            dependencies={['newPassword']}
             rules={[
               { required: true, message: '새 비밀번호를 입력해주세요.' },
-              {
-                validator: (_, value) => {
-                  if (!value) return Promise.resolve();
-
-                  const length = value.length;
-                  const hasUpper = /[A-Z]/.test(value);
-                  const hasLower = /[a-z]/.test(value);
-                  const hasNumber = /[0-9]/.test(value);
-                  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(value);
-
-                  const typeCount = [hasUpper, hasLower, hasNumber, hasSpecial].filter(
-                    Boolean,
-                  ).length;
-
-                  if (typeCount >= 3 && length >= 8) return Promise.resolve();
-
-                  return Promise.reject(
-                    new Error('영문, 숫자, 특수문자를 조합하여 8자리 이상으로 입력해주세요.'),
-                  );
-                },
-              },
+              passwordValidationRule,
+              passwordNotSameAsIdRule(form.getFieldValue, 'email'),
+              passwordNotSameAsCurrentRule(form.getFieldValue, 'currentPassword'),
             ]}
             hasFeedback
           >
@@ -96,25 +89,18 @@ export default function PasswordChangePage() {
             dependencies={['newPassword']}
             rules={[
               { required: true, message: '새 비밀번호 확인을 입력해주세요.' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(new Error('새 비밀번호가 일치하지 않습니다.'));
-                },
-              }),
+              passwordConfirmRule(form.getFieldValue, 'newPassword'),
             ]}
             hasFeedback
           >
             <Input.Password />
           </Form.Item>
 
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <Flex justify="center">
             <Button type="primary" htmlType="submit">
               수정
             </Button>
-          </div>
+          </Flex>
         </Form>
       </Card>
     </>
