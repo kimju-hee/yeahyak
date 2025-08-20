@@ -88,12 +88,11 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           script_stop: true
-          # 원격으로 export 할 환경변수 목록
+          # 원격으로 export 할 환경변수 목록 (이름만 나열)
           envs: TZ,SPRING_PROFILES_ACTIVE,SERVER_PORT,AI_SERVICE_URL,DB_URL,DB_USERNAME,DB_PASSWORD,BLOB_ENDPOINT,BLOB_CONTAINER,BLOB_CONN_STR
           script: |
-            # dash(/bin/sh) 호환: -E, pipefail 미사용
+            # /bin/sh(dash) 호환
             set -eu
-            trap 'echo "FAILED at line $LINENO"; exit 1' ERR
 
             LOGIN_SERVER="${{ env.LOGIN_SERVER }}"
             IMAGE="${LOGIN_SERVER}/backend:latest"
@@ -102,26 +101,31 @@ jobs:
             HOST_PORT="8080"
             CONTAINER_PORT="8080"
 
+            # 함수: 변수값 안전 조회 (POSIX)
+            getvar() { eval "printf %s \"\${$1-}\""; }
+
             # 0) 원본 시크릿 전달 여부 확인
             for v in DB_URL DB_USERNAME DB_PASSWORD BLOB_ENDPOINT BLOB_CONTAINER BLOB_CONN_STR; do
-              [ -z "${!v:-}" ] && echo "ERROR: missing env $v" && exit 1
+              val="$(getvar "$v")"
+              [ -n "$val" ] || { echo "ERROR: missing env $v"; exit 1; }
             done
 
-            # 1) DB_/BLOB_ → SPRING_/AZURE_STORAGE_ 매핑
-            SPRING_DATASOURCE_URL="$DB_URL"
-            SPRING_DATASOURCE_USERNAME="$DB_USERNAME"
-            SPRING_DATASOURCE_PASSWORD="$DB_PASSWORD"
+            # 1) DB_/BLOB_ → SPRING_/AZURE_STORAGE_ 매핑(export)
+            SPRING_DATASOURCE_URL="$(getvar DB_URL)"
+            SPRING_DATASOURCE_USERNAME="$(getvar DB_USERNAME)"
+            SPRING_DATASOURCE_PASSWORD="$(getvar DB_PASSWORD)"
 
-            AZURE_STORAGE_BLOB_ENDPOINT="$BLOB_ENDPOINT"
-            AZURE_STORAGE_CONTAINER_NAME="$BLOB_CONTAINER"
-            AZURE_STORAGE_CONNECTION_STRING="$BLOB_CONN_STR"
+            AZURE_STORAGE_BLOB_ENDPOINT="$(getvar BLOB_ENDPOINT)"
+            AZURE_STORAGE_CONTAINER_NAME="$(getvar BLOB_CONTAINER)"
+            AZURE_STORAGE_CONNECTION_STRING="$(getvar BLOB_CONN_STR)"
 
             export SPRING_DATASOURCE_URL SPRING_DATASOURCE_USERNAME SPRING_DATASOURCE_PASSWORD
             export AZURE_STORAGE_BLOB_ENDPOINT AZURE_STORAGE_CONTAINER_NAME AZURE_STORAGE_CONNECTION_STRING
 
             # 2) 매핑된 변수 확인
             for v in SPRING_DATASOURCE_URL SPRING_DATASOURCE_USERNAME SPRING_DATASOURCE_PASSWORD AZURE_STORAGE_BLOB_ENDPOINT AZURE_STORAGE_CONTAINER_NAME AZURE_STORAGE_CONNECTION_STRING; do
-              [ -z "${!v:-}" ] && echo "ERROR: missing env $v" && exit 1
+              val="$(getvar "$v")"
+              [ -n "$val" ] || { echo "ERROR: missing env $v"; exit 1; }
             done
 
             # 3) ACR 로그인 & 최신 이미지 pull
