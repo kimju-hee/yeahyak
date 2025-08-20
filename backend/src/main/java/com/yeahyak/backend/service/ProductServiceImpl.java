@@ -15,9 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
-
+import java.util.Optional;
 import java.util.List;
 import java.util.Map;
+
+// ✅ 추가 import
+import com.yeahyak.backend.repository.InventoryHistoryRepository;
+import java.util.HashMap;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +30,9 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final RestTemplate restTemplate = new RestTemplate();
+
+    // ✅ 추가 주입
+    private final InventoryHistoryRepository inventoryHistoryRepository;
 
     @Override
     public Long registerProduct(ProductRequestDTO dto) {
@@ -113,6 +121,30 @@ public class ProductServiceImpl implements ProductService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Product> productPage = productRepository.findFiltered(mainCategory, subCategory, keyword, pageable);
 
+        // ✅ 현재 페이지 productId 목록
+        List<Long> ids = productPage.map(Product::getProductId).getContent();
+        Map<Long, LocalDateTime> lastInboundMap = new HashMap<>();
+        Map<Long, LocalDateTime> lastOutboundMap = new HashMap<>();
+        // ✅ 추가: 현재 재고 맵 (productId -> stock)
+        Map<Long, Integer> currentStockMap = new HashMap<>();
+
+        if (!ids.isEmpty()) {
+            // ✅ 최신 입고(RETURN_IN 포함)
+            for (Object[] row : inventoryHistoryRepository.findLastInboundAtByProductIds(ids)) {
+                lastInboundMap.put((Long) row[0], (LocalDateTime) row[1]);
+            }
+            // ✅ 최신 출고
+            for (Object[] row : inventoryHistoryRepository.findLastOutboundAtByProductIds(ids)) {
+                lastOutboundMap.put((Long) row[0], (LocalDateTime) row[1]);
+            }
+            // ✅ 추가: 히스토리 기반 현재 재고 집계
+            for (Object[] row : inventoryHistoryRepository.findCurrentStockByProductIds(ids)) {
+                Long pid = ((Number) row[0]).longValue();
+                Integer stock = row[1] == null ? 0 : ((Number) row[1]).intValue();
+                currentStockMap.put(pid, stock);
+            }
+        }
+
         return productPage.map(product -> ProductResponseDTO.builder()
                 .productId(product.getProductId())
                 .productName(product.getProductName())
@@ -123,9 +155,16 @@ public class ProductServiceImpl implements ProductService {
                 .details(product.getDetails())
                 .unit(product.getUnit())
                 .unitPrice(product.getUnitPrice())
-                .stock(product.getStock())
+                // ✅ 변경: products.stock(초기값)이 아니라 히스토리 집계값으로 덮어쓰기
+                .stock(currentStockMap.getOrDefault(
+                        product.getProductId(),
+                        Optional.ofNullable(product.getStock()).orElse(0)
+                ))
                 .productImgUrl(product.getProductImgUrl())
                 .createdAt(product.getCreatedAt())
+                // ✅ 추가 세팅
+                .lastInboundAt(lastInboundMap.get(product.getProductId()))
+                .lastOutboundAt(lastOutboundMap.get(product.getProductId()))
                 .build());
     }
 }
