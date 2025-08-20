@@ -18,7 +18,7 @@ import { MarkButton } from '../tiptap/components/tiptap-ui/mark-button';
 import { TextAlignButton } from '../tiptap/components/tiptap-ui/text-align-button';
 import { UndoRedoButton } from '../tiptap/components/tiptap-ui/undo-redo-button';
 import { handleImageUpload, MAX_FILE_SIZE } from '../tiptap/lib/tiptap-utils';
-import './TipTapEditor.scss';
+import './TiptapEditor.scss';
 
 const TiptapToolbarContent = () => {
   return (

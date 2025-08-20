@@ -1,20 +1,28 @@
-name: deploy-frontend (dev)
+name: deploy-frontend (deploy)
 
 on:
   push:
-    branches: [deploy]          # dev에서만 실행
+    branches: [deploy]              # ✅ deploy에 push/merge되면 자동 실행
     paths:
-      - 'frontend/**'
+      - 'frontend/**'               # ✅ 프런트 변경 있을 때만
       - '.github/workflows/frontend.yml'
+  # 수동 실행은 비활성화해도 됨. 필요하면 남겨둬도 OK
+  # workflow_dispatch:
 
 env:
-  IMAGE: ${{ secrets.ACR_LOGIN_SERVER }}/yeahyak-frontend:dev   # dev 태그로 푸시
+  IMAGE: ${{ secrets.ACR_LOGIN_SERVER }}/yeahyak-frontend:deploy
+
+concurrency:
+  group: frontend-deploy-deploy
+  cancel-in-progress: true
 
 jobs:
   build-push-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}     # 현재 푸시된 브랜치(deploy) 기준
 
       - name: Login ACR
         uses: docker/login-action@v3
@@ -23,9 +31,10 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Build & Push image (dev)
+      - name: Build & Push image (deploy)
         run: |
-          docker build -t "$IMAGE" ./frontend
+          set -e
+          docker build -t "$IMAGE" -f frontend/Dockerfile frontend
           docker push "$IMAGE"
 
       - name: Deploy to VM (frontend only)
@@ -40,10 +49,14 @@ jobs:
             cd /opt/yeahyak
             docker login ${{ secrets.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }}
 
-            # compose에 우리 dev 이미지가 아직 안 박혀 있으면 1회 치환
-            grep -q 'yeahyak-frontend:dev' docker-compose.yml || \
-              sed -i 's#nginxdemos/hello#${{ secrets.ACR_LOGIN_SERVER }}/yeahyak-frontend:dev#' docker-compose.yml
+            # compose에 deploy 이미지가 없으면 1회 치환
+            grep -q 'yeahyak-frontend:deploy' docker-compose.yml || \
+              sed -i 's#nginxdemos/hello#${{ secrets.ACR_LOGIN_SERVER }}/yeahyak-frontend:deploy#' docker-compose.yml
 
+            # 최신 이미지 기준으로 컨테이너 교체
             docker compose pull frontend || true
-            docker compose up -d --no-deps frontend
+            docker compose rm -sf frontend || true
+            docker compose up -d --no-deps --force-recreate frontend
+
+            # 안 쓰는 이미지 정리
             docker image prune -f
