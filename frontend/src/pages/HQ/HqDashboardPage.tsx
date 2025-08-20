@@ -1,11 +1,10 @@
-import { Card, Col, List, message, Row, Table } from 'antd';
+import { Card, Col, List, message, Row, Table, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { instance } from '../../api/api';
-import type { Announcement } from '../../types/announcement.type';
-import { ANNOUNCEMENT_TYPE } from '../../types/announcement.type';
-import type { OrderListResponse } from '../../types/order.type';
+import { useNavigate } from 'react-router-dom';
+import { announcementAPI, orderAPI } from '../../api';
+import { ANNOUNCEMENT_TYPE_TEXT, DATE_FORMAT } from '../../constants';
+import { type Announcement, type Order } from '../../types';
 
 // FIXME: 베스트셀러 하드코딩 해놓음
 const bestSeller = [
@@ -17,30 +16,39 @@ const bestSeller = [
 
 export default function HqDashboardPage() {
   const [messageApi, contextHolder] = message.useMessage();
+  const navigate = useNavigate();
 
-  const [latestNotices, setLatestNotices] = useState<Announcement[]>([]);
-  const [requestedOrders, setRequestedOrders] = useState<OrderListResponse[]>([]);
+  const [latestAnnouncements, setLatestAnnouncements] = useState<Announcement[]>([]);
+  const [requestedOrders, setRequestedOrders] = useState<Order[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const noticeRes = await instance.get('/announcements?page=0&size=5');
-        // LOG: 테스트용 로그
-        console.log('✨ 최근 공지사항 로딩 응답:', noticeRes.data);
-        if (noticeRes.data.success && noticeRes.data.data.length > 0) {
-          setLatestNotices(noticeRes.data.data);
+        const announcementResponse = await announcementAPI.getAnnouncements({ page: 0, size: 5 });
+
+        if (announcementResponse.success && announcementResponse.data.length > 0) {
+          setLatestAnnouncements(announcementResponse.data);
+        } else {
+          setLatestAnnouncements([]);
         }
 
-        const orderRes = await instance.get(`/orders/admin/orders?status=REQUESTED&page=0&size=5`);
-        // LOG: 테스트용 로그
-        console.log('✨ 발주 요청 현황 로딩 응답:', orderRes.data);
-        if (orderRes.data.success && orderRes.data.data.length > 0) {
-          setRequestedOrders(orderRes.data.data);
+        const orderResponse = await orderAPI.getAdminOrders({
+          status: 'REQUESTED',
+          page: 0,
+          size: 5,
+        });
+
+        if (orderResponse.success && orderResponse.data.length > 0) {
+          setRequestedOrders(orderResponse.data);
+        } else {
+          setRequestedOrders([]);
         }
       } catch (e: any) {
         console.error('대시보드 데이터 로드 실패:', e);
-        messageApi.error(e.message || '대시보드 데이터 로딩 중 오류가 발생했습니다.');
-        setLatestNotices([]);
+        messageApi.error(
+          e.response?.data?.message || '대시보드 데이터 로딩 중 오류가 발생했습니다.',
+        );
+        setLatestAnnouncements([]);
         setRequestedOrders([]);
       }
     };
@@ -49,41 +57,29 @@ export default function HqDashboardPage() {
   }, []);
 
   const bestSellerColumns = [
-    {
-      title: '제품명',
-      dataIndex: 'productName',
-      key: 'productName',
-    },
-    {
-      title: '제조사',
-      dataIndex: 'manufacturer',
-      key: 'manufacturer',
-    },
+    { title: '제품명', dataIndex: 'productName', key: 'productName' },
+    { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer' },
     {
       title: '판매 수량',
       dataIndex: 'quantity',
       key: 'quantity',
-      render: (val: number) => val.toLocaleString(),
+      render: (value: number) => value.toLocaleString(),
     },
   ];
 
   const requestedOrdersColumns = [
-    {
-      title: '지점',
-      dataIndex: 'pharmacyName',
-      key: 'pharmacyName',
-    },
+    { title: '지점', dataIndex: 'pharmacyName', key: 'pharmacyName' },
     {
       title: '발주 일시',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (val: string) => dayjs(val).format('YYYY/MM/DD HH:mm'),
+      render: (value: string) => dayjs(value).format(DATE_FORMAT.DEFAULT),
     },
     {
-      title: '총액',
+      title: '금액',
       dataIndex: 'totalPrice',
       key: 'totalPrice',
-      render: (val: number) => `${val.toLocaleString()}원`,
+      render: (value: number) => `${value.toLocaleString()}원`,
     },
   ];
 
@@ -94,12 +90,21 @@ export default function HqDashboardPage() {
         <Col span={24}>
           <Card title="최근 공지사항" variant="borderless">
             <List
-              dataSource={latestNotices}
+              dataSource={latestAnnouncements}
               renderItem={(item) => (
                 <List.Item key={item.announcementId}>
                   <List.Item.Meta
-                    title={<Link to={`/hq/notices/${item.announcementId}`}>{item.title}</Link>}
-                    description={ANNOUNCEMENT_TYPE[item.type]}
+                    title={
+                      <Typography.Link
+                        onClick={() => {
+                          navigate(`/hq/announcements/${item.announcementId}`, {
+                            state: { returnTo: { type: item.type, page: 1, keyword: '' } },
+                          });
+                        }}
+                      >
+                        {`[${ANNOUNCEMENT_TYPE_TEXT[item.type]}] ${item.title}`}
+                      </Typography.Link>
+                    }
                   />
                 </List.Item>
               )}
@@ -122,7 +127,7 @@ export default function HqDashboardPage() {
         </Col>
         <Col span={12}>
           <Card
-            title={`발주 요청 현황 (${dayjs().format('YYYY.MM.DD. HH:mm')} 기준)`}
+            title={`발주 요청 현황 (${dayjs().format(DATE_FORMAT.DEFAULT)} 기준)`}
             variant="borderless"
           >
             <Table

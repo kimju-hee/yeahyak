@@ -1,4 +1,3 @@
-import type { TableProps } from 'antd';
 import {
   Button,
   Card,
@@ -15,77 +14,24 @@ import {
   Tag,
   Typography,
   message,
+  type TableProps,
 } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
-import { instance } from '../../api/api';
-import { ORDER_STATUS, type OrderListResponse, type OrderStatus } from '../../types/order.type';
-
-// TODO: 지역이나 기간으로 필터링 기능 추가? 고민중
-
-const regionOptions = [
-  {
-    value: '수도권',
-    label: '수도권',
-    children: [
-      { value: '서울', label: '서울' },
-      { value: '인천', label: '인천' },
-      { value: '경기', label: '경기' },
-    ],
-  },
-  { value: '강원', label: '강원' },
-  {
-    value: '충청',
-    label: '충청',
-    children: [
-      { value: '대전', label: '대전' },
-      { value: '세종', label: '세종' },
-      { value: '충북', label: '충북' },
-      { value: '충남', label: '충남' },
-    ],
-  },
-  {
-    value: '영남',
-    label: '영남',
-    children: [
-      { value: '부산', label: '부산' },
-      { value: '대구', label: '대구' },
-      { value: '울산', label: '울산' },
-      { value: '경북', label: '경북' },
-      { value: '경남', label: '경남' },
-    ],
-  },
-  {
-    value: '호남',
-    label: '호남',
-    children: [
-      { value: '광주', label: '광주' },
-      { value: '전북', label: '전북' },
-      { value: '전남', label: '전남' },
-    ],
-  },
-  { value: '제주', label: '제주' },
-];
-
-const statusOptions = [
-  { value: ORDER_STATUS.REQUESTED, label: '대기' },
-  { value: ORDER_STATUS.APPROVED, label: '승인' },
-  { value: ORDER_STATUS.PROCESSING, label: '처리중' },
-  { value: ORDER_STATUS.SHIPPING, label: '배송중' },
-  { value: ORDER_STATUS.COMPLETED, label: '완료' },
-  { value: ORDER_STATUS.REJECTED, label: '반려' },
-];
+import { orderAPI } from '../../api';
+import {
+  DATE_FORMAT,
+  ORDER_STATUS_COLORS,
+  ORDER_STATUS_OPTIONS,
+  ORDER_STATUS_TEXT,
+  PAGE_SIZE,
+  REGION_OPTIONS,
+} from '../../constants';
+import { ORDER_STATUS, type Order, type OrderStatus } from '../../types';
 
 const getStatusTag = (status: OrderStatus, isClickable: boolean) => {
-  const statusColorMap: Record<OrderStatus, { color: string; text: string }> = {
-    [ORDER_STATUS.REQUESTED]: { color: 'orange', text: '대기' },
-    [ORDER_STATUS.APPROVED]: { color: 'blue', text: '승인' },
-    [ORDER_STATUS.PROCESSING]: { color: 'blue', text: '처리중' },
-    [ORDER_STATUS.SHIPPING]: { color: 'cyan', text: '배송중' },
-    [ORDER_STATUS.COMPLETED]: { color: 'green', text: '완료' },
-    [ORDER_STATUS.REJECTED]: { color: 'default', text: '반려' },
-  };
-  const { color, text } = statusColorMap[status];
+  const color = ORDER_STATUS_COLORS[status];
+  const text = ORDER_STATUS_TEXT[status];
   return (
     <Tag bordered={true} color={color} style={isClickable ? { cursor: 'pointer' } : {}}>
       {text}
@@ -93,13 +39,11 @@ const getStatusTag = (status: OrderStatus, isClickable: boolean) => {
   );
 };
 
-const PAGE_SIZE = 10;
-
 export default function OrderManagementPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
 
-  const [orders, setOrders] = useState<OrderListResponse[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [filters, setFilters] = useState({
     region: undefined as string | undefined,
     status: undefined as OrderStatus | undefined,
@@ -119,14 +63,12 @@ export default function OrderManagementPage() {
 
   const fetchStatistics = async () => {
     try {
-      const res = await instance.get('/orders/admin/orders');
-      // LOG: 테스트용 로그
-      console.log('✨ 전체 발주 요청 목록 로딩 응답:', res.data);
+      const res = await orderAPI.getAdminOrders();
 
-      if (res.data.success) {
-        const totalOrders = res.data.data.length;
-        const calculatedStatistics = res.data.data.reduce(
-          (acc: any, order: OrderListResponse) => {
+      if (res.success) {
+        const totalOrders = res.data.length;
+        const calculatedStatistics = res.data.reduce(
+          (acc: any, order: Order) => {
             if (order.status === ORDER_STATUS.PROCESSING) {
               acc.totalProcessing += 1;
             } else if (order.status === ORDER_STATUS.SHIPPING) {
@@ -143,34 +85,32 @@ export default function OrderManagementPage() {
       }
     } catch (e: any) {
       console.error('전체 발주 요청 목록 로딩 실패:', e);
-      messageApi.error(e.message || '전체 발주 요청 목록 로딩 중 오류가 발생했습니다.');
+      messageApi.error(
+        e.response?.data?.message || '전체 발주 요청 목록 로딩 중 오류가 발생했습니다.',
+      );
     }
   };
 
-  const fetchFilteredOrders = async () => {
+  const fetchOrders = async () => {
     setLoading(true);
     try {
-      const res = await instance.get('/orders/admin/orders', {
-        params: {
-          page: currentPage - 1,
-          size: PAGE_SIZE,
-          region: filters.region,
-          status: filters.status,
-          startDate: filters.startDate,
-          endDate: filters.endDate,
-        },
+      const res = await orderAPI.getAdminOrders({
+        page: currentPage - 1,
+        size: PAGE_SIZE,
+        // region: filters.region,
+        status: filters.status,
+        // startDate: filters.startDate,
+        // endDate: filters.endDate,
       });
-      // LOG: 테스트용 로그
-      console.log('✨ 발주 요청 목록 로딩 응답:', res.data);
 
-      if (res.data.success) {
-        const { data, totalElements } = res.data;
+      if (res.success) {
+        const { data, totalElements } = res;
         setOrders(data);
         setTotal(totalElements);
       }
     } catch (e: any) {
       console.error('발주 요청 목록 로딩 실패:', e);
-      messageApi.error(e.message || '발주 요청 목록 로딩 중 오류가 발생했습니다.');
+      messageApi.error(e.response?.data?.message || '발주 요청 목록 로딩 중 오류가 발생했습니다.');
       setOrders([]);
       setTotal(0);
     } finally {
@@ -183,7 +123,7 @@ export default function OrderManagementPage() {
   }, []);
 
   useEffect(() => {
-    fetchFilteredOrders();
+    fetchOrders();
   }, [currentPage, filters]);
 
   const handleSearch = () => {
@@ -209,36 +149,34 @@ export default function OrderManagementPage() {
       let res: any;
       switch (action) {
         case 'APPROVE':
-          res = await instance.post(`/orders/${orderId}/approve`);
+          res = await orderAPI.approveOrder(orderId);
           break;
         case 'REJECT':
-          res = await instance.post(`/orders/${orderId}/reject`);
+          res = await orderAPI.rejectOrder(orderId);
           break;
         case 'PROCESS':
-          res = await instance.patch(`/orders/${orderId}`, { status: 'PROCESSING' });
+          res = await orderAPI.updateOrderStatus(orderId, { status: ORDER_STATUS.PROCESSING });
           break;
         case 'SHIP':
-          res = await instance.patch(`/orders/${orderId}`, { status: 'SHIPPING' });
+          res = await orderAPI.updateOrderStatus(orderId, { status: ORDER_STATUS.SHIPPING });
           break;
         case 'COMPLETE':
-          res = await instance.patch(`/orders/${orderId}`, { status: 'COMPLETED' });
+          res = await orderAPI.updateOrderStatus(orderId, { status: ORDER_STATUS.COMPLETED });
           break;
       }
-      // LOG: 테스트용 로그
-      console.log('✨ 주문 상태 업데이트 응답:', res.data);
 
-      if (res.data.success) {
+      if (res.success) {
         messageApi.success('주문 상태가 변경되었습니다.');
         fetchStatistics();
-        fetchFilteredOrders();
+        fetchOrders();
       }
     } catch (e: any) {
       console.error('주문 상태 변경 실패:', e);
-      messageApi.error(e.message || '주문 상태 변경 중 오류가 발생했습니다.');
+      messageApi.error(e.response?.data?.message || '주문 상태 변경 중 오류가 발생했습니다.');
     }
   };
 
-  const renderStatusTagWithActions = (record: OrderListResponse) => {
+  const renderStatusTagWithActions = (record: Order) => {
     if (record.status === ORDER_STATUS.REQUESTED) {
       return (
         <Popconfirm
@@ -299,7 +237,7 @@ export default function OrderManagementPage() {
     );
   };
 
-  const tableColumns: TableProps<OrderListResponse>['columns'] = [
+  const tableColumns: TableProps<Order>['columns'] = [
     { title: '주문번호', dataIndex: 'orderId', key: 'orderId' },
     { title: '지점명', dataIndex: 'pharmacyName', key: 'pharmacyName' },
     {
@@ -323,7 +261,7 @@ export default function OrderManagementPage() {
       title: '요청일시',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (value) => dayjs(value).format('YYYY. MM. DD. HH:mm'),
+      render: (value) => dayjs(value).format(DATE_FORMAT.DEFAULT),
     },
     {
       title: '상태',
@@ -333,7 +271,7 @@ export default function OrderManagementPage() {
     },
   ];
 
-  const expandedRowRender = (record: OrderListResponse) => {
+  const expandedRowRender = (record: Order) => {
     return (
       <>
         <Table
@@ -407,10 +345,10 @@ export default function OrderManagementPage() {
       <Form layout="vertical" form={form} onFinish={handleSearch}>
         <Space wrap align="end">
           <Form.Item label="지역" name="region">
-            <Cascader options={regionOptions} placeholder="지역 선택" />
+            <Cascader options={REGION_OPTIONS} placeholder="지역 선택" />
           </Form.Item>
           <Form.Item label="상태" name="status">
-            <Select allowClear options={statusOptions} placeholder="상태 선택" />
+            <Select allowClear options={[...ORDER_STATUS_OPTIONS]} placeholder="상태 선택" />
           </Form.Item>
           <Form.Item label="기간" name="date">
             <DatePicker.RangePicker placeholder={['시작일', '종료일']} />
@@ -437,6 +375,7 @@ export default function OrderManagementPage() {
           total: total,
           current: currentPage,
           onChange: (page) => setCurrentPage(page),
+          showSizeChanger: false,
         }}
         expandable={{
           expandedRowRender,
