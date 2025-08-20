@@ -1,30 +1,26 @@
 import {
   ApartmentOutlined,
-  AreaChartOutlined,
   BellOutlined,
-  BulbFilled,
   EditOutlined,
   KeyOutlined,
   LogoutOutlined,
   MinusSquareFilled,
+  MoneyCollectOutlined,
   NotificationFilled,
   PlusSquareFilled,
   ProductFilled,
   TagsFilled,
   UserOutlined,
 } from '@ant-design/icons';
-import { ConfigProvider, Divider, Dropdown, Flex, Layout, Menu, Typography } from 'antd';
-import DOMPurify from 'dompurify';
+import { ConfigProvider, Dropdown, Flex, Layout, Menu, Typography } from 'antd';
 import { useRef } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import { logo } from '../assets';
 import Chatbot from '../components/Chatbot';
 import { useAuthStore } from '../stores/authStore';
-import { USER_ROLE, type Admin } from '../types/profile.type';
-const { Sider, Header, Content, Footer } = Layout;
-
-// HTML 파일들을 텍스트로 import
-import privacyHtml from '../assets/privacy.html?raw';
-import termsHtml from '../assets/terms.html?raw';
+import { USER_ROLE, type Admin, type User } from '../types';
+import Footer from './Footer';
+const { Sider, Header, Content } = Layout;
 
 // Design Token
 const theme = {
@@ -48,13 +44,18 @@ const theme = {
 const siderMenuItems = [
   {
     key: 'notices',
-    label: <Link to="/hq/notices">공지사항</Link>,
+    label: <Link to="/hq/announcements">공지사항</Link>,
     icon: <NotificationFilled />,
   },
   {
     key: 'branches',
     label: <Link to="/hq/branches">가맹점 관리</Link>,
     icon: <ApartmentOutlined />,
+  },
+  {
+    key: 'credits',
+    label: <Link to="/hq/credits">정산 관리</Link>,
+    icon: <MoneyCollectOutlined />,
   },
   {
     key: 'orders',
@@ -67,73 +68,22 @@ const siderMenuItems = [
     icon: <MinusSquareFilled />,
   },
   {
-    key: 'monitoring',
-    label: <Link to="/hq/monitoring">가맹점 모니터링</Link>,
-    icon: <AreaChartOutlined />,
-  },
-  {
-    key: 'forecast',
-    label: <Link to="/hq/forecast">수요 예측</Link>,
-    icon: <BulbFilled />,
+    key: 'products',
+    label: <Link to="/hq/products">제품 목록</Link>,
+    icon: <TagsFilled />,
   },
   {
     key: 'stock',
     label: <Link to="/hq/stock">재고 관리</Link>,
     icon: <ProductFilled />,
   },
-  {
-    key: 'products',
-    label: <Link to="/hq/products">제품 목록</Link>,
-    icon: <TagsFilled />,
-  },
 ];
 
 export default function HqLayout() {
   const location = useLocation();
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.user) as User;
   const profile = useAuthStore((state) => state.profile);
-  const admin = user?.role === USER_ROLE.ADMIN ? (profile as Admin) : null;
-
-  // 이용약관과 개인정보처리방침 새 창으로 열기
-  const openTermsWindow = () => {
-    const sanitizedHtml = DOMPurify.sanitize(termsHtml);
-    // UTF-8 BOM 추가하여 인코딩 확실히 처리
-    const bom = '\uFEFF';
-    const blob = new Blob([bom + sanitizedHtml], { type: 'text/html; charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const newWindow = window.open(
-      url,
-      '_blank',
-      'width=800,height=600,scrollbars=yes,resizable=yes',
-    );
-
-    // 메모리 정리를 위해 URL 해제 (창이 닫힐 때)
-    if (newWindow) {
-      newWindow.addEventListener('beforeunload', () => {
-        URL.revokeObjectURL(url);
-      });
-    }
-  };
-
-  const openPrivacyWindow = () => {
-    const sanitizedHtml = DOMPurify.sanitize(privacyHtml);
-    // UTF-8 BOM 추가하여 인코딩 확실히 처리
-    const bom = '\uFEFF';
-    const blob = new Blob([bom + sanitizedHtml], { type: 'text/html; charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const newWindow = window.open(
-      url,
-      '_blank',
-      'width=800,height=600,scrollbars=yes,resizable=yes',
-    );
-
-    // 메모리 정리를 위해 URL 해제 (창이 닫힐 때)
-    if (newWindow) {
-      newWindow.addEventListener('beforeunload', () => {
-        URL.revokeObjectURL(url);
-      });
-    }
-  };
+  const admin = user.role === USER_ROLE.ADMIN ? (profile as Admin) : null;
 
   // 아바타 메뉴 아이템
   const avatarMenuItems = {
@@ -187,7 +137,9 @@ export default function HqLayout() {
             justifyContent: 'space-between',
           }}
         >
-          <Link to="/hq">예약</Link>
+          <Link to="/branch">
+            <img src={logo} alt="로고" style={{ height: '32px' }} />
+          </Link>
           <Flex align="center" gap={'24px'}>
             <Typography.Text style={{ color: '#ffffff' }}>
               {admin?.adminName.slice(0, -1) + '*'}
@@ -235,17 +187,7 @@ export default function HqLayout() {
               </Content>
               <Chatbot boundsRef={contentRef} />
             </div>
-            <Footer style={{ textAlign: 'center' }}>
-              © 2025 Team yeahyak
-              <Divider type="vertical" />
-              <Typography.Link onClick={openTermsWindow} style={{ color: '#000000' }}>
-                이용약관
-              </Typography.Link>
-              <Divider type="vertical" />
-              <Typography.Link onClick={openPrivacyWindow} style={{ color: '#000000' }}>
-                개인정보처리방침
-              </Typography.Link>
-            </Footer>
+            <Footer />
           </Layout>
         </Layout>
       </Layout>
