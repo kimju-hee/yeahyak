@@ -1,14 +1,21 @@
 package com.yeahyak.backend.controller;
 
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.yeahyak.backend.entity.User;
 import com.yeahyak.backend.entity.enums.CreditStatus;
 import com.yeahyak.backend.repository.UserRepository;
 import com.yeahyak.backend.service.CreditService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
@@ -38,17 +45,17 @@ public class CreditAdminController {
     ) {
         var pendingPage = creditService.getPendingCredits(page, size);
 
-        return ResponseEntity.ok(Map.of(
+        return ResponseEntity.ok(
+            Map.of(
                 "success", true,
-                "data", Map.of(
-                        "content", pendingPage.getContent(),
-                        "page", pendingPage.getNumber(),
-                        "size", pendingPage.getSize(),
-                        "totalElements", pendingPage.getTotalElements(),
-                        "totalPages", pendingPage.getTotalPages(),
-                        "last", pendingPage.isLast()
-                )
-        ));
+                "data", pendingPage.getContent(),
+                "page", pendingPage.getNumber(),
+                "size", pendingPage.getSize(),
+                "totalElements", pendingPage.getTotalElements(),
+                "totalPages", pendingPage.getTotalPages(),
+                "last", pendingPage.isLast()
+            )
+        );
     }
 
 
