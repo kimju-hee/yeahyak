@@ -1,16 +1,7 @@
 package com.yeahyak.backend.service;
 
-import com.yeahyak.backend.dto.*;
-import com.yeahyak.backend.entity.*;
-import com.yeahyak.backend.entity.enums.Department;
-import com.yeahyak.backend.entity.enums.Status;
-import com.yeahyak.backend.entity.enums.UserRole;
-import com.yeahyak.backend.repository.AdminRepository;
-import com.yeahyak.backend.repository.PharmacyRegistrationRequestRepository;
-import com.yeahyak.backend.repository.PharmacyRepository;
-import com.yeahyak.backend.repository.UserRepository;
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
+import java.time.LocalDateTime;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -21,7 +12,35 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import com.yeahyak.backend.dto.AdminLoginResponse;
+import com.yeahyak.backend.dto.AdminProfile;
+import com.yeahyak.backend.dto.AdminSignupRequest;
+import com.yeahyak.backend.dto.ChangePasswordRequest;
+import com.yeahyak.backend.dto.LoginRequest;
+import com.yeahyak.backend.dto.LoginResponse;
+import com.yeahyak.backend.dto.PharmacyApprovalResponse;
+import com.yeahyak.backend.dto.PharmacyDto;
+import com.yeahyak.backend.dto.PharmacyProfile;
+import com.yeahyak.backend.dto.PharmacyRequestDto;
+import com.yeahyak.backend.dto.SignupRequest;
+import com.yeahyak.backend.dto.UpdateAdminRequest;
+import com.yeahyak.backend.dto.UpdatePharmacyRequest;
+import com.yeahyak.backend.dto.UserInfo;
+import com.yeahyak.backend.entity.Admin;
+import com.yeahyak.backend.entity.Pharmacy;
+import com.yeahyak.backend.entity.PharmacyRegistrationRequest;
+import com.yeahyak.backend.entity.User;
+import com.yeahyak.backend.entity.enums.CreditStatus;
+import com.yeahyak.backend.entity.enums.Department;
+import com.yeahyak.backend.entity.enums.Status;
+import com.yeahyak.backend.entity.enums.UserRole;
+import com.yeahyak.backend.repository.AdminRepository;
+import com.yeahyak.backend.repository.PharmacyRegistrationRequestRepository;
+import com.yeahyak.backend.repository.PharmacyRepository;
+import com.yeahyak.backend.repository.UserRepository;
+
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Service
@@ -44,6 +63,7 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .userRole(UserRole.BRANCH)
                 .point(0)
+                .creditStatus(CreditStatus.FULL)
                 .build();
         userRepository.save(user);
 
@@ -105,7 +125,8 @@ public class AuthService {
                 user.getUserId(),
                 user.getEmail(),
                 safePoint,
-                user.getUserRole().name()
+                user.getUserRole().name(),
+                user.getCreditStatus().name()
         );
 
         PharmacyProfile profile = new PharmacyProfile(
@@ -141,7 +162,7 @@ public class AuthService {
 
         int safePoint = user.getPoint() != null ? user.getPoint() : 0;
 
-        UserInfo userInfo = new UserInfo(user.getUserId(), user.getEmail(), safePoint, user.getUserRole().name());
+        UserInfo userInfo = new UserInfo(user.getUserId(), user.getEmail(), safePoint, user.getUserRole().name(), user.getCreditStatus().name());
         AdminProfile profile = new AdminProfile(admin.getAdminId(), user.getUserId(), admin.getAdminName(), admin.getDepartment().name());
 
         return new AdminLoginResponse(userInfo, profile);
@@ -188,6 +209,7 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .userRole(UserRole.ADMIN)
                 .point(0)
+                .creditStatus(CreditStatus.FULL)
                 .build();
         userRepository.save(user);
 
