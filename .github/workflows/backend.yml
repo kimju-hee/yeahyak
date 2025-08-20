@@ -93,17 +93,33 @@ jobs:
             set -e
             LOGIN_SERVER="${{ env.LOGIN_SERVER }}"
             IMAGE="${LOGIN_SERVER}/backend:latest"
+            CONTAINER_NAME="yeahyak-backend"
+            HOST_BIND_IP="127.0.0.1"
+            HOST_PORT="8080"
+            CONTAINER_PORT="8080"
 
-            # VM에서 ACR 로그인 (admin 계정/토큰 사용)
+            # ACR 로그인 (관리 사용자/토큰 사용)
             echo "${{ secrets.ACR_PASSWORD }}" | docker login "$LOGIN_SERVER" -u "${{ secrets.ACR_USERNAME }}" --password-stdin
 
+            # 최신 이미지 pull
             docker pull "$IMAGE"
 
-            docker rm -f backend || true
-            docker run -d --name backend \
-              -p 8080:8080 \
+            # 같은 이름의 컨테이너 있으면 제거
+            docker rm -f "$CONTAINER_NAME" || true
+            # 8080 점유 중인 다른 컨테이너들도 제거
+            INUSE_IDS=$(docker ps --format '{{.ID}} {{.Ports}}' | awk '/(0\.0\.0\.0|127\.0\.0\.1):8080->8080\/tcp/ {print $1}')
+            if [ -n "$INUSE_IDS" ]; then
+              echo "Port 8080 in use by: $INUSE_IDS - removing..."
+              docker rm -f $INUSE_IDS || true
+            fi
+
+            # 재실행 (127.0.0.1:8080 -> 8080/tcp)
+            docker run -d --name "$CONTAINER_NAME" \
+              -p ${HOST_BIND_IP}:${HOST_PORT}:${CONTAINER_PORT} \
               --restart unless-stopped \
               -e SPRING_PROFILES_ACTIVE=prod \
               "$IMAGE"
 
+            # 이미지 청소 & 로그아웃
             docker image prune -f
+            docker logout "$LOGIN_SERVER" || true
