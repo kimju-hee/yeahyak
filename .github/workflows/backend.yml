@@ -98,28 +98,62 @@ jobs:
             HOST_PORT="8080"
             CONTAINER_PORT="8080"
 
+            # --- 필수 DB 시크릿 로드/검증 ---
+            DB_URL="${{ secrets.DB_URL }}"
+            DB_USERNAME="${{ secrets.DB_USERNAME }}"
+            DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            if [ -z "$DB_URL" ] || [ -z "$DB_USERNAME" ] || [ -z "$DB_PASSWORD" ]; then
+              echo "ERROR: DB_URL / DB_USERNAME / DB_PASSWORD GitHub Secrets가 필요합니다."
+              exit 1
+            fi
+
+            # --- 스토리지 시크릿 로드/검증 ---
+            BLOB_ENDPOINT="${{ secrets.BLOB_ENDPOINT }}"
+            BLOB_CONTAINER="${{ secrets.BLOB_CONTAINER }}"
+            BLOB_CONN_STR="${{ secrets.BLOB_CONN_STR }}"
+            if [ -z "$BLOB_ENDPOINT" ] || [ -z "$BLOB_CONTAINER" ] || [ -z "$BLOB_CONN_STR" ]; then
+              echo "ERROR: BLOB_ENDPOINT / BLOB_CONTAINER / BLOB_CONN_STR GitHub Secrets가 필요합니다."
+              exit 1
+            fi
+
             # ACR 로그인 (관리 사용자/토큰 사용)
             echo "${{ secrets.ACR_PASSWORD }}" | docker login "$LOGIN_SERVER" -u "${{ secrets.ACR_USERNAME }}" --password-stdin
 
             # 최신 이미지 pull
             docker pull "$IMAGE"
 
+            # 기본 네트워크 없으면 생성
+            docker network create yeahyak-net >/dev/null 2>&1 || true
+
             # 같은 이름의 컨테이너 있으면 제거
             docker rm -f "$CONTAINER_NAME" || true
-            # 8080 점유 중인 다른 컨테이너들도 제거
+
+            # 8080 포트 점유 중인 다른 컨테이너 제거
             INUSE_IDS=$(docker ps --format '{{.ID}} {{.Ports}}' | awk '/(0\.0\.0\.0|127\.0\.0\.1):8080->8080\/tcp/ {print $1}')
             if [ -n "$INUSE_IDS" ]; then
               echo "Port 8080 in use by: $INUSE_IDS - removing..."
               docker rm -f $INUSE_IDS || true
             fi
 
-            # 재실행 (127.0.0.1:8080 -> 8080/tcp)
+            # 컨테이너 재실행 (127.0.0.1:8080 -> 8080/tcp) + 프로덕션 env
             docker run -d --name "$CONTAINER_NAME" \
-              -p ${HOST_BIND_IP}:${HOST_PORT}:${CONTAINER_PORT} \
               --restart unless-stopped \
+              --network yeahyak-net \
+              -p ${HOST_BIND_IP}:${HOST_PORT}:${CONTAINER_PORT} \
+              -e TZ=Asia/Seoul \
               -e SPRING_PROFILES_ACTIVE=prod \
+              -e SERVER_PORT=8080 \
+              -e AI_SERVICE_URL=http://yeahyak-ai:8080 \
+              -e SPRING_DATASOURCE_URL="$DB_URL" \
+              -e SPRING_DATASOURCE_USERNAME="$DB_USERNAME" \
+              -e SPRING_DATASOURCE_PASSWORD="$DB_PASSWORD" \
+              -e SPRING_JPA_HIBERNATE_DDL_AUTO=update \
+              -e SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.MySQLDialect \
+              -e AZURE_STORAGE_BLOB_ENDPOINT="$BLOB_ENDPOINT" \
+              -e AZURE_STORAGE_CONTAINER_NAME="$BLOB_CONTAINER" \
+              -e AZURE_STORAGE_CONNECTION_STRING="$BLOB_CONN_STR" \
               "$IMAGE"
 
-            # 이미지 청소 & 로그아웃
+            # 이미지 청소 & 로그아웃 (옵션)
             docker image prune -f
             docker logout "$LOGIN_SERVER" || true
