@@ -32,14 +32,12 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // $2a / $2y 해시만 처리
         BCryptPasswordEncoder enc2a = new BCryptPasswordEncoder(BCryptPasswordEncoder.BCryptVersion.$2A);
         BCryptPasswordEncoder enc2y = new BCryptPasswordEncoder(BCryptPasswordEncoder.BCryptVersion.$2Y);
 
         return new PasswordEncoder() {
             @Override
             public String encode(CharSequence rawPassword) {
-                // 새로 저장할 때는 $2y로 인코딩
                 return enc2y.encode(rawPassword);
             }
 
@@ -47,7 +45,6 @@ public class SecurityConfig {
             public boolean matches(CharSequence rawPassword, String encodedPassword) {
                 if (encodedPassword == null) return false;
 
-                // 만약 {bcrypt}$2x$ 형태로 저장된 게 있으면 접두어 제거
                 String enc = encodedPassword.startsWith("{bcrypt}")
                         ? encodedPassword.substring("{bcrypt}".length())
                         : encodedPassword;
@@ -55,13 +52,11 @@ public class SecurityConfig {
                 if (enc.startsWith("$2y$")) return enc2y.matches(rawPassword, enc);
                 if (enc.startsWith("$2a$")) return enc2a.matches(rawPassword, enc);
 
-                // 그 외 prefix는 지원하지 않음
                 return false;
             }
 
             @Override
             public boolean upgradeEncoding(String encodedPassword) {
-                // $2y가 아니면 업그레이드 대상
                 return encodedPassword != null
                         && !encodedPassword.startsWith("$2y$")
                         && !encodedPassword.startsWith("{bcrypt}$2y$");

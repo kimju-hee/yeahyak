@@ -88,10 +88,8 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           script_stop: true
-          # 원격으로 export할 변수 목록 (여기 나열된 이름만 원격 셸에 전달됨)
           envs: TZ,SPRING_PROFILES_ACTIVE,SERVER_PORT,AI_SERVICE_URL,DB_URL,DB_USERNAME,DB_PASSWORD,BLOB_ENDPOINT,BLOB_CONTAINER,BLOB_CONN_STR
           script: |
-            # /bin/sh(dash) 호환, 간단/안전 기본기만 유지
             set -eu
 
             LOGIN_SERVER="${{ env.LOGIN_SERVER }}"
@@ -101,23 +99,19 @@ jobs:
             HOST_IP="127.0.0.1"
             PORT="8080"
 
-            # 필수 env 존재 확인(짧게)
             for v in TZ SPRING_PROFILES_ACTIVE SERVER_PORT AI_SERVICE_URL DB_URL DB_USERNAME DB_PASSWORD BLOB_ENDPOINT BLOB_CONTAINER BLOB_CONN_STR; do
               eval "val=\${$v-}"
               [ -n "$val" ] || { echo "missing env: $v"; exit 1; }
             done
 
-            # ACR 로그인 & 최신 이미지 pull
             echo "${{ secrets.ACR_PASSWORD }}" | docker login "$LOGIN_SERVER" -u "${{ secrets.ACR_USERNAME }}" --password-stdin
             docker pull "$IMAGE"
 
-            # 네트워크/컨테이너/포트 정리
             docker network create "$NET_NAME" >/dev/null 2>&1 || true
             docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
             INUSE=$(docker ps --format '{{.ID}} {{.Ports}}' | awk '/(0\.0\.0\.0|127\.0\.0\.1):8080->8080\/tcp/ {print $1}')
             [ -n "$INUSE" ] && docker rm -f $INUSE || true
 
-            # 재실행 (필요 env만 깔끔히 전달)
             docker run -d --name "$CONTAINER_NAME" \
               --restart unless-stopped \
               --network "$NET_NAME" \
@@ -134,17 +128,14 @@ jobs:
               -e AZURE_STORAGE_CONNECTION_STRING="$BLOB_CONN_STR" \
               "$IMAGE"
 
-            # 가벼운 청소
             docker image prune -f >/dev/null 2>&1 || true
             docker logout "$LOGIN_SERVER" || true
         env:
-          # 기본 런타임 설정
           TZ: Asia/Seoul
           SPRING_PROFILES_ACTIVE: prod
           SERVER_PORT: "8080"
           AI_SERVICE_URL: http://yeahyak-ai:8080
 
-          # DB / Blob 시크릿
           DB_URL: ${{ secrets.DB_URL }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
