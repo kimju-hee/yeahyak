@@ -77,7 +77,6 @@ export default function TermsAndPrivacyCheckbox() {
         styles={{
           body: {
             maxHeight: '60vh',
-
             overflowY: 'auto',
             scrollbarWidth: 'thin',
           },

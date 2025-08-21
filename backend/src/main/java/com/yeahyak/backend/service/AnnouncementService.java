@@ -1,16 +1,5 @@
 package com.yeahyak.backend.service;
 
-import com.yeahyak.backend.entity.Announcement;
-import com.yeahyak.backend.entity.enums.AnnouncementType;
-import com.yeahyak.backend.repository.AnnouncementRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,6 +8,19 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.yeahyak.backend.entity.Announcement;
+import com.yeahyak.backend.entity.enums.AnnouncementType;
+import com.yeahyak.backend.repository.AnnouncementRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -72,9 +74,17 @@ public class AnnouncementService {
         original.setUpdatedAt(LocalDateTime.now());
         return announcementRepository.save(original);
     }
+
     public Page<Announcement> searchAnnouncements(String keyword, Pageable pageable) {
         return announcementRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
                 keyword, keyword, pageable
+        );
+    }
+
+    public Page<Announcement> searchAnnouncementsWithType(String type, String keyword, Pageable pageable) {
+        AnnouncementType enumType = AnnouncementType.valueOf(type.toUpperCase());
+        return announcementRepository.findByTypeAndTitleContainingIgnoreCaseOrTypeAndContentContainingIgnoreCase(
+                enumType, keyword, enumType, keyword, pageable
         );
     }
 

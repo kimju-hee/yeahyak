@@ -11,7 +11,7 @@ import DOMPurify from 'dompurify';
 import MarkdownIt from 'markdown-it';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { Rnd } from 'react-rnd';
-import { instance } from '../api/api';
+import { aiAPI } from '../api';
 import { useAuthStore } from '../stores/authStore';
 import {
   CHAT_ROLE,
@@ -19,7 +19,7 @@ import {
   type ChatbotRequest,
   type ChatMessage,
   type ChatType,
-} from '../types/chatbot.type';
+} from '../types/ai.type';
 import type { User } from '../types/profile.type';
 
 interface ChatbotProps {
@@ -96,8 +96,8 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
         role: CHAT_ROLE.AI,
         content:
           type === CHAT_TYPE.FAQ
-            ? '안녕하세요 저는 FAQ 챗봇입니다. 무엇을 도와드릴까요?'
-            : '안녕하세요 저는 Q&A 챗봇입니다. 무엇을 도와드릴까요?',
+            ? '안녕하세요 저는 운영도우미입니다. 무엇을 도와드릴까요?'
+            : '안녕하세요 저는 의약품 AI 어시스턴트입니다. 무엇을 도와드릴까요?',
         key: makeKey(),
       };
       setMessages([initialMessage]);
@@ -139,23 +139,23 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
           content: message.content,
         })),
       };
-      // LOG: 테스트용 로그
-      console.log('🤖 챗봇 요청:', payload);
-
-      const endpoint = chatType === CHAT_TYPE.FAQ ? '/chat/faq' : '/chat/qna';
 
       setRequesting(true);
       const controller = new AbortController();
       abortController.current = controller;
 
       try {
-        const res = await instance.post(endpoint, payload, { signal: controller.signal });
-        // LOG: 테스트용 로그
-        console.log('🤖 챗봇 응답:', res.data);
-        if (res.data.success) {
+        let response;
+        if (chatType === CHAT_TYPE.FAQ) {
+          response = await aiAPI.chatFAQ(payload);
+        } else {
+          response = await aiAPI.chatQnA(payload);
+        }
+
+        if (response.success) {
           const aiMessage: ChatMessage = {
             role: CHAT_ROLE.AI,
-            content: res.data.data.reply || '응답이 없습니다.',
+            content: response.data.reply || '응답이 없습니다.',
             key: makeKey(),
           };
           setMessages((prev) => prev.slice(0, -1).concat(aiMessage));
@@ -181,7 +181,7 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
         abortController.current = null;
       }
     },
-    [chatType, requesting, makeKey],
+    [chatType, requesting, makeKey, messages, user.userId],
   );
 
   return (
@@ -191,6 +191,7 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
         type="primary"
         style={{ insetInlineEnd: '24px' }}
         icon={<MessageOutlined />}
+        tooltip={{ title: '궁금한 점이 있으신가요?', placement: 'left' }}
       >
         <FloatButton
           icon={<QuestionCircleOutlined />}
@@ -214,7 +215,7 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
           bounds={boundsRef?.current ?? undefined}
         >
           <Card
-            title={chatType === CHAT_TYPE.FAQ ? 'FAQ 챗봇' : 'Q&A 챗봇'}
+            title={chatType === CHAT_TYPE.FAQ ? '운영도우미' : '의약품 AI 어시스턴트'}
             extra={
               <Button
                 type="text"

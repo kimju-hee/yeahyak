@@ -1,15 +1,18 @@
 package com.yeahyak.backend.service;
 
-import com.yeahyak.backend.dto.ProductRequestDTO;
-import com.yeahyak.backend.dto.ProductResponseDTO;
-import com.yeahyak.backend.entity.Product;
-import com.yeahyak.backend.entity.enums.MainCategory;
-import com.yeahyak.backend.entity.enums.SubCategory;
-import com.yeahyak.backend.repository.ProductRepository;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.data.domain.*;
-import org.springframework.http.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
@@ -18,6 +21,14 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Optional;
 import java.util.List;
 import java.util.Map;
+import com.yeahyak.backend.dto.ProductRequestDTO;
+import com.yeahyak.backend.dto.ProductResponseDTO;
+import com.yeahyak.backend.entity.Product;
+import com.yeahyak.backend.entity.enums.MainCategory;
+import com.yeahyak.backend.entity.enums.SubCategory;
+import com.yeahyak.backend.repository.ProductRepository;
+import lombok.RequiredArgsConstructor;
+
 
 // ✅ 추가 import
 import com.yeahyak.backend.repository.InventoryHistoryRepository;
@@ -40,20 +51,21 @@ public class ProductServiceImpl implements ProductService {
             throw new IllegalArgumentException("메인 카테고리와 서브 카테고리가 일치하지 않습니다.");
         }
 
-        String summary = callFlaskSummary(dto.getPdfPath());
+    String summary = callFlaskSummary(dto.getPdfPath());
+    String details = dto.getDetails() != null && !dto.getDetails().isEmpty() ? dto.getDetails() : summary;
 
-        Product product = Product.builder()
-                .productName(dto.getProductName())
-                .productCode(dto.getProductCode())
-                .mainCategory(dto.getMainCategory())
-                .subCategory(dto.getSubCategory())
-                .manufacturer(dto.getManufacturer())
-                .details(summary)
-                .unit(dto.getUnit())
-                .unitPrice(dto.getUnitPrice())
-                .productImgUrl(dto.getProductImgUrl())
-                .stock(dto.getStock() == null ? 0 : dto.getStock())
-                .build();
+    Product product = Product.builder()
+        .productName(dto.getProductName())
+        .productCode(dto.getProductCode())
+        .mainCategory(dto.getMainCategory())
+        .subCategory(dto.getSubCategory())
+        .manufacturer(dto.getManufacturer())
+        .details(details)
+        .unit(dto.getUnit())
+        .unitPrice(dto.getUnitPrice())
+        .productImgUrl(dto.getProductImgUrl())
+        .stock(dto.getStock() == null ? 0 : dto.getStock())
+        .build();
 
         return productRepository.save(product).getProductId();
     }
@@ -82,6 +94,7 @@ public class ProductServiceImpl implements ProductService {
         product.setMainCategory(dto.getMainCategory());
         product.setSubCategory(dto.getSubCategory());
         product.setManufacturer(dto.getManufacturer());
+        product.setDetails(dto.getDetails());
         product.setUnit(dto.getUnit());
         product.setUnitPrice(dto.getUnitPrice());
         product.setProductImgUrl(dto.getProductImgUrl());

@@ -11,18 +11,15 @@ import {
   TagsFilled,
   UserOutlined,
 } from '@ant-design/icons';
-import { ConfigProvider, Divider, Dropdown, Flex, Layout, Menu, Space, Typography } from 'antd';
-import DOMPurify from 'dompurify';
+import { ConfigProvider, Dropdown, Flex, Layout, Menu, Space, Typography } from 'antd';
 import { useRef } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import { logo } from '../assets';
 import Chatbot from '../components/Chatbot';
 import { useAuthStore } from '../stores/authStore';
-import { PHARMACY_STATUS, USER_ROLE, type Pharmacy } from '../types/profile.type';
-const { Sider, Header, Content, Footer } = Layout;
-
-// HTML 파일들을 텍스트로 import
-import privacyHtml from '../assets/privacy.html?raw';
-import termsHtml from '../assets/terms.html?raw';
+import { PHARMACY_STATUS, USER_ROLE, type Pharmacy, type User } from '../types';
+import Footer from './Footer';
+const { Sider, Header, Content } = Layout;
 
 // Design Token
 const theme = {
@@ -46,7 +43,7 @@ const theme = {
 const siderMenuItems = [
   {
     key: 'notices',
-    label: <Link to="/branch/notices">공지사항</Link>,
+    label: <Link to="/branch/announcements">공지사항</Link>,
     icon: <NotificationFilled />,
   },
   {
@@ -56,62 +53,21 @@ const siderMenuItems = [
   },
   {
     key: 'order-request',
-    label: <Link to="/branch/order-request">발주 요청</Link>,
+    label: <Link to="/branch/orders">발주 요청</Link>,
     icon: <ShoppingFilled />,
   },
   {
     key: 'return-request',
-    label: <Link to="/branch/return-request">반품 요청</Link>,
+    label: <Link to="/branch/returns">반품 요청</Link>,
     icon: <FrownFilled />,
   },
 ];
 
 export default function BranchLayout() {
   const location = useLocation();
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.user) as User;
   const profile = useAuthStore((state) => state.profile);
-  const pharmacy = user?.role === USER_ROLE.BRANCH ? (profile as Pharmacy) : null;
-
-  // 이용약관과 개인정보처리방침 새 창으로 열기
-  const openTermsWindow = () => {
-    const sanitizedHtml = DOMPurify.sanitize(termsHtml);
-    // UTF-8 BOM 추가하여 인코딩 확실히 처리
-    const bom = '\uFEFF';
-    const blob = new Blob([bom + sanitizedHtml], { type: 'text/html; charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const newWindow = window.open(
-      url,
-      '_blank',
-      'width=800,height=600,scrollbars=yes,resizable=yes',
-    );
-
-    // 메모리 정리를 위해 URL 해제 (창이 닫힐 때)
-    if (newWindow) {
-      newWindow.addEventListener('beforeunload', () => {
-        URL.revokeObjectURL(url);
-      });
-    }
-  };
-
-  const openPrivacyWindow = () => {
-    const sanitizedHtml = DOMPurify.sanitize(privacyHtml);
-    // UTF-8 BOM 추가하여 인코딩 확실히 처리
-    const bom = '\uFEFF';
-    const blob = new Blob([bom + sanitizedHtml], { type: 'text/html; charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const newWindow = window.open(
-      url,
-      '_blank',
-      'width=800,height=600,scrollbars=yes,resizable=yes',
-    );
-
-    // 메모리 정리를 위해 URL 해제 (창이 닫힐 때)
-    if (newWindow) {
-      newWindow.addEventListener('beforeunload', () => {
-        URL.revokeObjectURL(url);
-      });
-    }
-  };
+  const pharmacy = user.role === USER_ROLE.BRANCH ? (profile as Pharmacy) : null;
 
   // 아바타 메뉴 아이템
   const avatarMenuItems = {
@@ -165,7 +121,9 @@ export default function BranchLayout() {
             justifyContent: 'space-between',
           }}
         >
-          <Link to="/branch">예약</Link>
+          <Link to="/branch">
+            <img src={logo} alt="로고" style={{ height: '32px' }} />
+          </Link>
           <Flex align="center" gap={'24px'}>
             <Space>
               <Typography.Text style={{ color: '#ffffff' }}>
@@ -220,17 +178,7 @@ export default function BranchLayout() {
               </Content>
               <Chatbot boundsRef={contentRef} />
             </div>
-            <Footer style={{ textAlign: 'center' }}>
-              © 2025 Team yeahyak
-              <Divider type="vertical" />
-              <Typography.Link onClick={openTermsWindow} style={{ color: '#000000' }}>
-                이용약관
-              </Typography.Link>
-              <Divider type="vertical" />
-              <Typography.Link onClick={openPrivacyWindow} style={{ color: '#000000' }}>
-                개인정보처리방침
-              </Typography.Link>
-            </Footer>
+            <Footer />
           </Layout>
         </Layout>
       </Layout>
