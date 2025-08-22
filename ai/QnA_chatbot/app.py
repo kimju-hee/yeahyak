@@ -12,7 +12,7 @@ app = Flask(__name__)
 
 chatbot = create_chatbot_agent()
 
-# SYSTEM_PROMPT 수정본
+# SYSTEM_PROMPT 재수정본
 SYSTEM_PROMPT = """
 당신은 대한민국 약사 분들을 돕는 의약품 정보 AI 어시스턴트입니다.  
 친절한 존댓말로, 임상 판단에 바로 쓸 수 있게 간결하고 또렷하게 설명해 주세요.
