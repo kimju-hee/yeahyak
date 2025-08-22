@@ -1,17 +1,26 @@
 package com.yeahyak.backend.service;
 
-import com.yeahyak.backend.entity.Announcement;
-import com.yeahyak.backend.entity.enums.AnnouncementType;
-import com.yeahyak.backend.repository.AnnouncementRepository;
-import lombok.RequiredArgsConstructor;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import com.yeahyak.backend.entity.Announcement;
+import com.yeahyak.backend.entity.enums.AnnouncementType;
+import com.yeahyak.backend.repository.AnnouncementRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -65,9 +74,33 @@ public class AnnouncementService {
         original.setUpdatedAt(LocalDateTime.now());
         return announcementRepository.save(original);
     }
+
     public Page<Announcement> searchAnnouncements(String keyword, Pageable pageable) {
-        return announcementRepository
-                .findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(keyword, keyword, pageable);
+        return announcementRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
+                keyword, keyword, pageable
+        );
     }
 
+    public Page<Announcement> searchAnnouncementsWithType(String type, String keyword, Pageable pageable) {
+        AnnouncementType enumType = AnnouncementType.valueOf(type.toUpperCase());
+        return announcementRepository.findByTypeAndTitleContainingIgnoreCaseOrTypeAndContentContainingIgnoreCase(
+                enumType, keyword, enumType, keyword, pageable
+        );
+    }
+
+    public String storeFile(MultipartFile file) {
+        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+
+
+        Path uploadPath = Paths.get("uploads").toAbsolutePath().normalize();
+        try {
+            Files.createDirectories(uploadPath);
+            Path target = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new RuntimeException("파일 저장 실패", e);
+        }
+
+        return "/uploads/" + fileName;
+    }
 }

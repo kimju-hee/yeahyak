@@ -12,4 +12,5 @@ public class UserInfo {
     private String email;
     private int point;
     private String role;
+    private String creditStatus;
 }

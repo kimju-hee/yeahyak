@@ -38,7 +38,7 @@ public class User implements UserDetails {
     private Integer point = 0;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 30, nullable = false)
+    @Column(length = 30)
     private CreditStatus creditStatus = CreditStatus.FULL;
 
 

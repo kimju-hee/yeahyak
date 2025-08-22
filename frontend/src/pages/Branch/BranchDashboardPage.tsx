@@ -1,45 +1,48 @@
-import { Card, Col, List, message, Row, Table } from 'antd';
+import { Card, Col, List, message, Progress, Row, Space, Statistic, Table, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { instance } from '../../api/api';
+import { useNavigate } from 'react-router-dom';
+import { announcementAPI, orderAPI } from '../../api';
+import { ANNOUNCEMENT_TYPE_TEXT } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
-import { ANNOUNCEMENT_TYPE, type Announcement } from '../../types/announcement.type';
-import type { OrderListResponse } from '../../types/order.type';
-import type { Pharmacy, User } from '../../types/profile.type';
+import { type Announcement, type Order, type Pharmacy, type User } from '../../types';
+import { calculateCreditInfo } from '../../utils';
 
 export default function BranchDashboardPage() {
   const [messageApi, contextHolder] = message.useMessage();
+  const navigate = useNavigate();
 
   const user = useAuthStore((state) => state.user) as User;
   const profile = useAuthStore((state) => state.profile) as Pharmacy;
   const pharmacyId = profile.pharmacyId;
 
-  const [latestNotices, setLatestNotices] = useState<Announcement[]>([]);
-  const [recentOrder, setRecentOrder] = useState<OrderListResponse[]>([]);
+  const [latestAnnouncements, setLatestAnnouncements] = useState<Announcement[]>([]);
+  const [recentOrder, setRecentOrder] = useState<Order[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const noticeRes = await instance.get('/announcements?page=0&size=5');
-        // LOG: 테스트용 로그
-        console.log('✨ 최근 공지사항 로딩 응답:', noticeRes.data);
-        if (noticeRes.data.success && noticeRes.data.data.length > 0) {
-          setLatestNotices(noticeRes.data.data);
+        const announcementResponse = await announcementAPI.getAnnouncements({ page: 0, size: 5 });
+
+        if (announcementResponse.success && announcementResponse.data.length > 0) {
+          setLatestAnnouncements(announcementResponse.data);
+        } else {
+          setLatestAnnouncements([]);
         }
 
-        const orderRes = await instance.get(
-          `/orders/branch/orders?pharmacyId=${pharmacyId}&page=0&size=1`,
-        );
-        // LOG: 테스트용 로그
-        console.log('✨ 최근 발주 상세 로딩 응답:', orderRes.data);
-        if (orderRes.data.success && orderRes.data.data.length > 0) {
-          setRecentOrder(orderRes.data.data);
+        const orderResponse = await orderAPI.getBranchOrders({ pharmacyId, page: 0, size: 1 });
+
+        if (orderResponse.success && orderResponse.data.length > 0) {
+          setRecentOrder(orderResponse.data);
+        } else {
+          setRecentOrder([]);
         }
       } catch (e: any) {
         console.error('대시보드 데이터 로드 실패:', e);
-        messageApi.error(e.message || '대시보드 데이터 로딩 중 오류가 발생했습니다.');
-        setLatestNotices([]);
+        messageApi.error(
+          e.response?.data?.message || '대시보드 데이터 로딩 중 오류가 발생했습니다.',
+        );
+        setLatestAnnouncements([]);
         setRecentOrder([]);
       }
     };
@@ -48,27 +51,19 @@ export default function BranchDashboardPage() {
   }, [pharmacyId]);
 
   const recentOrderItemsColumns = [
-    {
-      title: '제품명',
-      dataIndex: 'productName',
-      key: 'productName',
-    },
-    {
-      title: '수량',
-      dataIndex: 'quantity',
-      key: 'quantity',
-    },
+    { title: '제품명', dataIndex: 'productName', key: 'productName' },
+    { title: '수량', dataIndex: 'quantity', key: 'quantity' },
     {
       title: '단가',
       dataIndex: 'unitPrice',
       key: 'unitPrice',
-      render: (val: number) => `${val.toLocaleString()}원`,
+      render: (value: number) => `${value.toLocaleString()}원`,
     },
     {
       title: '소계',
       dataIndex: 'subtotalPrice',
       key: 'subtotalPrice',
-      render: (val: number) => `${val.toLocaleString()}원`,
+      render: (value: number) => `${value.toLocaleString()}원`,
     },
   ];
 
@@ -79,12 +74,21 @@ export default function BranchDashboardPage() {
         <Col span={24}>
           <Card title="최근 공지사항" variant="borderless">
             <List
-              dataSource={latestNotices}
+              dataSource={latestAnnouncements}
               renderItem={(item) => (
                 <List.Item key={item.announcementId}>
                   <List.Item.Meta
-                    title={<Link to={`/branch/notices/${item.announcementId}`}>{item.title}</Link>}
-                    description={ANNOUNCEMENT_TYPE[item.type]}
+                    title={
+                      <Typography.Link
+                        onClick={() => {
+                          navigate(`/branch/announcements/${item.announcementId}`, {
+                            state: { returnTo: { type: item.type, page: 1, keyword: '' } },
+                          });
+                        }}
+                      >
+                        {`[${ANNOUNCEMENT_TYPE_TEXT[item.type]}] ${item.title}`}
+                      </Typography.Link>
+                    }
                   />
                 </List.Item>
               )}
@@ -121,14 +125,37 @@ export default function BranchDashboardPage() {
                 pagination={false}
                 rowKey="productName"
                 size="small"
-                locale={{ emptyText: '최근 발주 내역이 없습니다.' }}
               />
             </Card>
           )}
         </Col>
         <Col span={12}>
-          <Card title="잔액 현황" variant="borderless">
-            {user.point.toLocaleString()}원
+          <Card title="크레딧 현황" variant="borderless">
+            <Space direction="vertical" style={{ width: '100%' }}>
+              {(() => {
+                const creditInfo = calculateCreditInfo(user.point);
+                return (
+                  <>
+                    <Statistic
+                      title="남은 금액"
+                      value={creditInfo.remainingAmount}
+                      formatter={(value) => `${Number(value).toLocaleString()}원`}
+                    />
+                    <Progress
+                      percent={creditInfo.remainingPercent}
+                      showInfo={false}
+                      strokeColor={creditInfo.strokeColor}
+                    />
+                    <Typography.Text type="secondary">
+                      사용 금액: {creditInfo.usedAmount.toLocaleString()}원
+                    </Typography.Text>
+                    <Typography.Text type="secondary">
+                      총 한도: {creditInfo.totalLimit.toLocaleString()}원
+                    </Typography.Text>
+                  </>
+                );
+              })()}
+            </Space>
           </Card>
         </Col>
       </Row>

@@ -1,11 +1,21 @@
-export const PRODUCT_MAIN_CATEGORY = {
-  전문의약품: '전문의약품',
-  일반의약품: '일반의약품',
-  의약외품: '의약외품',
-} as const;
-export type ProductMainCategory = keyof typeof PRODUCT_MAIN_CATEGORY;
+import type { PaginatedResponse } from './api.type';
 
-export const PRODUCT_SUB_CATEGORY = {
+export interface Product {
+  productId: number;
+  productName: string;
+  productCode: string;
+  mainCategory: ProductMainCategory;
+  subCategory: ProductSubCategory;
+  manufacturer: string;
+  unit: string;
+  unitPrice: number;
+  details?: string;
+  productImgUrl?: string;
+  createdAt: string;
+  stock: number;
+}
+
+export const PRODUCT_CATEGORIES = {
   전문의약품: [
     '항생제',
     '고혈압_치료제',
@@ -26,52 +36,51 @@ export const PRODUCT_SUB_CATEGORY = {
     '기타_의약외품',
   ],
 } as const;
-export type ProductSubCategory =
-  | (typeof PRODUCT_SUB_CATEGORY.전문의약품)[number]
-  | (typeof PRODUCT_SUB_CATEGORY.일반의약품)[number]
-  | (typeof PRODUCT_SUB_CATEGORY.의약외품)[number];
+
+export type ProductMainCategory = keyof typeof PRODUCT_CATEGORIES;
+export type ProductMainCategoryTextMap = { [key in ProductMainCategory]: string };
+
+export type ProductSubCategory = (typeof PRODUCT_CATEGORIES)[ProductMainCategory][number];
+export type ProductSubCategoryTextMap = { [key in ProductSubCategory]: string };
+
 export type ProductSubCategoryWithAll = '전체' | ProductSubCategory;
 
-// 의약품 POST
-export interface ProductRequest {
+export interface ProductCreateRequest {
   productName: string;
   productCode: string;
-  manufacturer: string;
   mainCategory: ProductMainCategory;
   subCategory: ProductSubCategory;
-  details?: string;
+  manufacturer: string;
   unit: string;
   unitPrice: number;
+  details?: string;
   productImgUrl?: string;
   stock: number;
 }
 
-// 의약품 목록 GET
-export interface ProductResponse {
-  productId: number;
-  productName: string;
-  productCode: string;
-  manufacturer: string;
-  mainCategory: ProductMainCategory;
-  subCategory: ProductSubCategory;
-  details?: string;
-  unit: string;
-  unitPrice: number;
-  createdAt: string;
-  productImgUrl?: string;
+export interface ProductListParams {
+  page?: number;
+  size?: number;
+  mainCategory?: ProductMainCategory;
+  subCategory?: ProductSubCategory;
+  keyword?: string;
 }
 
-// 의약품 상세 GET
-export interface ProductDetailResponse {
-  productId: number;
+export interface ProductUpdateRequest {
   productName: string;
   productCode: string;
-  manufacturer: string;
   mainCategory: ProductMainCategory;
   subCategory: ProductSubCategory;
-  details?: string;
+  manufacturer: string;
   unit: string;
   unitPrice: number;
-  createdAt: string;
+  details?: string;
   productImgUrl?: string;
+  stock: number;
 }
+
+export type ProductCreateResponse = PaginatedResponse<number>;
+export type ProductListResponse = PaginatedResponse<Product>;
+export type ProductDetailResponse = PaginatedResponse<Product>;
+export type ProductUpdateResponse = PaginatedResponse<Product>;
+export type ProductDeleteResponse = PaginatedResponse<string>;

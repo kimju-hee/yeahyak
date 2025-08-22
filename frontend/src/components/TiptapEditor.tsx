@@ -33,7 +33,7 @@ const TiptapToolbarContent = () => {
       <ToolbarSeparator />
 
       <ToolbarGroup>
-        <HeadingDropdownMenu levels={[1, 2]} />
+        <HeadingDropdownMenu levels={[1, 2, 3]} />
         <ListDropdownMenu types={['bulletList', 'orderedList']} />
       </ToolbarGroup>
 

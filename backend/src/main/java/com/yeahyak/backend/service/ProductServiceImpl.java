@@ -1,5 +1,26 @@
 package com.yeahyak.backend.service;
 
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+import java.util.Optional;
+import java.util.List;
+import java.util.Map;
 import com.yeahyak.backend.dto.ProductRequestDTO;
 import com.yeahyak.backend.dto.ProductResponseDTO;
 import com.yeahyak.backend.entity.Product;
@@ -7,17 +28,12 @@ import com.yeahyak.backend.entity.enums.MainCategory;
 import com.yeahyak.backend.entity.enums.SubCategory;
 import com.yeahyak.backend.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.data.domain.*;
-import org.springframework.http.*;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
-import java.util.Map;
+
+// ✅ 추가 import
+import com.yeahyak.backend.repository.InventoryHistoryRepository;
+import java.util.HashMap;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -26,26 +42,30 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final RestTemplate restTemplate = new RestTemplate();
 
+    // ✅ 추가 주입
+    private final InventoryHistoryRepository inventoryHistoryRepository;
+
     @Override
     public Long registerProduct(ProductRequestDTO dto) {
         if (dto.getSubCategory().getMainCategory() != dto.getMainCategory()) {
             throw new IllegalArgumentException("메인 카테고리와 서브 카테고리가 일치하지 않습니다.");
         }
 
-        String summary = callFlaskSummary(dto.getPdfPath());
+    String summary = callFlaskSummary(dto.getPdfPath());
+    String details = dto.getDetails() != null && !dto.getDetails().isEmpty() ? dto.getDetails() : summary;
 
-        Product product = Product.builder()
-                .productName(dto.getProductName())
-                .productCode(dto.getProductCode())
-                .mainCategory(dto.getMainCategory())
-                .subCategory(dto.getSubCategory())
-                .manufacturer(dto.getManufacturer())
-                .details(summary)
-                .unit(dto.getUnit())
-                .unitPrice(dto.getUnitPrice())
-                .productImgUrl(dto.getProductImgUrl())
-                .stock(dto.getStock() == null ? 0 : dto.getStock())
-                .build();
+    Product product = Product.builder()
+        .productName(dto.getProductName())
+        .productCode(dto.getProductCode())
+        .mainCategory(dto.getMainCategory())
+        .subCategory(dto.getSubCategory())
+        .manufacturer(dto.getManufacturer())
+        .details(details)
+        .unit(dto.getUnit())
+        .unitPrice(dto.getUnitPrice())
+        .productImgUrl(dto.getProductImgUrl())
+        .stock(dto.getStock() == null ? 0 : dto.getStock())
+        .build();
 
         return productRepository.save(product).getProductId();
     }
@@ -74,6 +94,7 @@ public class ProductServiceImpl implements ProductService {
         product.setMainCategory(dto.getMainCategory());
         product.setSubCategory(dto.getSubCategory());
         product.setManufacturer(dto.getManufacturer());
+        product.setDetails(dto.getDetails());
         product.setUnit(dto.getUnit());
         product.setUnitPrice(dto.getUnitPrice());
         product.setProductImgUrl(dto.getProductImgUrl());
@@ -113,6 +134,30 @@ public class ProductServiceImpl implements ProductService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Product> productPage = productRepository.findFiltered(mainCategory, subCategory, keyword, pageable);
 
+        // ✅ 현재 페이지 productId 목록
+        List<Long> ids = productPage.map(Product::getProductId).getContent();
+        Map<Long, LocalDateTime> lastInboundMap = new HashMap<>();
+        Map<Long, LocalDateTime> lastOutboundMap = new HashMap<>();
+        // ✅ 추가: 현재 재고 맵 (productId -> stock)
+        Map<Long, Integer> currentStockMap = new HashMap<>();
+
+        if (!ids.isEmpty()) {
+            // ✅ 최신 입고(RETURN_IN 포함)
+            for (Object[] row : inventoryHistoryRepository.findLastInboundAtByProductIds(ids)) {
+                lastInboundMap.put((Long) row[0], (LocalDateTime) row[1]);
+            }
+            // ✅ 최신 출고
+            for (Object[] row : inventoryHistoryRepository.findLastOutboundAtByProductIds(ids)) {
+                lastOutboundMap.put((Long) row[0], (LocalDateTime) row[1]);
+            }
+            // ✅ 추가: 히스토리 기반 현재 재고 집계
+            for (Object[] row : inventoryHistoryRepository.findCurrentStockByProductIds(ids)) {
+                Long pid = ((Number) row[0]).longValue();
+                Integer stock = row[1] == null ? 0 : ((Number) row[1]).intValue();
+                currentStockMap.put(pid, stock);
+            }
+        }
+
         return productPage.map(product -> ProductResponseDTO.builder()
                 .productId(product.getProductId())
                 .productName(product.getProductName())
@@ -123,9 +168,16 @@ public class ProductServiceImpl implements ProductService {
                 .details(product.getDetails())
                 .unit(product.getUnit())
                 .unitPrice(product.getUnitPrice())
-                .stock(product.getStock())
+                // ✅ 변경: products.stock(초기값)이 아니라 히스토리 집계값으로 덮어쓰기
+                .stock(currentStockMap.getOrDefault(
+                        product.getProductId(),
+                        Optional.ofNullable(product.getStock()).orElse(0)
+                ))
                 .productImgUrl(product.getProductImgUrl())
                 .createdAt(product.getCreatedAt())
+                // ✅ 추가 세팅
+                .lastInboundAt(lastInboundMap.get(product.getProductId()))
+                .lastOutboundAt(lastOutboundMap.get(product.getProductId()))
                 .build());
     }
 }

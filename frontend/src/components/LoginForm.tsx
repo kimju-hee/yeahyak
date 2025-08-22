@@ -11,7 +11,7 @@ interface LoginFormProps {
 
 export default function LoginForm({ role, form, handleSubmit }: LoginFormProps) {
   return (
-    <Form name={`${role.toLowerCase()}-login`} form={form} onFinish={handleSubmit}>
+    <Form name={`login-${role.toLowerCase()}`} form={form} onFinish={handleSubmit}>
       <Flex vertical justify="center">
         <Form.Item
           name="email"
@@ -35,30 +35,30 @@ export default function LoginForm({ role, form, handleSubmit }: LoginFormProps) 
         <Flex justify="center" align="center" gap="small">
           {role === 'BRANCH' ? (
             <>
-              <Link to="/register" style={{ color: 'black', whiteSpace: 'nowrap' }}>
-                회원가입
-              </Link>
-              <Divider type="vertical" />
               <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 아이디 찾기
               </Link>
               <Divider type="vertical" />
               <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 비밀번호 찾기
+              </Link>
+              <Divider type="vertical" />
+              <Link to="/signup-branch" style={{ color: 'black', whiteSpace: 'nowrap' }}>
+                회원가입
               </Link>
             </>
           ) : (
             <>
-              <Link to="/hq-register" style={{ color: 'black', whiteSpace: 'nowrap' }}>
-                회원가입
-              </Link>
-              <Divider type="vertical" />
               <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 아이디 찾기
               </Link>
               <Divider type="vertical" />
               <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 비밀번호 찾기
+              </Link>
+              <Divider type="vertical" />
+              <Link to="/signup-hq" style={{ color: 'black', whiteSpace: 'nowrap' }}>
+                회원가입
               </Link>
             </>
           )}
