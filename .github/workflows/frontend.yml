@@ -15,13 +15,15 @@ concurrency:
   group: frontend-deploy-deploy
   cancel-in-progress: true
 
+# ...위 내용 동일...
+
 jobs:
   build-push-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}      # 현재 푸시된 브랜치(deploy) 기준
+          ref: ${{ github.ref }}
 
       - name: Login ACR
         uses: docker/login-action@v3
@@ -30,7 +32,6 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      # ✅ 소프트 타입체크(실패해도 배포는 계속)
       - name: Setup Node for typecheck
         uses: actions/setup-node@v4
         with:
@@ -46,6 +47,16 @@ jobs:
         working-directory: frontend
         run: npm run typecheck
         continue-on-error: true
+
+      # ✅ 추가: Vite 빌드용 .env.production을 CI에서만 생성
+      - name: Create .env.production for Vite (CI-only)
+        working-directory: frontend
+        run: |
+          cat > .env.production << 'EOF'
+          VITE_API_BASE_URL=${{ secrets.API_BASE_URL }}
+          VITE_AI_API_BASE_URL=${{ secrets.AI_API_BASE_URL }}
+          EOF
+          echo "Created frontend/.env.production"
 
       - name: Build & Push image (deploy)
         run: |
@@ -64,14 +75,8 @@ jobs:
             set -e
             cd /opt/yeahyak
             docker login ${{ secrets.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} -p ${{ secrets.ACR_PASSWORD }}
-
-            # ✅ docker-compose.yml 안의 프런트 이미지를 어떤 태그든 무조건 :deploy 로 통일
             sed -i -E "s#${{ secrets.ACR_LOGIN_SERVER }}/yeahyak-frontend:[^[:space:]]+#${{ secrets.ACR_LOGIN_SERVER }}/yeahyak-frontend:deploy#g" docker-compose.yml
-
-            # 최신 이미지 받고 컨테이너 교체
             docker compose pull frontend || true
             docker compose rm -sf frontend || true
             docker compose up -d --no-deps --force-recreate frontend
-
-            # 안 쓰는 이미지 정리
             docker image prune -f
