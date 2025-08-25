@@ -30,6 +30,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    /** $2a/$2y 호환 비밀번호 인코더 (기존 로직 유지) */
     @Bean
     public PasswordEncoder passwordEncoder() {
         BCryptPasswordEncoder enc2a = new BCryptPasswordEncoder(BCryptPasswordEncoder.BCryptVersion.$2A);
@@ -69,6 +70,7 @@ public class SecurityConfig {
         return configuration.getAuthenticationManager();
     }
 
+    /** 정적 리소스 완전 무시 */
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
         return web -> web.ignoring().requestMatchers(
@@ -82,19 +84,19 @@ public class SecurityConfig {
         return new RestTemplate();
     }
 
+    /** CORS 전역 설정 */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",
                 "http://127.0.0.1:5173",
-                "http://4.230.25.25"
+                "http://4.230.25.25" // VM 프론트 접근 도메인/아이피 필요시 추가
         ));
         config.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
+        config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization"));
-        config.setAllowCredentials(true);
+        config.setAllowCredentials(true); // 필요 시 true
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
@@ -104,6 +106,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // REST API라면 CSRF 비활성(또는 /ai/**만 무시도 가능)
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -122,7 +125,14 @@ public class SecurityConfig {
                         })
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // Preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // ✅ AI 게이트웨이: 무인증 허용
+                        .requestMatchers("/ai/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/ai/chat/qna").permitAll()
+
+                        // 인증 없이 열어둘 엔드포인트들
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/auth/**",
@@ -133,9 +143,12 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/docs/**"
                         ).permitAll()
+
+                        // 나머지는 인증 필요
                         .anyRequest().authenticated()
                 );
 
+        // JWT 필터는 UsernamePasswordAuthenticationFilter 앞에
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
