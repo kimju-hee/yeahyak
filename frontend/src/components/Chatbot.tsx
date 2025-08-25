@@ -130,7 +130,7 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
     setMessages((prev) => [...prev, userMessage, loadingMessage]);
     setContent('');
 
-    // ✅ 공통: 기존 메시지 + 방금 보낸 유저 메시지
+    // ✅ 공통(FAQ/QNA 모두): 직전 메시지 + 방금 보낸 메시지
     const merged = [...messages, userMessage];
 
     setRequesting(true);
@@ -139,30 +139,31 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
 
     try {
       let response;
+
       if (chatType === CHAT_TYPE.FAQ) {
-        // ✅ FAQ는 기존과 동일 (role 그대로)
+        // ✅ FAQ는 기존처럼 role 그대로 보냄
         const payload: ChatbotRequest = {
           userId: user.userId,
-          chatType: chatType,
+          chatType: CHAT_TYPE.FAQ,
           query: raw.trim(),
-          history: merged.map((message) => ({
-            role: message.role,
-            content: message.content,
+          history: merged.map((m) => ({
+            role: m.role,
+            content: m.content,
           })),
         };
         response = await aiAPI.chatFAQ(payload);
       } else {
-        // ✅ QNA는 history 스키마를 'type'으로 변환 (ai | human)
+        // ✅ QNA는 history를 type: 'human' | 'ai'로 변환, chatType도 강제 'QNA'
         const payloadQna = {
           userId: user.userId,
-          chatType: chatType,
+          chatType: 'QNA', // ← 'ONA'로 찍혀도 여기서 강제 교정
           query: raw.trim(),
-          history: merged.map((message) => ({
-            type: message.role === CHAT_ROLE.AI ? 'ai' : 'human',
-            content: message.content,
+          history: merged.map((m) => ({
+            type: m.role === CHAT_ROLE.AI ? 'ai' : 'human',
+            content: m.content,
           })),
         };
-        // ChatbotRequest 타입이 role 기반이면 캐스팅만 적용
+        // 타입이 role 기반이면 캐스팅만
         response = await aiAPI.chatQnA(payloadQna as unknown as ChatbotRequest);
       }
 
