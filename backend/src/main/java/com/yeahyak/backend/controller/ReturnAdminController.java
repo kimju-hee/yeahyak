@@ -41,4 +41,15 @@ public class ReturnAdminController {
         returnService.updateStatus(returnId, ReturnStatus.REJECTED);
         return ResponseEntity.ok(Map.of("success", true, "data", ""));
     }
+
+    @PatchMapping("/{returnId}")
+    public ResponseEntity<?> updateReturnStatus(
+            @PathVariable Long returnId,
+            @RequestBody Map<String, String> request
+    ) {
+        String statusStr = request.get("status");
+        ReturnStatus status = ReturnStatus.valueOf(statusStr.toUpperCase());
+        returnService.updateStatus(returnId, status);
+        return ResponseEntity.ok(Map.of("success", true, "data", ""));
+    }
 }
