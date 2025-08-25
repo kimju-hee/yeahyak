@@ -33,7 +33,11 @@ const getStatusTag = (status: OrderStatus, isClickable: boolean) => {
   const color = ORDER_STATUS_COLORS[status];
   const text = ORDER_STATUS_TEXT[status];
   return (
-    <Tag bordered={true} color={color} style={isClickable ? { cursor: 'pointer' } : {}}>
+    <Tag
+      bordered={true}
+      color={color}
+      style={isClickable ? { cursor: 'pointer' } : { cursor: 'default' }}
+    >
       {text}
     </Tag>
   );

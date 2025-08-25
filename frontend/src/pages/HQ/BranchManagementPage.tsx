@@ -25,7 +25,7 @@ const getStatusTag = (status: BranchRequestStatus) => {
   const color = BRANCH_REQUEST_STATUS_COLORS[status];
   const text = BRANCH_REQUEST_STATUS_TEXT[status];
   return (
-    <Tag bordered={true} color={color}>
+    <Tag bordered={true} color={color} style={{ cursor: 'default' }}>
       {text}
     </Tag>
   );

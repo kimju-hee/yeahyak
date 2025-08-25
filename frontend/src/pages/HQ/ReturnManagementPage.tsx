@@ -33,7 +33,11 @@ const getStatusTag = (status: ReturnStatus, isClickable: boolean) => {
   const color = RETURN_STATUS_COLORS[status];
   const text = RETURN_STATUS_TEXT[status];
   return (
-    <Tag bordered={true} color={color} style={isClickable ? { cursor: 'pointer' } : {}}>
+    <Tag
+      bordered={true}
+      color={color}
+      style={isClickable ? { cursor: 'pointer' } : { cursor: 'default' }}
+    >
       {text}
     </Tag>
   );
@@ -58,7 +62,7 @@ export default function ReturnManagementPage() {
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [total, setTotal] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const fetchStatistics = async () => {
     try {
@@ -159,7 +163,7 @@ export default function ReturnManagementPage() {
           break;
       }
 
-      if (res.data.success) {
+      if (res.success) {
         messageApi.success('반품 상태가 변경되었습니다.');
         fetchStatistics();
         fetchReturns();
