@@ -137,7 +137,7 @@ export default function HqLayout() {
             justifyContent: 'space-between',
           }}
         >
-          <Link to="/branch">
+          <Link to="/hq">
             <img src={logo} alt="로고" style={{ height: '32px' }} />
           </Link>
           <Flex align="center" gap={'24px'}>

@@ -39,11 +39,11 @@
 //   key: string;
 //   date: string;
 //   branch: string;
-//   order: number;
+//   orders: number;
 //   stock: { [key: string]: number };
 //   predict: { [key: string]: number };
 //   recommend: { [key: string]: number };
-//   status: StatusType;
+//   pharmacyRequestStatus: StatusType;
 // }
 // const pastelColors = [
 //   '#A2C8EC', // 파스텔 블루
@@ -82,7 +82,7 @@
 //     key: '1',
 //     date: '2025-01',
 //     branch: '대전서구점',
-//     order: 368,
+//     orders: 368,
 //     stock: {
 //       타이레놀: 27,
 //       펜잘큐: 98,
@@ -107,7 +107,7 @@
 //       활명수: 72,
 //       모드나폴: 74,
 //     },
-//     status: ['정상', '정상'],
+//     pharmacyRequestStatus: ['정상', '정상'],
 //     recommend: {
 //       타이레놀: 43,
 //       펜잘큐: 0,
@@ -125,7 +125,7 @@
 //     key: '2',
 //     date: '2025-01',
 //     branch: '천안불당점',
-//     order: 290,
+//     orders: 290,
 //     stock: {
 //       타이레놀: 26,
 //       펜잘큐: 53,
@@ -150,7 +150,7 @@
 //       활명수: 35,
 //       모드나폴: 79,
 //     },
-//     status: ['정상', '부족'],
+//     pharmacyRequestStatus: ['정상', '부족'],
 //     recommend: {
 //       타이레놀: 18,
 //       펜잘큐: 0,
@@ -168,7 +168,7 @@
 //     key: '3',
 //     date: '2025-01',
 //     branch: '청주오창점',
-//     order: 169,
+//     orders: 169,
 //     stock: {
 //       타이레놀: 94,
 //       펜잘큐: 15,
@@ -194,7 +194,7 @@
 //       활명수: 102,
 //       모드나폴: 32,
 //     },
-//     status: ['정상', '부족'],
+//     pharmacyRequestStatus: ['정상', '부족'],
 //     recommend: {
 //       타이레놀: 0,
 //       펜잘큐: 77,
@@ -212,7 +212,7 @@
 //     key: '4',
 //     date: '2025-01',
 //     branch: '대전탄방점',
-//     order: 295,
+//     orders: 295,
 //     stock: {
 //       타이레놀: 60,
 //       펜잘큐: 97,
@@ -238,7 +238,7 @@
 //       활명수: 120,
 //       모드나폴: 101,
 //     },
-//     status: ['정상', '과다'],
+//     pharmacyRequestStatus: ['정상', '과다'],
 //     recommend: {
 //       타이레놀: 47,
 //       펜잘큐: 0,
@@ -256,7 +256,7 @@
 //     key: '5',
 //     date: '2025-02',
 //     branch: '청주흥덕점',
-//     order: 291,
+//     orders: 291,
 //     stock: {
 //       타이레놀: 32,
 //       펜잘큐: 83,
@@ -282,7 +282,7 @@
 //       활명수: 104,
 //       모드나폴: 106,
 //     },
-//     status: ['부족', '과다'],
+//     pharmacyRequestStatus: ['부족', '과다'],
 //     recommend: {
 //       타이레놀: 13,
 //       펜잘큐: 17,
@@ -300,7 +300,7 @@
 //     key: '6',
 //     date: '2025-02',
 //     branch: '대전둔산점',
-//     order: 361,
+//     orders: 361,
 //     stock: {
 //       타이레놀: 87,
 //       펜잘큐: 8,
@@ -326,7 +326,7 @@
 //       활명수: 31,
 //       모드나폴: 84,
 //     },
-//     status: ['부족', '부족'],
+//     pharmacyRequestStatus: ['부족', '부족'],
 //     recommend: {
 //       타이레놀: 31,
 //       펜잘큐: 27,
@@ -344,7 +344,7 @@
 //     key: '7',
 //     date: '2025-01',
 //     branch: '천안쌍용점',
-//     order: 263,
+//     orders: 263,
 //     stock: {
 //       타이레놀: 45,
 //       펜잘큐: 42,
@@ -369,7 +369,7 @@
 //       활명수: 80,
 //       모드나폴: 101,
 //     },
-//     status: ['정상', '정상'],
+//     pharmacyRequestStatus: ['정상', '정상'],
 //     recommend: {
 //       타이레놀: 26,
 //       펜잘큐: 78,
@@ -398,22 +398,22 @@
 //   return ['정상'];
 // };
 
-// // ✅ dummy를 변환해서 status 추가 => Dummy에 저장
+// // ✅ dummy를 변환해서 pharmacyRequestStatus 추가 => Dummy에 저장
 // const Dummy: TableData[] = dummy.map((item) => ({
 //   ...item,
-//   status: evaluateStatus(item.stock, item.predict),
+//   pharmacyRequestStatus: evaluateStatus(item.stock, item.predict),
 // }));
 
 // const columns: TableProps<TableData>['columns'] = [
 //   // 테이블에 들어가는 컬럼 지정
 //   { title: '기준월', dataIndex: 'date', key: 'date' },
 //   { title: '지점명', dataIndex: 'branch', key: 'branch' },
-//   { title: '주문 건수', dataIndex: 'order', key: 'order' },
+//   { title: '주문 건수', dataIndex: 'orders', key: 'orders' },
 //   {
 //     title: '예측 대비',
-//     dataIndex: 'status',
-//     key: 'status',
-//     render: (_, record) => renderStatusTags(record.status),
+//     dataIndex: 'pharmacyRequestStatus',
+//     key: 'pharmacyRequestStatus',
+//     render: (_, record) => renderStatusTags(record.pharmacyRequestStatus),
 //   },
 // ];
 
@@ -426,11 +426,11 @@
 //     (option) => (option.label as string).toLowerCase().indexOf(inputValue.toLowerCase()) > -1,
 //   );
 
-// const renderStatusTags = (status: string[] = []) => {
+// const renderStatusTags = (pharmacyRequestStatus: string[] = []) => {
 //   // status에 저장되있는 값에 tag 속성 부여
 //   return (
 //     <>
-//       {status.map((tag) => {
+//       {pharmacyRequestStatus.map((tag) => {
 //         let color: string;
 
 //         switch (tag) {
@@ -476,7 +476,7 @@
 //     { title: '✅ 추천 발주량', dataIndex: 'recommend', key: 'recommend' },
 //     {
 //       title: '📦 비교',
-//       key: 'status',
+//       key: 'pharmacyRequestStatus',
 //       render: (_: any, record: any) => {
 //         const { stock, predict } = record;
 
@@ -507,14 +507,14 @@ export default function BranchMonitoringPage() {
   //   const handle_Search = () => {
   //     // 조건 검색
   //     const values = form.getFieldsValue();
-  //     const { date, country, status } = values;
+  //     const { date, country, pharmacyRequestStatus } = values;
   //     const [region, city] = country || [];
   //     const result = Dummy.filter((item) => {
   //       const matchesDate =
   //         !date || (item.date >= date[0].format('YYYY-MM') && item.date <= date[1].format('YYYY-MM'));
   //       const matchesRegion = !country || item.branch.includes(city);
   //       const itemStatus = evaluateStatus(item.stock, item.predict)[0];
-  //       const matchesStatus = !status || itemStatus === status;
+  //       const matchesStatus = !pharmacyRequestStatus || itemStatus === pharmacyRequestStatus;
   //       return matchesDate && matchesRegion && matchesStatus;
   //     });
   //     setFilteredData(result);
@@ -563,7 +563,7 @@ export default function BranchMonitoringPage() {
   //     // 주문건수 차트
   //     data: filteredData,
   //     xField: 'branch',
-  //     yField: 'order',
+  //     yField: 'orders',
   //     colorField: 'branch',
   //     color: pastelColors,
   //     columnWidthRatio: 0.6,
@@ -673,7 +673,7 @@ export default function BranchMonitoringPage() {
   //               size="small"
   //             />
   //           </Form.Item>
-  //           <Form.Item label="상태" name="status">
+  //           <Form.Item label="상태" name="pharmacyRequestStatus">
   //             <Select placeholder="상태 선택" style={{ width: 120 }} allowClear size="small">
   //               <Option value="부족">부족</Option>
   //               <Option value="정상">정상</Option>
@@ -819,7 +819,7 @@ export default function BranchMonitoringPage() {
   //                     <Card variant="borderless">
   //                       <Statistic
   //                         title="총 주문건수"
-  //                         value={filteredData.reduce((sum, item) => sum + item.order, 0)}
+  //                         value={filteredData.reduce((sum, item) => sum + item.orders, 0)}
   //                         suffix="건"
   //                         precision={0}
   //                         valueStyle={{ color: '#3f8600' }}
@@ -868,13 +868,13 @@ export default function BranchMonitoringPage() {
   //           <Descriptions bordered column={2} size="small">
   //             <Descriptions.Item label="📅 기준월">{selectedBranch.date}</Descriptions.Item>
   //             <Descriptions.Item label="🏪 지점명">{selectedBranch.branch}</Descriptions.Item>
-  //             <Descriptions.Item label="🧾 주문 건수">{selectedBranch.order}건</Descriptions.Item>
-  //             <Descriptions.Item label="🧾 보유 포인트">{selectedBranch.order}건</Descriptions.Item>
+  //             <Descriptions.Item label="🧾 주문 건수">{selectedBranch.orders}건</Descriptions.Item>
+  //             <Descriptions.Item label="🧾 보유 포인트">{selectedBranch.orders}건</Descriptions.Item>
   //             <Descriptions.Item label="전체 재고 현황" span={2}>
   //               {Modal_MedicineTable(selectedBranch)}
   //             </Descriptions.Item>
   //             <Descriptions.Item label="📦 총 재고 상태" span={2}>
-  //               {renderStatusTags(selectedBranch.status)}
+  //               {renderStatusTags(selectedBranch.pharmacyRequestStatus)}
   //             </Descriptions.Item>
   //           </Descriptions>
   //         )}
