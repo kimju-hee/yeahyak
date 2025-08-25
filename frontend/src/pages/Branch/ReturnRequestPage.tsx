@@ -2,6 +2,7 @@ import {
   Button,
   Card,
   Descriptions,
+  Divider,
   Flex,
   Form,
   Input,
@@ -41,14 +42,13 @@ import {
   type ReturnStatus,
   type User,
 } from '../../types';
-
-const DEFAULT_IMG = 'https://via.placeholder.com/60x60.png?text=No+Image';
+import { PLACEHOLDER } from '../../utils';
 
 const getStatusTag = (status: ReturnStatus) => {
   const color = RETURN_STATUS_COLORS[status];
   const text = RETURN_STATUS_TEXT[status];
   return (
-    <Tag bordered={true} color={color}>
+    <Tag bordered={true} color={color} style={{ cursor: 'default' }}>
       {text}
     </Tag>
   );
@@ -167,7 +167,7 @@ export default function ReturnRequestPage() {
         setOrderDetail(res);
         setOrderItems(res.data.items as OrderDetailItem[]);
         form.setFieldsValue({
-          productName: undefined,
+          productId: undefined,
           quantity: undefined,
           unitPrice: undefined,
         });
@@ -197,10 +197,30 @@ export default function ReturnRequestPage() {
     if (selectedItem) {
       setMaxQuantity(selectedItem.quantity);
       form.setFieldsValue({
-        productName: selectedItem.productId,
+        productId,
+        quantity: undefined,
         unitPrice: selectedItem.unitPrice,
       });
     }
+  };
+
+  const handleAddItem = (values: { productId: number; quantity: number; unitPrice: number }) => {
+    const selectedItem = orderItems.find((item) => item.productId === values.productId);
+    if (!selectedItem) {
+      messageApi.error('선택한 제품을 찾을 수 없습니다.');
+      return;
+    }
+    addItem({
+      productId: selectedItem.productId,
+      productName: selectedItem.productName,
+      manufacturer: selectedItem.manufacturer,
+      quantity: values.quantity,
+      unitPrice: selectedItem.unitPrice,
+      subtotalPrice: values.unitPrice * values.quantity,
+      productImgUrl: PLACEHOLDER,
+    });
+    messageApi.success(`${selectedItem.productName}이(가) 반품카트에 추가되었습니다.`);
+    form.resetFields(['productId', 'quantity', 'unitPrice']);
   };
 
   const handleSubmit = async (values: { reason: string | string[] }) => {
@@ -233,6 +253,9 @@ export default function ReturnRequestPage() {
         updateUser({ point: point + res.data.totalPrice });
         clearCart();
         setSelectedOrder(undefined);
+        form.resetFields(['orderId', 'productId', 'quantity', 'unitPrice']);
+        setOrderItems([]);
+        setMaxQuantity(0);
         returnForm.resetFields(['reason']);
       }
     } catch (e: any) {
@@ -269,7 +292,7 @@ export default function ReturnRequestPage() {
       dataIndex: 'productImgUrl',
       key: 'productImgUrl',
       render: (url) => (
-        <img src={url || DEFAULT_IMG} alt="제품 이미지" style={{ width: '60px', height: '60px' }} />
+        <img src={url || PLACEHOLDER} alt="제품 이미지" style={{ width: '60px', height: '60px' }} />
       ),
     },
     { title: '제품명', dataIndex: 'productName', key: 'productName' },
@@ -283,7 +306,6 @@ export default function ReturnRequestPage() {
       render: (value) => `${value.toLocaleString()}원`,
     },
     {
-      title: '관리',
       key: 'actions',
       render: (_, record) => (
         <Button danger onClick={() => removeItem(record.productId)}>
@@ -300,7 +322,7 @@ export default function ReturnRequestPage() {
       title: '일시',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (v) => dayjs(v).format('YYYY. MM. DD. HH:mm'),
+      render: (value) => dayjs(value).format(DATE_FORMAT.DEFAULT),
     },
     {
       title: '요약',
@@ -318,7 +340,7 @@ export default function ReturnRequestPage() {
       title: '합계',
       dataIndex: 'totalPrice',
       key: 'totalPrice',
-      render: (v) => `${v.toLocaleString()}원`,
+      render: (value) => `${value.toLocaleString()}원`,
     },
     {
       title: '상태',
@@ -349,7 +371,6 @@ export default function ReturnRequestPage() {
             { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer' },
             { title: '대분류', dataIndex: 'mainCategory', key: 'mainCategory' },
             { title: '소분류', dataIndex: 'subCategory', key: 'subCategory' },
-
             { title: '수량', dataIndex: 'quantity', key: 'quantity' },
             {
               title: '단가',
@@ -370,7 +391,7 @@ export default function ReturnRequestPage() {
           summary={() => (
             <Table.Summary fixed>
               <Table.Summary.Row>
-                <Table.Summary.Cell index={0} colSpan={3} />
+                <Table.Summary.Cell index={0} colSpan={5} />
                 <Table.Summary.Cell index={1}>합계</Table.Summary.Cell>
                 <Table.Summary.Cell index={2}>
                   {record.totalPrice.toLocaleString()}원
@@ -396,22 +417,30 @@ export default function ReturnRequestPage() {
         반품 요청
       </Typography.Title>
 
-      <Form form={form} layout="vertical" onFinish={addItem}>
+      <Form form={form} layout="vertical" onFinish={handleAddItem}>
         <Flex vertical>
           <Flex wrap>
             <Form.Item
               name="orderId"
               label="주문번호"
               rules={[{ required: true, message: '주문번호를 선택해주세요.' }]}
+              style={{ minWidth: '180px' }}
             >
-              <Input readOnly onClick={() => setIsModalVisible(true)} placeholder="주문번호 선택" />
+              <Input
+                readOnly
+                onClick={() => setIsModalVisible(true)}
+                placeholder="주문번호 선택"
+                style={{ cursor: 'pointer' }}
+              />
             </Form.Item>
           </Flex>
-          <Flex wrap>
+
+          <Flex wrap gap={8} align="end">
             <Form.Item
-              name="productName"
+              name="productId"
               label="제품명"
               rules={[{ required: true, message: '제품을 선택해주세요.' }]}
+              style={{ minWidth: '180px' }}
             >
               <Select
                 placeholder="제품 선택"
@@ -430,19 +459,26 @@ export default function ReturnRequestPage() {
             <Form.Item
               name="quantity"
               label="반품 수량"
+              dependencies={['productId']}
               rules={[
                 { required: true, message: '반품 수량을 입력해주세요.' },
                 () => ({
                   validator(_, value) {
-                    if (!value || value <= maxQuantity) {
-                      return Promise.resolve();
-                    }
-                    return Promise.reject(
-                      new Error(`반품 수량은 주문 수량(${maxQuantity}개)을 초과할 수 없습니다.`),
-                    );
+                    if (!value) return Promise.resolve();
+                    const inCartQuantity =
+                      items.find((item) => item.productId === form.getFieldValue('productId'))
+                        ?.quantity ?? 0;
+                    return value + inCartQuantity <= maxQuantity
+                      ? Promise.resolve()
+                      : Promise.reject(
+                          new Error(
+                            `반품 수량은 주문 수량(${maxQuantity}개)을 초과할 수 없습니다.`,
+                          ),
+                        );
                   },
                 }),
               ]}
+              style={{ width: '120px' }}
             >
               <InputNumber
                 min={1}
@@ -451,7 +487,7 @@ export default function ReturnRequestPage() {
                 placeholder={`주문 수량: ${maxQuantity}개`}
               />
             </Form.Item>
-            <Form.Item name="unitPrice" label="단가">
+            <Form.Item name="unitPrice" label="단가" style={{ width: '120px' }}>
               <Input readOnly suffix="원" />
             </Form.Item>
             <Form.Item>
@@ -483,6 +519,7 @@ export default function ReturnRequestPage() {
                   onClick={() => {
                     setSelectedOrder(order);
                     fetchOrderDetail(order.orderId);
+                    clearCart();
                     setIsModalVisible(false);
                     form.setFieldsValue({
                       orderId: order.orderId,
@@ -507,11 +544,27 @@ export default function ReturnRequestPage() {
                 </Card>
               ))}
               {ordersTotal > PAGE_SIZE && (
-                <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                <Flex justify="space-between" style={{ marginTop: '8px' }}>
+                  <Button
+                    disabled={ordersCurrentPage <= 1}
+                    onClick={() => setOrdersCurrentPage((p) => Math.max(1, p - 1))}
+                  >
+                    이전
+                  </Button>
                   <Typography.Text type="secondary">
                     {ordersCurrentPage} / {Math.ceil(ordersTotal / PAGE_SIZE)} 페이지
                   </Typography.Text>
-                </div>
+                  <Button
+                    disabled={ordersCurrentPage >= Math.ceil(ordersTotal / PAGE_SIZE)}
+                    onClick={() =>
+                      setOrdersCurrentPage((p) =>
+                        Math.min(Math.ceil(ordersTotal / PAGE_SIZE), p + 1),
+                      )
+                    }
+                  >
+                    다음
+                  </Button>
+                </Flex>
               )}
             </>
           ) : (
@@ -520,7 +573,7 @@ export default function ReturnRequestPage() {
         </Spin>
       </Modal>
 
-      <Typography.Title level={4} style={{ marginBottom: '24px' }}>
+      <Typography.Title level={4} style={{ marginBottom: '16px' }}>
         상세 내역
       </Typography.Title>
       <Table
@@ -530,12 +583,7 @@ export default function ReturnRequestPage() {
           subtotalPrice: item.unitPrice * item.quantity,
         }))}
         rowKey={(record) => record.productId}
-        pagination={{
-          position: ['bottomCenter'],
-          pageSize: PAGE_SIZE,
-          total: items.length,
-          showSizeChanger: false,
-        }}
+        pagination={false}
         summary={() => (
           <Table.Summary fixed>
             <Table.Summary.Row>
@@ -545,13 +593,15 @@ export default function ReturnRequestPage() {
             </Table.Summary.Row>
           </Table.Summary>
         )}
+        style={{ marginBottom: '16px' }}
       />
       <Form form={returnForm} onFinish={handleSubmit}>
-        <Flex align="flex-end">
+        <Flex wrap gap={8} align="start">
           <Form.Item
             name="reason"
             label="반품 사유"
             rules={[{ required: true, message: '반품 사유를 입력해주세요.' }]}
+            style={{ flex: 1 }}
           >
             <Select
               placeholder="반품 사유를 선택하세요. (직접 입력 가능)"
@@ -570,6 +620,8 @@ export default function ReturnRequestPage() {
           </Button>
         </Flex>
       </Form>
+
+      <Divider />
 
       <Typography.Title level={4} style={{ marginBottom: '24px' }}>
         반품 내역

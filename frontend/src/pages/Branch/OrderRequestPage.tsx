@@ -3,6 +3,7 @@ import {
   Button,
   Col,
   Descriptions,
+  Divider,
   Flex,
   InputNumber,
   message,
@@ -50,7 +51,7 @@ const getStatusTag = (status: OrderStatus) => {
   const color = ORDER_STATUS_COLORS[status];
   const text = ORDER_STATUS_TEXT[status];
   return (
-    <Tag bordered={true} color={color}>
+    <Tag bordered={true} color={color} style={{ cursor: 'default' }}>
       {text}
     </Tag>
   );
@@ -190,13 +191,14 @@ export default function OrderRequestPage() {
       if (res.success) {
         messageApi.success('AI 발주 추천이 완료되었습니다!');
         const recommendedItems: OrderCartItem[] = res.data.map((item: any) => ({
-          productId: Math.floor(Math.random() * 1000000), // response에 없음
-          productName: item.product_name,
-          manufacturer: '더미 제조사', // response에 없음
-          quantity: item.predicted_quantity,
-          unitPrice: 15000, // response에 없음
-          subtotalPrice: 15000 * item.predicted_quantity, // response에 없음
-          productImgUrl: PLACEHOLDER, // response에 없음
+          productId: item.productId,
+          productName: item.productName,
+          productCode: item.productCode,
+          manufacturer: item.manufacturer,
+          unitPrice: item.unitPrice,
+          quantity: item.quantity,
+          subtotalPrice: item.subtotalPrice,
+          productImgUrl: item.productImgUrl || PLACEHOLDER,
         }));
         addItem(recommendedItems);
       }
@@ -298,7 +300,6 @@ export default function OrderRequestPage() {
       render: (value) => `${value.toLocaleString()}원`,
     },
     {
-      title: '관리',
       key: 'actions',
       render: (_, record) => (
         <Button danger onClick={() => removeItem(record.productId)}>
@@ -322,7 +323,6 @@ export default function OrderRequestPage() {
     { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer' },
     { title: '단가', dataIndex: 'unitPrice', render: (value) => `${value.toLocaleString()}원` },
     {
-      title: '관리',
       key: 'actions',
       render: (_, record) => (
         <Button
@@ -447,16 +447,16 @@ export default function OrderRequestPage() {
       <Typography.Title level={3} style={{ marginBottom: '24px' }}>
         발주 요청
       </Typography.Title>
-      <Descriptions column={3} bordered size="middle">
+      <Descriptions column={3} bordered size="middle" style={{ marginBottom: '24px' }}>
         <Descriptions.Item label="지점명">{profile.pharmacyName}</Descriptions.Item>
         <Descriptions.Item label="주소">{`${profile.address} ${profile.detailAddress}`}</Descriptions.Item>
         <Descriptions.Item label="요청일자">{dayjs().format(DATE_FORMAT.DATE)}</Descriptions.Item>
       </Descriptions>
 
-      <Typography.Title level={4} style={{ marginBottom: '24px' }}>
+      <Typography.Title level={4} style={{ marginBottom: '16px' }}>
         상세 내역
       </Typography.Title>
-      <Flex wrap>
+      <Flex wrap gap="8px" style={{ marginBottom: '16px' }}>
         <Button
           type="primary"
           onClick={() => {
@@ -490,25 +490,33 @@ export default function OrderRequestPage() {
           </Button>
         </Tooltip>
 
-        <Upload
-          accept=".csv"
-          showUploadList={false}
-          fileList={fileList}
-          beforeUpload={() => false}
-          onChange={handleUploadChange}
-          maxCount={1}
-        >
-          {fileList.length >= 1 ? (
-            <Button onClick={handleAiSuggest} loading={aiLoading}>
-              AI 발주 추천
-            </Button>
-          ) : (
+        {fileList.length === 0 ? (
+          <Upload
+            accept=".csv"
+            showUploadList={false}
+            fileList={fileList}
+            beforeUpload={() => false}
+            onChange={handleUploadChange}
+            maxCount={1}
+          >
             <Button type="default" icon={<UploadOutlined />}>
               업로드
             </Button>
-          )}
-        </Upload>
-        <Upload showUploadList={true} fileList={fileList} onRemove={() => setFileList([])} />
+          </Upload>
+        ) : (
+          <>
+            <Button onClick={handleAiSuggest} loading={aiLoading}>
+              AI 발주 추천
+            </Button>
+            <Upload
+              showUploadList={true}
+              fileList={fileList}
+              onRemove={() => setFileList([])}
+              beforeUpload={() => false}
+              style={{ display: 'none' }}
+            />
+          </>
+        )}
       </Flex>
 
       <Modal
@@ -559,28 +567,18 @@ export default function OrderRequestPage() {
           subtotalPrice: item.unitPrice * item.quantity,
         }))}
         rowKey={(record) => record.productId}
-        pagination={{
-          position: ['bottomCenter'],
-          pageSize: PAGE_SIZE,
-          total: items.length,
-          showSizeChanger: false,
-        }}
+        pagination={false}
+        style={{ marginBottom: '24px' }}
       />
 
-      <Row gutter={16} justify="space-around">
-        <Col span={6}>
+      <Row gutter={16} justify="center" style={{ marginBottom: '24px' }}>
+        <Col span={8} style={{ textAlign: 'center' }}>
           <Statistic title="현재 잔액" value={point} suffix="원" />
         </Col>
-        <Col style={{ textAlign: 'center' }}>
-          <Typography.Text>-</Typography.Text>
-        </Col>
-        <Col span={6}>
+        <Col span={8} style={{ textAlign: 'center' }}>
           <Statistic title="합계 금액" value={totalPrice.toLocaleString()} suffix="원" />
         </Col>
-        <Col style={{ textAlign: 'center' }}>
-          <Typography.Text>=</Typography.Text>
-        </Col>
-        <Col span={6}>
+        <Col span={8} style={{ textAlign: 'center' }}>
           <Statistic
             title="주문 후 예상 잔액"
             value={point - totalPrice}
@@ -591,6 +589,8 @@ export default function OrderRequestPage() {
           />
         </Col>
       </Row>
+
+      <Divider />
 
       <Typography.Title level={4} style={{ marginBottom: '24px' }}>
         발주 내역
