@@ -227,7 +227,7 @@ public class ReturnService {
                     .build());
         }
 
-        returns.setStatus(ReturnStatus.COMPLETED);
+        returns.setStatus(ReturnStatus.APPROVED);
         returns.setUpdatedAt(LocalDateTime.now());
     }
 
