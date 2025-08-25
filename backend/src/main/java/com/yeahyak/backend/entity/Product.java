@@ -2,48 +2,73 @@ package com.yeahyak.backend.entity;
 
 import com.yeahyak.backend.entity.enums.MainCategory;
 import com.yeahyak.backend.entity.enums.SubCategory;
-import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
+import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
-@Table(name = "products")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Table(name = "products")
 public class Product {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long productId;
 
-    private String productName;
-    private String productCode;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Column(name = "product_id")
+  private Long productId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private MainCategory mainCategory;
+  @Column(name = "product_name", nullable = false, length = 100)
+  private String productName;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private SubCategory subCategory;
+  @Column(name = "insurance_code", nullable = false, unique = true, length = 45)
+  private String insuranceCode;
 
-    private String manufacturer;
-    @Lob
-    private String details;
-    private String unit;
-    private BigDecimal unitPrice;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "main_category", nullable = false)
+  private MainCategory mainCategory;
 
-    @Column(nullable = false)
-    private Integer stock;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "sub_category", nullable = false)
+  private SubCategory subCategory;
 
-    @CreationTimestamp
-    private LocalDateTime createdAt;
+  @Column(nullable = false, length = 100)
+  private String manufacturer;
 
-    @Lob
-    private String productImgUrl; //약품 이미지 URL
+  @Column(nullable = false, length = 45)
+  private String unit;
+
+  @Column(name = "unit_price", nullable = false, precision = 10, scale = 2)
+  private BigDecimal unitPrice;
+
+  @Lob
+  @Column(columnDefinition = "TEXT")
+  private String details;
+
+  @Lob
+  @Column(name = "product_img_url", columnDefinition = "LONGTEXT")
+  private String productImgUrl;
+
+  @CreationTimestamp
+  @Column(name = "created_at", nullable = false)
+  private LocalDateTime createdAt;
+
+  @Column(name = "stock_qty", nullable = false)
+  private Integer stockQty;
 }

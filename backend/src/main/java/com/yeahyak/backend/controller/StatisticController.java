@@ -1,40 +1,38 @@
 package com.yeahyak.backend.controller;
 
-import com.yeahyak.backend.dto.BranchStatisticsDto;
-import com.yeahyak.backend.dto.JinhoResponse;
-import com.yeahyak.backend.service.StatisticService;
+import com.yeahyak.backend.deprecated.BranchStatisticsDTO;
+import com.yeahyak.backend.deprecated.JinhoResponse;
+import com.yeahyak.backend.deprecated.StatisticService;
+import java.time.LocalDate;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/statistics")
 public class StatisticController {
 
-    private final StatisticService statisticService;
+  private final StatisticService statisticService;
 
-    @GetMapping("/branch")
-    public JinhoResponse<BranchStatisticsDto> getStatistics(
-            @RequestParam Long pharmacyId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end
-    ) {
-        BranchStatisticsDto stats = statisticService.getBranchStatistics(pharmacyId, start, end);
+  @GetMapping("/branch")
+  public JinhoResponse<BranchStatisticsDTO> getStatistics(
+      @RequestParam Long pharmacyId,
+      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end
+  ) {
+    BranchStatisticsDTO stats = statisticService.getBranchStatistics(pharmacyId, start, end);
 
-        return JinhoResponse.<BranchStatisticsDto>builder()
-                .success(true)
-                .data(List.of(stats))
-                .totalPages(1)
-                .totalElements(1)
-                .currentPage(0)
-                .build();
-    }
+    return JinhoResponse.<BranchStatisticsDTO>builder()
+        .success(true)
+        .data(List.of(stats))
+        .totalPages(1)
+        .totalElements(1)
+        .currentPage(0)
+        .build();
+  }
 }

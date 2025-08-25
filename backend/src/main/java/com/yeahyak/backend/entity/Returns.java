@@ -1,34 +1,64 @@
 package com.yeahyak.backend.entity;
 
 import com.yeahyak.backend.entity.enums.ReturnStatus;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDateTime;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
-@Table(name = "returns")
-@Getter @Setter
+@Getter
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Table(name = "returns")
 public class Returns {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long returnId;
 
-    @ManyToOne
-    @JoinColumn(name = "pharmacy_id", nullable = false)
-    private Pharmacy pharmacy;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Column(name = "return_id")
+  private Long returnId;
 
-    private LocalDateTime createdAt;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "pharmacy_id", nullable = false)
+  private Pharmacy pharmacy;
 
-    @Column(columnDefinition = "TEXT")
-    private String reason;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "order_id", nullable = false)
+  private Orders orders;
 
-    private int totalPrice;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private ReturnStatus status;
 
-    @Enumerated(EnumType.STRING)
-    private ReturnStatus status;
+  @Column(nullable = false)
+  private String reason;
 
-    private LocalDateTime updatedAt;
+  @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
+  private BigDecimal totalPrice;
+
+  @CreationTimestamp
+  @Column(name = "created_at", nullable = false)
+  private LocalDateTime createdAt;
+
+  @UpdateTimestamp
+  @Column(name = "updated_at")
+  private LocalDateTime updatedAt;
 }

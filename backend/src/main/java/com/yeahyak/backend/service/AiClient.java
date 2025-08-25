@@ -1,8 +1,9 @@
 package com.yeahyak.backend.service;
 
-import com.yeahyak.backend.dto.ChatRequest;
-import com.yeahyak.backend.dto.ChatResponse;
+import com.yeahyak.backend.dto.todo.ChatbotRequest;
+import com.yeahyak.backend.dto.todo.ChatbotResponse;
 
 public interface AiClient {
-    ChatResponse askQuestion(ChatRequest request);
+
+  ChatbotResponse askQuestion(ChatbotRequest request);
 }
