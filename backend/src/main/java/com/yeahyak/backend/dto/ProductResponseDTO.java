@@ -1,11 +1,10 @@
 package com.yeahyak.backend.dto;
-
+import java.time.LocalDateTime;
 import com.yeahyak.backend.entity.enums.MainCategory;
 import com.yeahyak.backend.entity.enums.SubCategory;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -25,4 +24,6 @@ public class ProductResponseDTO {
     private BigDecimal unitPrice;
     private LocalDateTime createdAt;
     private String productImgUrl;
+    private LocalDateTime lastInboundAt;   // IN or RETURN_IN의 최신 일시
+    private LocalDateTime lastOutboundAt;  // OUT의 최신 일시
 }

@@ -24,10 +24,10 @@ public class InventoryHistoryController {
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
             @RequestParam(required = false) InventoryDivision division,
+            @RequestParam Long productId, // ✅ 추가 (필수)
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        return ResponseEntity.ok(inventoryHistoryService.getHistories(startDate, endDate, division, page, size));
+        return ResponseEntity.ok(inventoryHistoryService.getHistories(startDate, endDate, division, productId, page, size)); // ✅ 전달
     }
 }
-

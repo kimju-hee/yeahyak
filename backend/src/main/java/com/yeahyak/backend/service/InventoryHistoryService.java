@@ -23,13 +23,14 @@ public class InventoryHistoryService {
     private final InventoryHistoryRepository inventoryHistoryRepository;
 
     @Transactional
-    public Map<String, Object> getHistories(LocalDate startDate, LocalDate endDate, InventoryDivision division, int page, int size) {
+    public Map<String, Object> getHistories(LocalDate startDate, LocalDate endDate, InventoryDivision division, Long productId, int page, int size) { // ✅ productId 추가
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
         Page<InventoryHistory> histories = inventoryHistoryRepository.findAllWithFilters(
                 startDate != null ? startDate.atStartOfDay() : null,
                 endDate != null ? endDate.atTime(23, 59, 59) : null,
                 division,
+                productId, // ✅ 전달
                 pageable
         );
 
@@ -44,7 +45,6 @@ public class InventoryHistoryService {
                     return map;
                 })
                 .toList();
-
 
         return Map.of(
                 "success", true,

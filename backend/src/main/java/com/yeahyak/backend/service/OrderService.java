@@ -42,7 +42,6 @@ public class OrderService {
         int totalPrice = 0;
         List<OrderItemResponse> itemResponses = new ArrayList<>();
 
-        // 1) 합계 계산 + 기본 유효성
         for (OrderItemRequest itemRequest : request.getItems()) {
             Product product = productRepository.findById(itemRequest.getProductId())
                     .orElseThrow(() -> new IllegalArgumentException("해당 제품이 존재하지 않습니다."));
@@ -57,13 +56,11 @@ public class OrderService {
                     .build());
         }
 
-        // 2) 여신 체크/차감
         User owner = pharmacy.getUser();
         long next = owner.getPoint() - totalPrice;
-        if (next < -1_000_000L) throw new IllegalStateException("CREDIT_LIMIT_EXCEEDED");
+        if (next < -10_000_000L) throw new IllegalStateException("CREDIT_LIMIT_EXCEEDED");
         owner.setPoint((int) next);
 
-        // 3) 주문 생성(합계 포함 저장!)
         Order order = Order.builder()
                 .pharmacy(pharmacy)
                 .status(OrderStatus.REQUESTED)
@@ -72,7 +69,6 @@ public class OrderService {
                 .build();
         orderRepository.save(order);
 
-        // 4) 재고 차감 + 아이템 저장 + 출고 기록(OUT)
         for (OrderItemRequest itemRequest : request.getItems()) {
             Long pid = itemRequest.getProductId();
             int qty  = itemRequest.getQuantity();
@@ -95,7 +91,6 @@ public class OrderService {
                     .build();
             orderItemRepository.save(orderItem);
 
-            // ✅ 출고 기록 (요청 등록 시점)
             inventoryHistoryRepository.save(InventoryHistory.builder()
                     .product(product)
                     .division(InventoryDivision.OUT)
@@ -238,7 +233,6 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 주문이 존재하지 않습니다."));
 
-        // 포인트 환원
         int total = (order.getTotalPrice() != null) ? order.getTotalPrice()
                 : orderItemRepository.findByOrders(order).stream()
                 .mapToInt(OrderItems::getSubtotalPrice).sum();
@@ -246,7 +240,6 @@ public class OrderService {
         owner.setPoint(owner.getPoint() + total);
         if (owner.getPoint() >= 0) owner.setCreditStatus(CreditStatus.FULL);
 
-        // 재고 복구 + 입고 기록(IN)
         List<OrderItems> items = orderItemRepository.findByOrders(order);
         for (OrderItems item : items) {
             Long pid = item.getProduct().getProductId();
