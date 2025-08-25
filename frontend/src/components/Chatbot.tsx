@@ -112,6 +112,7 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
     setContent('');
   }, []);
 
+  // handlesend 수정
   const handleSend = useCallback(
   async (raw: string) => {
     if (!raw.trim() || !chatType || requesting) return;
