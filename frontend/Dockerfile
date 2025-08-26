@@ -1,13 +1,13 @@
-# 1) 빌드 단계
+# 1) Build stage
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-# 필요 시 ENV/ARG로 VITE_* 값 세팅 가능
-RUN npm run build
+# ⬇️ 타입체크는 CI에서 소프트로, 도커 빌드는 번들만
+RUN npm run build:docker
 
-# 2) 런타임 단계
+# 2) Runtime stage
 FROM nginx:1.25-alpine
 RUN printf 'server { \
   listen 80; \
