@@ -19,8 +19,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
 @Getter
@@ -29,7 +27,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 @AllArgsConstructor
 @Builder
 @Table(name = "chatbot")
-public class ChatBot {
+public class Chatbot {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -52,11 +50,9 @@ public class ChatBot {
   @Column(nullable = false, columnDefinition = "TEXT")
   private String answer;
 
-  @CreationTimestamp
-  @Column(name = "created_at", nullable = false)
-  private LocalDateTime createdAt;
+  @Column(name = "asked_at", nullable = false)
+  private LocalDateTime askedAt;
 
-  @UpdateTimestamp
-  @Column(name = "updated_at")
-  private LocalDateTime updatedAt;
+  @Column(name = "answered_at")
+  private LocalDateTime answeredAt;
 }

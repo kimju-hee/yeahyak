@@ -1,14 +1,25 @@
 package com.yeahyak.backend.controller;
 
+import com.yeahyak.backend.dto.ApiResponse;
 import com.yeahyak.backend.dto.ReturnCreateRequest;
 import com.yeahyak.backend.dto.ReturnCreateResponse;
+import com.yeahyak.backend.dto.ReturnDetailResponse;
+import com.yeahyak.backend.dto.ReturnListResponse;
+import com.yeahyak.backend.dto.ReturnUpdateRequest;
+import com.yeahyak.backend.entity.enums.Region;
 import com.yeahyak.backend.entity.enums.ReturnStatus;
 import com.yeahyak.backend.service.ReturnService;
+import jakarta.validation.Valid;
+import java.net.URI;
 import java.time.LocalDateTime;
-import java.util.Map;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -19,97 +30,100 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-
+/**
+ * 반품 관련 API를 처리하는 컨트롤러입니다.
+ */
 @RestController
+@RequestMapping(value = "/api/returns", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
-@RequestMapping("/api/returns")
+@Validated
 public class ReturnController {
 
   private final ReturnService returnService;
 
   /**
-   * 반품 요청을 생성합니다.
+   * (가맹점) 반품을 생성합니다.
    */
-  @PostMapping
-  public ResponseEntity<?> createReturn(
-      @RequestBody ReturnCreateRequest returnRequest
+  @PreAuthorize("hasRole('PHARMACY')")
+  @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<ApiResponse<ReturnCreateResponse>> createReturn(
+      @RequestBody @Valid ReturnCreateRequest request
   ) {
-    ReturnCreateResponse response = returnService.createReturnRequest(returnRequest);
-    return ResponseEntity.ok(Map.of(
-        "success", true,
-        "data", response
-    ));
+    ReturnCreateResponse res = returnService.createReturn(request);
+    URI location = URI.create("/api/returns/" + res.getReturnId());
+    return ResponseEntity
+        .created(location)
+        .body(ApiResponse.ok(res)); // 201 Created
   }
 
   /**
-   * 본사에서 반품 요청 목록을 조회합니다.
+   * (본사) 반품 목록을 조회합니다.
    */
-  @GetMapping
-  public ResponseEntity<?> getReturns(
-      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDateTime,
-      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDateTime,
+  @PreAuthorize("hasRole('ADMIN')")
+  @GetMapping("/hq")
+  public ResponseEntity<ApiResponse<List<ReturnListResponse>>> getReturnsForHq(
+      @RequestParam(required = false) ReturnStatus status,
+      @RequestParam(required = false) Region region,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size
+  ) {
+    Page<ReturnListResponse> result = returnService.getReturns(status, region, start, end, page,
+        size);
+    return ResponseEntity.ok(ApiResponse.withPagination(result)); // 200 OK
+  }
+
+  /**
+   * (가맹점) 반품 목록을 조회합니다.
+   */
+  @PreAuthorize("hasRole('PHARMACY')")
+  @GetMapping("/branch}")
+  public ResponseEntity<ApiResponse<List<ReturnListResponse>>> getReturnsForBranch(
+      @RequestParam Long pharmacyId,
       @RequestParam(required = false) ReturnStatus status,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size
   ) {
-    return ResponseEntity.ok(
-        returnService.getReturns(startDateTime, endDateTime, status, page, size));
+    Page<ReturnListResponse> result = returnService.getReturnsByPharmacy(
+        pharmacyId, status, page, size);
+    return ResponseEntity.ok(ApiResponse.withPagination(result)); // 200 OK
   }
 
   /**
-   * 가맹점에서 반품 요청 목록을 조회합니다.
+   * (본사, 가맹점) 반품 상세를 조회합니다.
    */
-  @GetMapping("/{pharmacyId}")
-  public ResponseEntity<?> getReturnsByPharmacy(
-      @PathVariable Long pharmacyId,
-      @RequestParam(required = false) ReturnStatus status,
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "10") int size
-  ) {
-    return ResponseEntity.ok(
-        returnService.getReturnsByPharmacy(pharmacyId, status, page, size));
-  }
-
-  /**
-   * 반품 요청 상세을 조회합니다.
-   */
+  @PreAuthorize("isAuthenticated()")
   @GetMapping("/{returnId}")
-  public ResponseEntity<?> getReturnDetail(
+  public ResponseEntity<ApiResponse<ReturnDetailResponse>> getReturnDetail(
       @PathVariable Long returnId
   ) {
-    ReturnCreateResponse response = returnService.getReturnDetail(returnId);
-    return ResponseEntity.ok(Map.of(
-        "success", true,
-        "data", response));
+    ReturnDetailResponse detail = returnService.getReturnById(returnId);
+    return ResponseEntity.ok(ApiResponse.ok(detail)); // 200 OK
   }
 
   /**
-   * 반품 요청의 상태를 업데이트합니다.
+   * (본사) 반품 상태를 변경합니다.
    */
-  @PatchMapping("/{returnId}")
-  public ResponseEntity<?> updateReturnStatus(
+  @PreAuthorize("hasRole('ADMIN')")
+  @PatchMapping(value = "/{returnId}/status", consumes = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<Void> updateReturnStatus(
       @PathVariable Long returnId,
-      @RequestBody Map<String, String> request
+      @RequestBody @Valid ReturnUpdateRequest request
   ) {
-    String status = request.get("pharmacyRequestStatus");
-    returnService.updateReturnStatus(returnId, status);
-    return ResponseEntity.ok(Map.of(
-        "success", true,
-        "data", ""
-    ));
+    returnService.updateReturnStatus(returnId, request);
+    return ResponseEntity.noContent().build(); // 204 No Content
   }
 
   /**
-   * 반품 요청을 삭제합니다.
+   * 반품을 삭제합니다.
    */
+  @PreAuthorize("isAuthenticated()")
   @DeleteMapping("/{returnId}")
-  public ResponseEntity<?> deleteReturn(
+  public ResponseEntity<Void> deleteReturn(
       @PathVariable Long returnId
   ) {
     returnService.deleteReturn(returnId);
-    return ResponseEntity.ok(Map.of(
-        "success", true,
-        "data", ""
-    ));
+    return ResponseEntity.noContent().build(); // 204 No Content
   }
 }

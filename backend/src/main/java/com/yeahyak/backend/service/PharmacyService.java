@@ -29,11 +29,11 @@ public class PharmacyService {
 
   @Transactional(readOnly = true)
   public Page<PharmacyListResponse> getPharmacies(
-      Boolean unpaidCreditFilter, Region region, String keyword, int page, int size
+      Boolean unsettled, Region region, String keyword, int page, int size
   ) {
     Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.DESC, "createdAt"));
-    Page<Pharmacy> pharmacies = pharmacyRepo.findByUnpaidCreditAndRegionAndPharmacyName(
-        unpaidCreditFilter, region, keyword, pageable
+    Page<Pharmacy> pharmacies = pharmacyRepo.findByUnsettledAndRegionAndPharmacyName(
+        unsettled, region, keyword, pageable
     );
     List<Long> pharmacyIds = pharmacies.stream()
         .map(Pharmacy::getPharmacyId)

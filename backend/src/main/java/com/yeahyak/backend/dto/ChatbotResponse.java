@@ -1,11 +1,8 @@
-package com.yeahyak.backend.dto.todo;
+package com.yeahyak.backend.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.yeahyak.backend.entity.enums.ChatbotType;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
-import java.util.List;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,17 +15,13 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ChatbotRequest {
+public class ChatbotResponse {
 
-  @NotNull
+  private Long chatbotId;
   private Long userId;
-
-  @NotNull
   private ChatbotType type;
-
-  @NotBlank
-  @Size(max = 5_000)
   private String question;
-
-  private List<ChatMessage> history;
+  private String answer;
+  private LocalDateTime askedAt;
+  private LocalDateTime answeredAt;
 }

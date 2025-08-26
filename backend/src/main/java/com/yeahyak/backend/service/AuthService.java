@@ -243,8 +243,8 @@ public class AuthService {
    * 관리자 프로필을 수정합니다.
    */
   @Transactional
-  public AdminProfile updateAdmin(Long userId, AdminUpdateRequest req) {
-    Admin admin = adminRepo.findByUser_UserId(userId)
+  public AdminProfile updateAdmin(Long adminId, AdminUpdateRequest req) {
+    Admin admin = adminRepo.findById(adminId)
         .orElseThrow(() -> new RuntimeException("관리자 정보를 찾을 수 없습니다."));
 
     if (req.getAdminName() != null) {
@@ -266,8 +266,8 @@ public class AuthService {
    * 가맹점 프로필을 수정합니다.
    */
   @Transactional
-  public PharmacyProfile updatePharmacy(Long userId, PharmacyUpdateRequest req) {
-    Pharmacy pharmacy = pharmacyRepo.findByUser_UserId(userId)
+  public PharmacyProfile updatePharmacy(Long pharmacyId, PharmacyUpdateRequest req) {
+    Pharmacy pharmacy = pharmacyRepo.findById(pharmacyId)
         .orElseThrow(() -> new RuntimeException("가맹점 정보를 찾을 수 없습니다."));
 
     if (req.getPharmacyName() != null) {

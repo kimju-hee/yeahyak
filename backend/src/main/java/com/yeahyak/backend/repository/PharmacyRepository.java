@@ -23,7 +23,7 @@ public interface PharmacyRepository extends JpaRepository<Pharmacy, Long> {
       AND (:region IS NULL OR p.region = :region)
       AND (:keyword IS NULL OR p.pharmacyName LIKE CONCAT('%', :keyword, '%'))
       """)
-  Page<Pharmacy> findByUnpaidCreditAndRegionAndPharmacyName(
+  Page<Pharmacy> findByUnsettledAndRegionAndPharmacyName(
       @Param("unsettled") Boolean unsettled,
       @Param("region") Region region,
       @Param("keyword") String keyword,

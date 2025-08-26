@@ -1,4 +1,4 @@
-package com.yeahyak.backend.dto.todo;
+package com.yeahyak.backend.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.yeahyak.backend.entity.enums.ChatRole;

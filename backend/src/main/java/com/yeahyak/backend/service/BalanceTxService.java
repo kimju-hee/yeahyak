@@ -77,6 +77,9 @@ public class BalanceTxService {
   public SettlementResponse settlement(SettlementRequest req) {
     Pharmacy pharmacy = pharmacyRepo.findById(req.getPharmacyId())
         .orElseThrow(() -> new RuntimeException("가맹점 정보를 찾을 수 없습니다."));
+    if (pharmacy.getOutstandingBalance().compareTo(BigDecimal.ZERO) <= 0) {
+      throw new RuntimeException("정산할 외상 잔액이 없습니다.");
+    }
 
     BigDecimal before = pharmacy.getOutstandingBalance();
     BigDecimal amount = before;

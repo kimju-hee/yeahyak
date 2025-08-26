@@ -6,7 +6,6 @@ import com.yeahyak.backend.entity.StockTx;
 import com.yeahyak.backend.entity.enums.StockTxType;
 import com.yeahyak.backend.repository.ProductRepository;
 import com.yeahyak.backend.repository.StockTxRepository;
-import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -67,7 +66,7 @@ public class StockTxService {
    */
   @Transactional(readOnly = true)
   public Page<StockTxDetailResponse> searchStockTxByProductId(
-      Long productId, LocalDateTime start, LocalDateTime end, int page, int size
+      Long productId, int page, int size
   ) {
     Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.DESC, "createdAt"));
     return stockTxRepo.findByProduct_ProductId(productId, pageable)
