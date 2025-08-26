@@ -2,7 +2,7 @@ name: deploy-ai (deploy)
 
 on:
   push:
-    branches: [ dev ]          # ✅ dev에서만 동작하도록 변경
+    branches: [ dev ]          # ✅ dev에서만 동작
     paths:
       - 'ai/**'
       - '.github/workflows/ai.yml'
@@ -57,7 +57,10 @@ jobs:
             docker pull "$IMAGE" || true
             docker rm -f yeahyak-ai 2>/dev/null || true
 
+            # 네트워크만 지정 (생성은 하지 않음)
             docker run -d --name yeahyak-ai \
+              --network yeahyak-net \
+              --network-alias yeahyak-ai \
               -p 127.0.0.1:8082:8080 \
               --restart unless-stopped \
               --env-file /opt/yeahyak/ai.env \
