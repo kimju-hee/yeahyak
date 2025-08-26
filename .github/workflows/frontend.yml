@@ -79,4 +79,6 @@ jobs:
             docker compose pull frontend || true
             docker compose rm -sf frontend || true
             docker compose up -d --no-deps --force-recreate frontend
+            # ✅ 네트워크 연결(이미 존재한다고 가정). 이미 연결되어 있거나 네트워크가 없으면 무시.
+            docker network connect --alias yeahyak-frontend yeahyak-net yeahyak-frontend || true
             docker image prune -f
