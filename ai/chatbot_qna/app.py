@@ -1,18 +1,17 @@
-# yeahyak/ai/QnA_chatbot/app.py
-from flask import Flask, request, jsonify
-#from dotenv import load_dotenv
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+# yeahyak/ai/chatbot_qna/app.py
 # from chatbot_agent import create_chatbot_agent
-from QnA_chatbot.chatbot_agent import create_chatbot_agent
+from chatbot_qna.chatbot_agent import create_chatbot_agent
 
+# from dotenv import load_dotenv
+from flask import Flask, jsonify, request
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-#load_dotenv()
+# load_dotenv()
 
 app = Flask(__name__)
 
 chatbot = create_chatbot_agent()
 
-# SYSTEM_PROMPT 재수정본
 SYSTEM_PROMPT = """
 당신은 대한민국 약사 분들을 돕는 의약품 정보 AI 어시스턴트입니다.  
 친절한 존댓말로, 임상 판단에 바로 쓸 수 있게 간결하고 또렷하게 설명해 주세요.
@@ -66,41 +65,39 @@ SYSTEM_PROMPT = """
 """.strip()
 
 
-@app.route('/chat/qna', methods=['POST'])
-def handle_chat():
-    data = request.json
-    user_query = data.get("query")
-    conversation_history = data.get("history", [])
+# @app.route("/chat/qna", methods=["POST"])
+# def handle_chat():
+#     data = request.json
+#     user_query = data.get("query")
+#     conversation_history = data.get("history", [])
 
-    if not user_query:
-        return jsonify({"error": "query가 비어있습니다."}), 400
+#     if not user_query:
+#         return jsonify({"error": "query가 비어있습니다."}), 400
 
-    messages = [SystemMessage(content=SYSTEM_PROMPT)]
-    for message in conversation_history:
-        if message.get('type') == 'human':
-            messages.append(HumanMessage(content=message.get('content')))
-        elif message.get('type') == 'ai':
-            messages.append(AIMessage(content=message.get('content')))
-            
-    messages.append(HumanMessage(content=user_query))
+#     messages = [SystemMessage(content=SYSTEM_PROMPT)]
+#     for message in conversation_history:
+#         if message.get("type") == "human":
+#             messages.append(HumanMessage(content=message.get("content")))
+#         elif message.get("type") == "ai":
+#             messages.append(AIMessage(content=message.get("content")))
 
-    try:
-        response = chatbot.invoke({"messages": messages})
-        ai_response = response['messages'][-1].content
-        
-        new_history = conversation_history + [
-            {'type': 'human', 'content': user_query},
-            {'type': 'ai', 'content': ai_response}
-        ]
-        
-        return jsonify({
-            "reply": ai_response,
-            "history": new_history
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+#     messages.append(HumanMessage(content=user_query))
 
-if __name__ == '__main__':
-    print("🤖 챗봇 에이전트를 생성 중입니다...")
-    app.run(host="0.0.0.0", port=5000, debug=True)
-    print("✅ 챗봇 에이전트가 준비되었습니다.")
+#     try:
+#         response = chatbot.invoke({"messages": messages})
+#         ai_response = response["messages"][-1].content
+
+#         new_history = conversation_history + [
+#             {"type": "human", "content": user_query},
+#             {"type": "ai", "content": ai_response},
+#         ]
+
+#         return jsonify({"reply": ai_response, "history": new_history})
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
+
+
+# if __name__ == "__main__":
+#     print("🤖 챗봇 에이전트를 생성 중입니다...")
+#     app.run(host="0.0.0.0", port=5000, debug=True)
+#     print("✅ 챗봇 에이전트가 준비되었습니다.")

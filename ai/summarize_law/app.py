@@ -1,21 +1,23 @@
-from flask import Flask, request, Response
-from openai import OpenAI, APIError
-import os
 import json
+import os
 
+from dotenv import load_dotenv
+from flask import Flask, Response, request
+from openai import APIError, OpenAI
+
+# 환경변수 로드 및 초기 설정
+load_dotenv()
 app = Flask(__name__)
 
-# 🔐 환경변수에서 API 키 읽기 (.env 사용 안함)
 if "OPENAI_API_KEY" not in os.environ:
-    raise EnvironmentError("환경변수 'OPENAI_API_KEY'가 설정되어 있지 않습니다.")
+    raise EnvironmentError("'OPENAI_API_KEY' 환경 변수가 설정되어 있지 않습니다.")
 
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# ✅ 시스템 프롬프트
+# 프롬프트 정의
 SYSTEM_PROMPT = """
 당신은 법령 개정 분석 전문가입니다.
-약사 및 약국 종사자가 실무에 참고할 수 있도록 법령 개정 내용을 선별해
-실무 안내문 형식으로 요약합니다.
+약사 및 약국 종사자가 실무에 참고할 수 있도록 법령 개정 내용을 선별해 실무 안내문 형식으로 요약합니다.
 
 [HTML 출력 규칙]
 - 마크다운/코드펜스 금지: 백틱(```) 및 ```html 금지
@@ -62,52 +64,109 @@ SYSTEM_PROMPT = """
 위 기준을 철저히 준수해 작성하되, 반드시 HTML '본문만'을 반환하세요.
 """
 
-# ✅ GPT 요약 처리 함수 분리
+
+# GPT 요청 함수
 def summarize_text(content: str) -> str:
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": content}
-            ],
-            temperature=0.3,
-            max_tokens=10000
-        )
-        return response.choices[0].message.content.strip()
-    except APIError as api_err:
-        raise RuntimeError(f"OpenAI API 호출 오류: {str(api_err)}")
-    except Exception as e:
-        raise RuntimeError(f"요약 처리 중 예외 발생: {str(e)}")
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": content},
+        ],
+        temperature=0.3,
+        max_tokens=10000,
+    )
+    result = (
+        response.choices[0].message.content if response and response.choices else ""
+    )
+    if not result:
+        raise RuntimeError("OpenAI 응답이 비어 있습니다.")
+    return result.strip()
 
-@app.route("/summarize-law", methods=["POST"])
-def summarize_law():
-    data = request.get_json()
-    file_path = data.get("path")
 
-    if not file_path or not os.path.exists(file_path):
-        error = {"error": "유효한 'path'가 필요합니다."}
-        return Response(json.dumps(error, ensure_ascii=False), content_type="application/json; charset=utf-8", status=400)
+# 엔드포인트 정의
+# @app.route("/summarize/law", methods=["POST"])
+# def summarize_law():
+#     file = request.files.get("file")
 
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-    except Exception as e:
-        error = {"error": f"파일 열기 오류: {str(e)}"}
-        return Response(json.dumps(error, ensure_ascii=False), content_type="application/json; charset=utf-8", status=500)
+#     if not file or not file.filename.lower().endswith(".txt"):
+#         return Response(
+#             json.dumps(
+#                 {
+#                     "success": False,
+#                     "data": None,
+#                     "error": {"message": "TXT 파일을 업로드 해주세요"},
+#                 },
+#                 ensure_ascii=False,
+#             ),
+#             content_type="application/json; charset=utf-8",
+#             status=400,
+#         )
 
-    try:
-        summary = summarize_text(content)
-    except RuntimeError as e:
-        error = {"error": str(e)}
-        return Response(json.dumps(error, ensure_ascii=False), content_type="application/json; charset=utf-8", status=500)
+#     try:
+#         raw = file.read()
+#         content = raw.decode("utf-8")
+#     except Exception as e:
+#         return Response(
+#             json.dumps(
+#                 {
+#                     "success": False,
+#                     "data": None,
+#                     "error": {"message": f"TXT 처리 중 오류가 발생했습니다: {str(e)}"},
+#                 },
+#                 ensure_ascii=False,
+#             ),
+#             content_type="application/json; charset=utf-8",
+#             status=500,
+#         )
 
-    # ✅ 모든 경우 charset=utf-8 적용
-    if request.headers.get("Accept") == "text/plain":
-        return Response(summary, content_type="text/plain; charset=utf-8")
-    else:
-        return Response(json.dumps({"summary": summary}, ensure_ascii=False), content_type="application/json; charset=utf-8")
+#     try:
+#         summary = summarize_text(content)
+#         return Response(
+#             json.dumps(
+#                 {
+#                     "success": True,
+#                     "data": {"summary": summary},
+#                     "error": None,
+#                 },
+#                 ensure_ascii=False,
+#             ),
+#             content_type="application/json; charset=utf-8",
+#             status=200,
+#         )
+#     except APIError as api_err:
+#         return Response(
+#             json.dumps(
+#                 {
+#                     "success": False,
+#                     "data": None,
+#                     "error": {
+#                         "message": f"OpenAI API 호출 중 오류가 발생했습니다: {str(api_err)}"
+#                     },
+#                 },
+#                 ensure_ascii=False,
+#             ),
+#             content_type="application/json; charset=utf-8",
+#             status=502,
+#         )
+#     except Exception as e:
+#         return Response(
+#             json.dumps(
+#                 {
+#                     "success": False,
+#                     "data": None,
+#                     "error": {
+#                         "message": f"요청 처리 중 알 수 없는 오류가 발생했습니다: {str(e)}"
+#                     },
+#                 },
+#                 ensure_ascii=False,
+#             ),
+#             content_type="application/json; charset=utf-8",
+#             status=500,
+#         )
 
-if __name__ == "__main__":
-    print("✅ 법률 요약 서버 실행 중... http://localhost:5000")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+
+# # 서버 실행
+# if __name__ == "__main__":
+#     print("✅ 법령 요약 서버 실행 중... http://localhost:5000")
+#     app.run(host="0.0.0.0", port=5000, debug=True)
