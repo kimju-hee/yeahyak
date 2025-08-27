@@ -1,6 +1,6 @@
 package com.yeahyak.backend.entity.enums;
 
-public enum ChatbotType {
+public enum ChatBotType {
   FAQ,
   QNA
 }

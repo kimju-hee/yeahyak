@@ -4,10 +4,10 @@ import com.yeahyak.backend.dto.ApiResponse;
 import com.yeahyak.backend.dto.ChatMessage;
 import com.yeahyak.backend.dto.ChatbotRequest;
 import com.yeahyak.backend.dto.ChatbotResponse;
-import com.yeahyak.backend.entity.Chatbot;
+import com.yeahyak.backend.entity.ChatBot;
 import com.yeahyak.backend.entity.User;
-import com.yeahyak.backend.entity.enums.ChatbotType;
-import com.yeahyak.backend.repository.ChatbotRepository;
+import com.yeahyak.backend.entity.enums.ChatBotType;
+import com.yeahyak.backend.repository.ChatBotRepository;
 import com.yeahyak.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
@@ -30,9 +30,9 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ChatbotService {
+public class ChatBotService {
 
-  private final ChatbotRepository chatbotRepo;
+  private final ChatBotRepository chatbotRepo;
   private final UserRepository userRepo;
   private final RestTemplate restTemplate;
 
@@ -41,7 +41,7 @@ public class ChatbotService {
 
   @Transactional
   public ChatbotResponse ask(ChatbotRequest req) {
-    log.info("[ChatbotService] ask → userId={}, type={}, len(question)={}, history={}",
+    log.info("[ChatBotService] ask → userId={}, type={}, len(question)={}, history={}",
         req.getUserId(), req.getType(),
         (req.getQuestion() == null ? 0 : req.getQuestion().length()),
         (req.getHistory() == null ? 0 : req.getHistory().size()));
@@ -55,7 +55,7 @@ public class ChatbotService {
 
     // 1) AI 호출
     String endpoint =
-        (req.getType() == ChatbotType.QNA) ? "/chat/qna" : "/chat/faq";
+        (req.getType() == ChatBotType.QNA) ? "/chat/qna" : "/chat/faq";
     String url = aiServiceUrl + endpoint;
 
     Map<String, Object> payload = new HashMap<>();
@@ -78,7 +78,7 @@ public class ChatbotService {
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
     HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(payload, headers);
-    log.debug("[ChatbotService] POST {} → {}", url, payload);
+    log.debug("[ChatBotService] POST {} → {}", url, payload);
 
     ResponseEntity<ApiResponse<ChatbotResponse>> response = restTemplate.exchange(
         url,
@@ -100,20 +100,20 @@ public class ChatbotService {
     if (ai == null || ai.getAnswer() == null || ai.getAnswer().isBlank()) {
       throw new IllegalStateException("AI 응답이 올바르지 않습니다.");
     }
-    log.debug("[ChatbotService] answer → len(answer)={}", ai.getAnswer().length());
+    log.debug("[ChatBotService] answer → len(answer)={}", ai.getAnswer().length());
 
     // 응답 도착 시각
     LocalDateTime answeredAt = LocalDateTime.now();
 
     // 2) 저장 (엔티티 스키마: user, type, question, answer)
-    Chatbot chat = Chatbot.builder()
+    ChatBot chat = ChatBot.builder()
         .user(user)
         .type(req.getType())
         .question(req.getQuestion())
         .answer(ai.getAnswer())
         .build();
     chat = chatbotRepo.save(chat);
-    log.debug("[ChatbotService] saved chat id={}", chat.getChatbotId());
+    log.debug("[ChatBotService] saved chat id={}", chat.getChatbotId());
 
     // 3) DTO 반환 (저장값 기준으로 보장)
     return ChatbotResponse.builder()

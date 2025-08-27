@@ -1,6 +1,6 @@
 package com.yeahyak.backend.entity;
 
-import com.yeahyak.backend.entity.enums.ChatbotType;
+import com.yeahyak.backend.entity.enums.ChatBotType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -27,7 +27,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 @Table(name = "chatbot")
-public class Chatbot {
+public class ChatBot {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,7 +40,7 @@ public class Chatbot {
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
-  private ChatbotType type;
+  private ChatBotType type;
 
   @Lob
   @Column(nullable = false, columnDefinition = "TEXT")
