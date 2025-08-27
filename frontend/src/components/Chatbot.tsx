@@ -43,6 +43,7 @@ const roles: GetProp<typeof Bubble.List, 'roles'> = {
     placement: 'start',
     shape: 'corner',
     avatar: { icon: <RobotOutlined />, style: { color: '#1677ff', backgroundColor: '#e6f4ff' } },
+    avatar: { icon: <RobotOutlined />, style: { color: '#1677ff', backgroundColor: '#e6f4ff' } },
     messageRender: renderMarkdown,
   },
 };
@@ -98,6 +99,8 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
           type === CHAT_TYPE.FAQ
             ? '안녕하세요 저는 운영 도우미입니다! 무엇을 도와드릴까요?'
             : '안녕하세요 저는 의약품 AI 어시스턴트입니다! 무엇을 도와드릴까요?',
+            ? '안녕하세요 저는 운영 도우미입니다! 무엇을 도와드릴까요?'
+            : '안녕하세요 저는 의약품 AI 어시스턴트입니다! 무엇을 도와드릴까요?',
         key: makeKey(),
       };
       setMessages([initialMessage]);
@@ -116,7 +119,22 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
   const handleSend = useCallback(
     async (raw: string) => {
       if (!raw.trim() || !chatType || requesting) return;
+    async (raw: string) => {
+      if (!raw.trim() || !chatType || requesting) return;
 
+      const userMessage: ChatMessage = {
+        role: CHAT_ROLE.USER,
+        content: raw.trim(),
+        key: makeKey(),
+      };
+      const loadingMessage: ChatMessage = {
+        role: CHAT_ROLE.AI,
+        content: '',
+        key: makeKey(),
+        loading: true,
+      };
+      setMessages((prev) => [...prev, userMessage, loadingMessage]);
+      setContent('');
       const userMessage: ChatMessage = {
         role: CHAT_ROLE.USER,
         content: raw.trim(),
@@ -133,11 +151,18 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
 
       // ✅ 공통(FAQ/QNA 모두): 직전 메시지 + 방금 보낸 메시지
       const merged = [...messages, userMessage];
+      // ✅ 공통(FAQ/QNA 모두): 직전 메시지 + 방금 보낸 메시지
+      const merged = [...messages, userMessage];
 
       setRequesting(true);
       const controller = new AbortController();
       abortController.current = controller;
+      setRequesting(true);
+      const controller = new AbortController();
+      abortController.current = controller;
 
+      try {
+        let response;
       try {
         let response;
 
@@ -208,6 +233,7 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
         style={{ insetInlineEnd: '24px' }}
         icon={<MessageOutlined />}
         tooltip={{ title: '도움이 필요하신가요?', placement: 'left' }}
+        tooltip={{ title: '도움이 필요하신가요?', placement: 'left' }}
       >
         <FloatButton
           icon={<QuestionCircleOutlined />}
@@ -228,9 +254,12 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
           default={{ x: initialPosition.x, y: initialPosition.y, width: 360, height: 480 }}
           minWidth={320}
           minHeight={400}
+          minWidth={320}
+          minHeight={400}
           bounds={boundsRef?.current ?? undefined}
         >
           <Card
+            title={chatType === CHAT_TYPE.FAQ ? '운영 도우미' : '의약품 AI 어시스턴트'}
             title={chatType === CHAT_TYPE.FAQ ? '운영 도우미' : '의약품 AI 어시스턴트'}
             extra={
               <Button
