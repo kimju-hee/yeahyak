@@ -22,12 +22,12 @@ import { returnAPI } from '../../api';
 import {
   DATE_FORMAT,
   PAGE_SIZE,
-  REGION_OPTIONS,
+  REGION_CASCADER_OPTIONS,
   RETURN_STATUS_COLORS,
   RETURN_STATUS_OPTIONS,
   RETURN_STATUS_TEXT,
 } from '../../constants';
-import { RETURN_STATUS, type Return, type ReturnStatus } from '../../types';
+import { RETURN_STATUS, type ReturnDetail, type ReturnList, type ReturnStatus } from '../../types';
 
 const getStatusTag = (status: ReturnStatus, isClickable: boolean) => {
   const color = RETURN_STATUS_COLORS[status];
@@ -47,7 +47,7 @@ export default function ReturnManagementPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
 
-  const [returns, setReturns] = useState<Return[]>([]);
+  const [returns, setReturns] = useState<ReturnList[]>([]);
   const [filters, setFilters] = useState({
     region: undefined as string | undefined,
     status: undefined as ReturnStatus | undefined,
@@ -66,16 +66,16 @@ export default function ReturnManagementPage() {
 
   const fetchStatistics = async () => {
     try {
-      const res = await returnAPI.getAdminReturns();
+      const res = await returnAPI.getReturnsHq();
 
       if (res.success) {
         const totalReturns = res.data.length;
         const calculatedStatistics = res.data.reduce(
-          (acc: any, ret: Return) => {
-            if (ret.status === RETURN_STATUS.PROCESSING) {
+          (acc: any, ret: ReturnList) => {
+            if (ret.status === RETURN_STATUS.RECEIVED) {
               acc.totalProcessing += 1;
             }
-            if (ret.status !== RETURN_STATUS.REJECTED) {
+            if (ret.status !== RETURN_STATUS.CANCELED) {
               acc.totalAmount += ret.totalPrice || 0;
             }
             return acc;
@@ -95,19 +95,19 @@ export default function ReturnManagementPage() {
   const fetchReturns = async () => {
     setLoading(true);
     try {
-      const res = await returnAPI.getAdminReturns({
+      const res = await returnAPI.getReturnsHq({
         page: currentPage - 1,
         size: PAGE_SIZE,
-        // region: filters.region,
+        region: filters.region,
         status: filters.status,
-        // startDate: filters.startDate,
-        // endDate: filters.endDate,
+        start: filters.startDate,
+        end: filters.endDate,
       });
 
       if (res.success) {
-        const { data, totalElements } = res;
+        const { data, page } = res;
         setReturns(data);
-        setTotal(totalElements);
+        setTotal(page.totalElements);
       }
     } catch (e: any) {
       console.error('반품 요청 목록 로딩 실패:', e);
@@ -150,16 +150,16 @@ export default function ReturnManagementPage() {
       let res: any;
       switch (action) {
         case 'APPROVE':
-          res = await returnAPI.approveReturn(returnId);
+          res = await returnAPI.updateReturn(returnId, { status: RETURN_STATUS.APPROVED });
           break;
         case 'REJECT':
-          res = await returnAPI.rejectReturn(returnId);
+          res = await returnAPI.updateReturn(returnId, { status: RETURN_STATUS.CANCELED });
           break;
         case 'PROCESS':
-          res = await returnAPI.updateReturnStatus(returnId, { status: RETURN_STATUS.PROCESSING });
+          res = await returnAPI.updateReturn(returnId, { status: RETURN_STATUS.RECEIVED });
           break;
         case 'COMPLETE':
-          res = await returnAPI.updateReturnStatus(returnId, { status: RETURN_STATUS.COMPLETED });
+          res = await returnAPI.updateReturn(returnId, { status: RETURN_STATUS.COMPLETED });
           break;
       }
 
@@ -174,7 +174,7 @@ export default function ReturnManagementPage() {
     }
   };
 
-  const renderStatusTagWithActions = (record: Return) => {
+  const renderStatusTagWithActions = (record: ReturnList) => {
     if (record.status === RETURN_STATUS.REQUESTED) {
       return (
         <Popconfirm
@@ -204,7 +204,7 @@ export default function ReturnManagementPage() {
         nextAction = 'PROCESS';
         confirmDescription = '처리중으로 변경하시겠습니까?';
         break;
-      case RETURN_STATUS.PROCESSING:
+      case RETURN_STATUS.RECEIVED:
         nextAction = 'COMPLETE';
         confirmDescription = '완료로 변경하시겠습니까?';
         break;
@@ -231,20 +231,14 @@ export default function ReturnManagementPage() {
     );
   };
 
-  const tableColumns: TableProps<Return>['columns'] = [
+  const tableColumns: TableProps<ReturnList>['columns'] = [
     { title: '반품번호', dataIndex: 'returnId', key: 'returnId' },
     { title: '주문번호', dataIndex: 'orderId', key: 'orderId' },
     { title: '지점명', dataIndex: 'pharmacyName', key: 'pharmacyName' },
     {
       title: '반품요약',
-      key: 'returnSummary',
-      render: (_, record) => {
-        if (record.items.length > 1) {
-          return `${record.items[0].productName} 외 ${record.items.length - 1}건`;
-        } else {
-          return `${record.items[0].productName}`;
-        }
-      },
+      dataIndex: 'summary',
+      key: 'summary',
     },
     {
       title: '반품금액',
@@ -268,7 +262,7 @@ export default function ReturnManagementPage() {
     },
   ];
 
-  const expandedRowRender = (record: Return) => {
+  const expandedRowRender = (record: ReturnDetail) => {
     return (
       <>
         <Table
@@ -337,7 +331,7 @@ export default function ReturnManagementPage() {
       <Form layout="vertical" form={form} onFinish={handleSearch}>
         <Space wrap align="end">
           <Form.Item label="지역" name="region">
-            <Cascader options={REGION_OPTIONS} placeholder="지역 선택" />
+            <Cascader options={REGION_CASCADER_OPTIONS} placeholder="지역 선택" />
           </Form.Item>
           <Form.Item label="상태" name="status">
             <Select allowClear options={[...RETURN_STATUS_OPTIONS]} placeholder="상태 선택" />

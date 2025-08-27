@@ -13,14 +13,14 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { Rnd } from 'react-rnd';
 import { aiAPI } from '../api';
 import { useAuthStore } from '../stores/authStore';
+import type { User } from '../types';
 import {
   CHAT_ROLE,
   CHAT_TYPE,
   type ChatbotRequest,
   type ChatMessage,
   type ChatType,
-} from '../types/ai.type';
-import type { User } from '../types/profile.type';
+} from '../types/chatbot.type';
 
 interface ChatbotProps {
   boundsRef: RefObject<HTMLDivElement | null>;
@@ -31,7 +31,6 @@ const md = new MarkdownIt({ html: false, breaks: true, linkify: true });
 const renderMarkdown: GetProp<typeof Bubble, 'messageRender'> = (raw) => {
   const html = md.render(String(raw));
   const safe = DOMPurify.sanitize(html);
-  // 버블 내 여백 제거를 위해 index.css에 .chat-bubble-markdown 클래스 추가
   return <div className="chat-bubble-markdown" dangerouslySetInnerHTML={{ __html: safe }} />;
 };
 
@@ -113,7 +112,6 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
     setContent('');
   }, []);
 
-  // handleSend수정
   const handleSend = useCallback(
     async (raw: string) => {
       if (!raw.trim() || !chatType || requesting) return;
@@ -143,11 +141,10 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
         let response;
 
         if (chatType === CHAT_TYPE.FAQ) {
-          // ✅ FAQ는 기존처럼 role 그대로 보냄
           const payload: ChatbotRequest = {
             userId: user.userId,
-            chatType: CHAT_TYPE.FAQ,
-            query: raw.trim(),
+            type: CHAT_TYPE.FAQ,
+            question: raw.trim(),
             history: merged.map((m) => ({
               role: m.role,
               content: m.content,
@@ -155,24 +152,22 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
           };
           response = await aiAPI.chatFAQ(payload);
         } else {
-          // ✅ QNA는 history를 type: 'human' | 'ai'로 변환, chatType도 강제 'QNA'
           const payloadQna = {
             userId: user.userId,
-            chatType: 'QNA', // ← 'ONA'로 찍혀도 여기서 강제 교정
-            query: raw.trim(),
+            type: CHAT_TYPE.QNA,
+            question: raw.trim(),
             history: merged.map((m) => ({
-              type: m.role === CHAT_ROLE.AI ? 'ai' : 'human',
+              role: m.role === CHAT_ROLE.AI ? 'ai' : 'human',
               content: m.content,
             })),
           };
-          // 타입이 role 기반이면 캐스팅만
-          response = await aiAPI.chatQnA(payloadQna as unknown as ChatbotRequest);
+          response = await aiAPI.chatQNA(payloadQna as unknown as ChatbotRequest);
         }
 
         if (response.success) {
           const aiMessage: ChatMessage = {
             role: CHAT_ROLE.AI,
-            content: response.data.reply || '응답이 없습니다.',
+            content: response.data.answer || '응답이 없습니다.',
             key: makeKey(),
           };
           setMessages((prev) => prev.slice(0, -1).concat(aiMessage));

@@ -1,10 +1,14 @@
 import { Divider, Layout, message, Typography } from 'antd';
 import DOMPurify from 'dompurify';
+import { useLocation } from 'react-router-dom';
 
 import privacyHtml from '../assets/privacy.html?raw';
 import termsHtml from '../assets/terms.html?raw';
 
 export default function Footer() {
+  const location = useLocation();
+  const isLoginPage = location.pathname === '/login';
+
   const openHtmlInNewWindow = (html: string) => {
     const sanitizedHtml = DOMPurify.sanitize(html);
     const bom = '\uFEFF';
@@ -25,7 +29,13 @@ export default function Footer() {
   };
 
   return (
-    <Layout.Footer style={{ textAlign: 'center' }}>
+    <Layout.Footer
+      style={{
+        textAlign: 'center',
+        backgroundColor: isLoginPage ? 'transparent' : undefined,
+        borderTop: isLoginPage ? 'none' : undefined,
+      }}
+    >
       <Typography.Text style={{ color: '#000000E0' }}>© 2025 Team yeahyak</Typography.Text>
       <Divider type="vertical" />
       <Typography.Link

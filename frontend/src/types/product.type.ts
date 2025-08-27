@@ -1,19 +1,4 @@
-import type { PaginatedResponse } from './api.type';
-
-export interface Product {
-  productId: number;
-  productName: string;
-  productCode: string;
-  mainCategory: ProductMainCategory;
-  subCategory: ProductSubCategory;
-  manufacturer: string;
-  unit: string;
-  unitPrice: number;
-  details?: string;
-  productImgUrl?: string;
-  createdAt: string;
-  stock: number;
-}
+import type { ApiResponse, PaginatedResponse } from './api.type';
 
 export const PRODUCT_CATEGORIES = {
   전문의약품: [
@@ -37,50 +22,78 @@ export const PRODUCT_CATEGORIES = {
   ],
 } as const;
 
-export type ProductMainCategory = keyof typeof PRODUCT_CATEGORIES;
-export type ProductMainCategoryTextMap = { [key in ProductMainCategory]: string };
+export type MainCategory = keyof typeof PRODUCT_CATEGORIES;
+export type MainCategoryTextMap = { [key in MainCategory]: string };
 
-export type ProductSubCategory = (typeof PRODUCT_CATEGORIES)[ProductMainCategory][number];
-export type ProductSubCategoryTextMap = { [key in ProductSubCategory]: string };
+export type SubCategory = (typeof PRODUCT_CATEGORIES)[MainCategory][number];
+export type SubCategoryTextMap = { [key in SubCategory]: string };
 
-export type ProductSubCategoryWithAll = '전체' | ProductSubCategory;
+export type SubCategoryWithAll = '전체' | SubCategory;
 
 export interface ProductCreateRequest {
   productName: string;
-  productCode: string;
-  mainCategory: ProductMainCategory;
-  subCategory: ProductSubCategory;
+  insuranceCode: string;
+  mainCategory: MainCategory;
+  subCategory: SubCategory;
   manufacturer: string;
   unit: string;
   unitPrice: number;
   details?: string;
   productImgUrl?: string;
-  stock: number;
+  stockQty: number;
+}
+
+export interface ProductCreate {
+  productId: number;
+  stockTxId: number;
+}
+
+export interface ProductDetail {
+  productId: number;
+  productName: string;
+  insuranceCode: string;
+  mainCategory: MainCategory;
+  subCategory: SubCategory;
+  manufacturer: string;
+  unit: string;
+  unitPrice: number;
+  details?: string;
+  productImgUrl?: string;
+  createdAt: string;
+  stockQty: number;
 }
 
 export interface ProductListParams {
   page?: number;
   size?: number;
-  mainCategory?: ProductMainCategory;
-  subCategory?: ProductSubCategory;
+  mainCategory?: MainCategory;
+  subCategory?: SubCategory;
   keyword?: string;
+}
+
+export interface ProductList {
+  productId: number;
+  productName: string;
+  manufacturer: string;
+  unit: string;
+  unitPrice: number;
+  productImgUrl?: string;
+  stockQty: number;
+  latestStockInAt: string;
 }
 
 export interface ProductUpdateRequest {
   productName: string;
-  productCode: string;
-  mainCategory: ProductMainCategory;
-  subCategory: ProductSubCategory;
+  insuranceCode: string;
+  mainCategory: MainCategory;
+  subCategory: SubCategory;
   manufacturer: string;
   unit: string;
   unitPrice: number;
   details?: string;
   productImgUrl?: string;
-  stock: number;
 }
 
-export type ProductCreateResponse = PaginatedResponse<number>;
-export type ProductListResponse = PaginatedResponse<Product>;
-export type ProductDetailResponse = PaginatedResponse<Product>;
-export type ProductUpdateResponse = PaginatedResponse<Product>;
-export type ProductDeleteResponse = PaginatedResponse<string>;
+export type ProductCreateResponse = ApiResponse<ProductCreate>;
+export type ProductListResponse = PaginatedResponse<ProductList>;
+export type ProductDetailResponse = PaginatedResponse<ProductDetail>;

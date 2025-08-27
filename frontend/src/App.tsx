@@ -4,10 +4,6 @@ import HqLayout from './layouts/HqLayout';
 import PublicLayout from './layouts/PublicLayout';
 import BranchDashboardPage from './pages/Branch/BranchDashboardPage';
 import BranchProfileEditPage from './pages/Branch/BranchProfileEditPage';
-import OrderRequestPage from './pages/Branch/OrderRequestPage';
-import ReturnRequestPage from './pages/Branch/ReturnRequestPage';
-import AnnouncementDetailPage from './pages/Common/Announcement/AnnouncementDetailPage';
-import AnnouncementListPage from './pages/Common/Announcement/AnnouncementListPage';
 import BranchSignupPage from './pages/Common/Auth/BranchSignupPage';
 import HqSignupPage from './pages/Common/Auth/HqSignupPage';
 import LoginPage from './pages/Common/Auth/LoginPage';
@@ -16,18 +12,8 @@ import PasswordChangePage from './pages/Common/Auth/PasswordChangePage';
 import ForbiddenPage from './pages/Common/Error/ForbiddenPage';
 import NotFoundPage from './pages/Common/Error/NotFoundPage';
 import ServerErrorPage from './pages/Common/Error/ServerErrorPage';
-import ProductDetailPage from './pages/Common/Product/ProductDetailPage';
-import ProductListPage from './pages/Common/Product/ProductListPage';
-import AnnouncementEditPage from './pages/HQ/AnnouncementEditPage';
-import AnnouncementRegisterPage from './pages/HQ/AnnouncementRegisterPage';
-import BranchManagementPage from './pages/HQ/BranchManagementPage';
-import CreditManagementPage from './pages/HQ/CreditManagementPage';
 import HqDashboardPage from './pages/HQ/HqDashboardPage';
 import HqProfileEditPage from './pages/HQ/HqProfileEditPage';
-import OrderManagementPage from './pages/HQ/OrderManagementPage';
-import ProductEditPage from './pages/HQ/ProductEditPage';
-import ProductRegisterPage from './pages/HQ/ProductRegisterPage';
-import ReturnManagementPage from './pages/HQ/ReturnManagementPage';
 
 export default function App() {
   return (
@@ -48,17 +34,17 @@ export default function App() {
         <Route path="*" element={<Navigate to="/404" replace />} />
       </Route>
       {/* 가맹점 */}
-      {/*<Route element={<ProtectedRoute allowedRoles={['BRANCH']} />}>*/}
+      {/*<Route element={<ProtectedRoute allowedRoles={['PHARMACY']} />}>*/}
       <Route path="/branch" element={<BranchLayout />}>
         <Route index element={<BranchDashboardPage />} />
         <Route path="password-change" element={<PasswordChangePage />} />
         <Route path="profile-edit" element={<BranchProfileEditPage />} />
-        <Route path="announcements" element={<AnnouncementListPage />} />
-        <Route path="announcements/:id" element={<AnnouncementDetailPage />} />
+        {/* <Route path="notices" element={<NoticeListPage />} />
+        <Route path="notices/:id" element={<NoticeDetailPage />} />
         <Route path="orders" element={<OrderRequestPage />} />
         <Route path="returns" element={<ReturnRequestPage />} />
         <Route path="products" element={<ProductListPage />} />
-        <Route path="products/:id" element={<ProductDetailPage />} />
+        <Route path="products/:id" element={<ProductDetailPage />} /> */}
       </Route>
       {/* 본사 */}
       {/*<Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>*/}
@@ -66,10 +52,10 @@ export default function App() {
         <Route index element={<HqDashboardPage />} />
         <Route path="password-change" element={<PasswordChangePage />} />
         <Route path="profile-edit" element={<HqProfileEditPage />} />
-        <Route path="announcements" element={<AnnouncementListPage />} />
-        <Route path="announcements/:id" element={<AnnouncementDetailPage />} />
-        <Route path="announcements/new" element={<AnnouncementRegisterPage />} />
-        <Route path="announcements/:id/edit" element={<AnnouncementEditPage />} />
+        {/* <Route path="notices" element={<NoticeListPage />} />
+        <Route path="notices/:id" element={<NoticeDetailPage />} />
+        <Route path="notices/new" element={<NoticeRegisterPage />} />
+        <Route path="notices/:id/edit" element={<NoticeEditPage />} />
         <Route path="branches" element={<BranchManagementPage />} />
         <Route path="credits" element={<CreditManagementPage />} />
         <Route path="orders" element={<OrderManagementPage />} />
@@ -78,6 +64,7 @@ export default function App() {
         <Route path="products/:id" element={<ProductDetailPage />} />
         <Route path="products/new" element={<ProductRegisterPage />} />
         <Route path="products/:id/edit" element={<ProductEditPage />} />
+        <Route path="stock" element={<HqStockPage />} /> */}
       </Route>
     </Routes>
   );
@@ -89,7 +76,6 @@ export default function App() {
 //       <Route path="/hq" element={<HqLayout />}>
 //         <Route path="monitoring" element={<BranchMonitoringPage />} />
 //         <Route path="forecast" element={<DemandForecastPage />} />
-//         <Route path="stock" element={<HqStockPage />} />
 //       </Route>
 //     </Routes>
 //   );

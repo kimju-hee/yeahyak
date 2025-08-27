@@ -16,22 +16,22 @@ import { productAPI } from '../../../api';
 import ProductCardGrid from '../../../components/ProductCardGrid';
 import { SearchBox } from '../../../components/SearchBox';
 import {
-  PRODUCT_MAIN_CATEGORY_OPTIONS,
-  PRODUCT_MAIN_CATEGORY_TEXT,
-  PRODUCT_PAGE_SIZE,
-  PRODUCT_SUB_CATEGORY_TEXT,
+  MAIN_CATEGORY_OPTIONS,
+  MAIN_CATEGORY_TEXT,
+  PAGE_SIZE,
+  SUB_CATEGORY_TEXT,
 } from '../../../constants';
 import { useAuthStore } from '../../../stores/authStore';
 import {
   PRODUCT_CATEGORIES,
   USER_ROLE,
-  type Product,
-  type ProductMainCategory,
-  type ProductSubCategoryWithAll,
+  type MainCategory,
+  type ProductList,
+  type SubCategoryWithAll,
   type User,
 } from '../../../types';
 
-const MAIN_CATEGORIES = PRODUCT_MAIN_CATEGORY_OPTIONS.map((option) => option.value);
+const MAIN_CATEGORIES = MAIN_CATEGORY_OPTIONS.map((option) => option.value);
 
 export default function ProductListPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -39,14 +39,14 @@ export default function ProductListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const user = useAuthStore((state) => state.user) as User;
-  const basePath = user.role === USER_ROLE.BRANCH ? '/branch' : '/hq';
+  const basePath = user.role === USER_ROLE.PHARMACY ? '/branch' : '/hq';
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [activeMainCategory, setActiveMainCategory] = useState<ProductMainCategory>(
-    (searchParams.get('main') as ProductMainCategory) || '전문의약품',
+  const [products, setProducts] = useState<ProductList[]>([]);
+  const [activeMainCategory, setActiveMainCategory] = useState<MainCategory>(
+    (searchParams.get('main') as MainCategory) || '전문의약품',
   );
-  const [activeSubCategory, setActiveSubCategory] = useState<ProductSubCategoryWithAll>(
-    (searchParams.get('sub') as ProductSubCategoryWithAll) || '전체',
+  const [activeSubCategory, setActiveSubCategory] = useState<SubCategoryWithAll>(
+    (searchParams.get('sub') as SubCategoryWithAll) || '전체',
   );
   const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
   const [appliedKeyword, setAppliedKeyword] = useState(searchParams.get('keyword') || '');
@@ -62,14 +62,14 @@ export default function ProductListPage() {
         mainCategory: activeMainCategory,
         subCategory: activeSubCategory === '전체' ? undefined : activeSubCategory,
         page: currentPage - 1,
-        size: PRODUCT_PAGE_SIZE,
+        size: PAGE_SIZE,
         keyword: appliedKeyword ? appliedKeyword : undefined,
       });
 
       if (res.success) {
-        const { data, totalElements } = res;
+        const { data, page } = res;
         setProducts(data);
-        setTotal(totalElements);
+        setTotal(page.totalElements);
       } else {
         setProducts([]);
         setTotal(0);
@@ -98,7 +98,7 @@ export default function ProductListPage() {
   }, [activeMainCategory, activeSubCategory, currentPage, appliedKeyword]);
 
   const handleMainCategoryChange = (key: string) => {
-    setActiveMainCategory(key as ProductMainCategory);
+    setActiveMainCategory(key as MainCategory);
     setActiveSubCategory('전체');
     setKeyword('');
     setAppliedKeyword('');
@@ -106,7 +106,7 @@ export default function ProductListPage() {
   };
 
   const handleSubCategoryChange = (value: string) => {
-    setActiveSubCategory(value as ProductSubCategoryWithAll);
+    setActiveSubCategory(value as SubCategoryWithAll);
     setKeyword('');
     setAppliedKeyword('');
     setCurrentPage(1);
@@ -119,10 +119,10 @@ export default function ProductListPage() {
   };
 
   const tabsItems: TabsProps['items'] = MAIN_CATEGORIES.map((category) => {
-    const subCategories: ProductSubCategoryWithAll[] = ['전체', ...PRODUCT_CATEGORIES[category]];
+    const subCategories: SubCategoryWithAll[] = ['전체', ...PRODUCT_CATEGORIES[category]];
     return {
       key: category,
-      label: PRODUCT_MAIN_CATEGORY_TEXT[category],
+      label: MAIN_CATEGORY_TEXT[category],
       children: (
         <>
           <Flex justify="space-between">
@@ -134,7 +134,7 @@ export default function ProductListPage() {
                   variant={category === activeSubCategory ? 'outlined' : 'text'}
                   onClick={() => handleSubCategoryChange(category)}
                 >
-                  {category === '전체' ? '전체' : PRODUCT_SUB_CATEGORY_TEXT[category]}
+                  {category === '전체' ? '전체' : SUB_CATEGORY_TEXT[category]}
                 </Button>
               ))}
             </Space>
@@ -190,7 +190,7 @@ export default function ProductListPage() {
 
       <Pagination
         align="center"
-        pageSize={PRODUCT_PAGE_SIZE}
+        pageSize={PAGE_SIZE}
         total={total}
         current={currentPage}
         onChange={(page) => setCurrentPage(page)}

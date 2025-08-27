@@ -1,5 +1,5 @@
 import { Card, Divider, Flex, Skeleton, Space, Typography } from 'antd';
-import { USER_ROLE } from '../../types/profile.type';
+import { USER_ROLE } from '../../types';
 
 interface ProductDetailSkeletonProps {
   userRole: string;

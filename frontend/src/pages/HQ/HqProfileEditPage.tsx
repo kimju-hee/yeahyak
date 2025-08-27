@@ -1,9 +1,9 @@
 import { Button, Card, Flex, Form, Input, message, Select, Typography } from 'antd';
 import { useEffect } from 'react';
-import { profileAPI } from '../../api';
-import { ADMIN_DEPARTMENT_OPTIONS } from '../../constants';
+import { authAPI } from '../../api';
+import { DEPARTMENT_OPTIONS } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
-import type { Admin, AdminDepartment, AdminProfileUpdateRequest } from '../../types/profile.type';
+import type { Admin, AdminUpdateRequest, Department } from '../../types';
 
 export default function HqProfileEditPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -19,15 +19,13 @@ export default function HqProfileEditPage() {
     });
   }, [profile]);
 
-  const handleSubmit = async (values: { adminName: string; department: AdminDepartment }) => {
+  const handleSubmit = async (values: { adminName: string; department: Department }) => {
     try {
-      const payload: AdminProfileUpdateRequest = {
-        adminId: profile.adminId,
-        userId: profile.userId,
+      const payload: AdminUpdateRequest = {
         adminName: values.adminName,
         department: values.department,
       };
-      const res = await profileAPI.updateAdminProfile(payload);
+      const res = await authAPI.updateAdmin(adminId, payload);
 
       if (res.success) {
         updateProfile(payload);
@@ -67,7 +65,7 @@ export default function HqProfileEditPage() {
             label="소속 부서"
             rules={[{ required: true, message: '소속 부서를 선택해주세요.' }]}
           >
-            <Select placeholder="소속 부서를 선택하세요" options={[...ADMIN_DEPARTMENT_OPTIONS]} />
+            <Select placeholder="소속 부서를 선택하세요" options={[...DEPARTMENT_OPTIONS]} />
           </Form.Item>
 
           <Flex justify="center">
