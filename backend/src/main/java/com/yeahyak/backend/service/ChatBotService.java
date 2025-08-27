@@ -6,7 +6,7 @@ import com.yeahyak.backend.dto.ChatbotRequest;
 import com.yeahyak.backend.dto.ChatbotResponse;
 import com.yeahyak.backend.entity.ChatBot;
 import com.yeahyak.backend.entity.User;
-import com.yeahyak.backend.entity.enums.ChatBotType;
+import com.yeahyak.backend.entity.enums.ChatbotType;
 import com.yeahyak.backend.repository.ChatBotRepository;
 import com.yeahyak.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -55,7 +55,7 @@ public class ChatBotService {
 
     // 1) AI 호출
     String endpoint =
-        (req.getType() == ChatBotType.QNA) ? "/chat/qna" : "/chat/faq";
+        (req.getType() == ChatbotType.QNA) ? "/chat/qna" : "/chat/faq";
     String url = aiServiceUrl + endpoint;
 
     Map<String, Object> payload = new HashMap<>();

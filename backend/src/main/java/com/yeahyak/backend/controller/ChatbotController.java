@@ -3,7 +3,7 @@ package com.yeahyak.backend.controller;
 import com.yeahyak.backend.dto.ApiResponse;
 import com.yeahyak.backend.dto.ChatbotRequest;
 import com.yeahyak.backend.dto.ChatbotResponse;
-import com.yeahyak.backend.entity.enums.ChatBotType;
+import com.yeahyak.backend.entity.enums.ChatbotType;
 import com.yeahyak.backend.service.ChatBotService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(value = "/api/chatbot", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Validated
-public class ChatBotController {
+public class ChatbotController {
 
   private final ChatBotService chatbotService;
 
@@ -36,7 +36,7 @@ public class ChatBotController {
   public ResponseEntity<ApiResponse<ChatbotResponse>> askQna(
       @RequestBody @Valid ChatbotRequest req
   ) {
-    req.setType(ChatBotType.QNA);
+    req.setType(ChatbotType.QNA);
     ChatbotResponse res = chatbotService.ask(req);
     URI location = URI.create("/api/chatbot/" + res.getChatbotId());
     return ResponseEntity.created(location).body(ApiResponse.ok(res)); // 201 Created
@@ -50,7 +50,7 @@ public class ChatBotController {
   public ResponseEntity<ApiResponse<ChatbotResponse>> askFaq(
       @RequestBody @Valid ChatbotRequest req
   ) {
-    req.setType(ChatBotType.FAQ);
+    req.setType(ChatbotType.FAQ);
     ChatbotResponse res = chatbotService.ask(req);
     URI location = URI.create("/api/chatbot/" + res.getChatbotId());
     return ResponseEntity.created(location).body(ApiResponse.ok(res)); // 201 Created

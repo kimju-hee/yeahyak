@@ -1,7 +1,7 @@
 package com.yeahyak.backend.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.yeahyak.backend.entity.enums.ChatBotType;
+import com.yeahyak.backend.entity.enums.ChatbotType;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,7 +19,7 @@ public class ChatbotResponse {
 
   private Long chatbotId;
   private Long userId;
-  private ChatBotType type;
+  private ChatbotType type;
   private String question;
   private String answer;
   private LocalDateTime askedAt;

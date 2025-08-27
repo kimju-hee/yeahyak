@@ -1,7 +1,7 @@
 package com.yeahyak.backend.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.yeahyak.backend.entity.enums.ChatBotType;
+import com.yeahyak.backend.entity.enums.ChatbotType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -23,7 +23,7 @@ public class ChatbotRequest {
   @NotNull
   private Long userId;
 
-  private ChatBotType type;
+  private ChatbotType type;
 
   @NotBlank
   @Size(max = 5_000)

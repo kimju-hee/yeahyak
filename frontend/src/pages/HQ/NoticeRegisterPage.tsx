@@ -118,7 +118,7 @@ export default function NoticeRegisterPage() {
   const handleSubmit = async (values: any) => {
     try {
       const payload = {
-        announcement: {
+        notice: {
           type: values.type,
           title: (values.title || '').trim(),
           content: values.content,
@@ -128,7 +128,7 @@ export default function NoticeRegisterPage() {
       const res = await noticeAPI.createNotice(payload);
 
       if (res.success) {
-        const id = res.data[0]?.noticeId;
+        const id = res.data.noticeId;
         if (id) {
           messageApi.success('공지사항이 등록되었습니다.');
           navigate(`/hq/notices/${id}`);
