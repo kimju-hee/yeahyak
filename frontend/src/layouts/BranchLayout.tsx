@@ -1,6 +1,8 @@
 import {
   BellOutlined,
+  CheckCircleTwoTone,
   FrownFilled,
+  HourglassTwoTone,
   KeyOutlined,
   LogoutOutlined,
   NotificationFilled,
@@ -9,13 +11,13 @@ import {
   TagsFilled,
   UserOutlined,
 } from '@ant-design/icons';
-import { ConfigProvider, Dropdown, Flex, Layout, Menu, Typography } from 'antd';
+import { ConfigProvider, Dropdown, Flex, Layout, Menu, Space, Typography } from 'antd';
 import { useRef } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { logo } from '../assets';
 import Chatbot from '../components/Chatbot';
 import { useAuthStore } from '../stores/authStore';
-import { USER_ROLE, type Pharmacy, type User } from '../types';
+import { PHARMACY_STATUS, USER_ROLE, type Pharmacy, type User } from '../types';
 import Footer from './Footer';
 const { Sider, Header, Content } = Layout;
 
@@ -65,7 +67,7 @@ export default function BranchLayout() {
   const location = useLocation();
   const user = useAuthStore((state) => state.user) as User;
   const profile = useAuthStore((state) => state.profile);
-  const pharmacy = user.role === USER_ROLE.PHARMACY ? (profile as Pharmacy) : null;
+  const pharmacy = user.role === USER_ROLE.BRANCH ? (profile as Pharmacy) : null;
 
   // 아바타 메뉴 아이템
   const avatarMenuItems = {
@@ -123,7 +125,16 @@ export default function BranchLayout() {
             <img src={logo} alt="로고" style={{ height: '32px' }} />
           </Link>
           <Flex align="center" gap={'24px'}>
-            <Typography.Text style={{ color: '#ffffff' }}>{pharmacy?.pharmacyName}</Typography.Text>
+            <Space>
+              <Typography.Text style={{ color: '#ffffff' }}>
+                {pharmacy?.pharmacyName}
+              </Typography.Text>
+              {pharmacy?.status === PHARMACY_STATUS.ACTIVE ? (
+                <CheckCircleTwoTone twoToneColor="#52c41a" style={{ fontSize: '16px' }} />
+              ) : (
+                <HourglassTwoTone twoToneColor="#ff4d4f" style={{ fontSize: '16px' }} />
+              )}
+            </Space>
             <BellOutlined style={{ fontSize: '24px', color: '#ffffff' }} />
             <Dropdown
               trigger={['click']}

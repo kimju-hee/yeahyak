@@ -1,282 +1,286 @@
 package com.yeahyak.backend.service;
 
-import com.yeahyak.backend.dto.ReturnCreateRequest;
-import com.yeahyak.backend.dto.ReturnCreateResponse;
-import com.yeahyak.backend.dto.ReturnDetailResponse;
-import com.yeahyak.backend.dto.ReturnListResponse;
-import com.yeahyak.backend.dto.ReturnUpdateRequest;
-import com.yeahyak.backend.entity.OrderItem;
-import com.yeahyak.backend.entity.Orders;
-import com.yeahyak.backend.entity.Pharmacy;
-import com.yeahyak.backend.entity.Product;
-import com.yeahyak.backend.entity.ReturnItem;
-import com.yeahyak.backend.entity.Returns;
-import com.yeahyak.backend.entity.enums.BalanceTxType;
-import com.yeahyak.backend.entity.enums.Region;
+import com.yeahyak.backend.dto.ReturnItemResponseDto;
+import com.yeahyak.backend.dto.ReturnRequestDto;
+import com.yeahyak.backend.dto.ReturnResponseDto;
+import com.yeahyak.backend.entity.*;
+import com.yeahyak.backend.entity.enums.InventoryDivision;
 import com.yeahyak.backend.entity.enums.ReturnStatus;
-import com.yeahyak.backend.entity.enums.StockTxType;
-import com.yeahyak.backend.repository.OrderItemRepository;
-import com.yeahyak.backend.repository.OrderRepository;
-import com.yeahyak.backend.repository.PharmacyRepository;
-import com.yeahyak.backend.repository.ProductRepository;
-import com.yeahyak.backend.repository.ReturnItemRepository;
-import com.yeahyak.backend.repository.ReturnRepository;
-import com.yeahyak.backend.repository.StockTxRepository;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import com.yeahyak.backend.repository.*;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Sort.Direction;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 반품 요청과 관련된 비즈니스 로직을 처리하는 서비스 클래스입니다.
- */
+import java.time.LocalDateTime;
+import java.util.*;
+
 @Service
 @RequiredArgsConstructor
 public class ReturnService {
 
-  private final ReturnRepository returnRepo;
-  private final ReturnItemRepository returnItemRepo;
-  private final OrderRepository orderRepo;
-  private final OrderItemRepository orderItemRepo;
-  private final PharmacyRepository pharmacyRepo;
-  private final ProductRepository productRepo;
-  private final StockTxRepository stockTxRepo;
-  private final BalanceTxService balanceTxService;
-  private final StockTxService stockTxService;
+    private final ReturnRepository returnRepository;
+    private final ReturnItemsRepository returnItemsRepository;
+    private final PharmacyRepository pharmacyRepository;
+    private final ProductRepository productRepository;
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final InventoryHistoryRepository inventoryHistoryRepository;
 
-  /**
-   * 반품 요청을 생성합니다.
-   */
-  @Transactional
-  public ReturnCreateResponse createReturn(ReturnCreateRequest req) {
-    Pharmacy pharmacy = pharmacyRepo.findById(req.getPharmacyId())
-        .orElseThrow(() -> new RuntimeException("가맹점 정보를 찾을 수 없습니다."));
-    Orders orders = orderRepo.findById(req.getOrderId())
-        .orElseThrow(() -> new RuntimeException("발주 정보를 찾을 수 없습니다."));
-    if (!orders.getPharmacy().getPharmacyId().equals(pharmacy.getPharmacyId())) {
-      throw new RuntimeException("해당 가맹점의 발주 내역이 아닙니다.");
+    @Transactional
+    public ReturnResponseDto createReturnRequest(ReturnRequestDto dto) {
+        Pharmacy pharmacy = pharmacyRepository.findById(dto.getPharmacyId())
+                .orElseThrow(() -> new RuntimeException("약국 정보 없음"));
+
+        List<Product> orderedProducts = new ArrayList<>();
+        if (dto.getOrderId() != null) {
+            Order order = orderRepository.findById(dto.getOrderId())
+                    .orElseThrow(() -> new RuntimeException("주문 정보 없음"));
+
+            if (!order.getPharmacy().getPharmacyId().equals(dto.getPharmacyId())) {
+                throw new RuntimeException("해당 약국의 주문이 아닙니다.");
+            }
+
+            List<OrderItems> orderItems = orderItemRepository.findByOrders(order);
+            orderedProducts = orderItems.stream().map(OrderItems::getProduct).toList();
+        }
+
+        Returns returns = new Returns();
+        returns.setPharmacy(pharmacy);
+        returns.setCreatedAt(LocalDateTime.now());
+        returns.setReason(dto.getReason());
+        returns.setStatus(ReturnStatus.REQUESTED);
+        returns.setUpdatedAt(null);
+
+        List<ReturnItems> returnItemList = new ArrayList<>();
+        List<ReturnItemResponseDto> itemResponses = new ArrayList<>();
+        int total = 0;
+
+        for (ReturnRequestDto.ReturnItemDto itemDto : dto.getItems()) {
+            Product product = productRepository.findById(itemDto.getProductId())
+                    .orElseThrow(() -> new RuntimeException("제품 없음"));
+
+            if (dto.getOrderId() != null &&
+                    orderedProducts.stream().noneMatch(p -> p.getProductId().equals(product.getProductId()))) {
+                throw new RuntimeException("해당 주문에 포함되지 않은 상품입니다: " + product.getProductName());
+            }
+
+            int qty = itemDto.getQuantity();
+            if (qty <= 0) throw new RuntimeException("반품 수량은 1 이상이어야 합니다.");
+
+            int subtotal = qty * itemDto.getUnitPrice();
+            total += subtotal;
+
+            ReturnItems item = new ReturnItems();
+            item.setReturns(returns);
+            item.setProduct(product);
+            item.setQuantity(qty);
+            item.setUnitPrice(itemDto.getUnitPrice());
+            item.setSubtotalPrice(subtotal);
+            returnItemList.add(item);
+
+            itemResponses.add(ReturnItemResponseDto.builder()
+                    .productId(product.getProductId())
+                    .productName(product.getProductName())
+                    .manufacturer(product.getManufacturer())
+                    .quantity(qty)
+                    .unitPrice(itemDto.getUnitPrice())
+                    .subtotalPrice(subtotal)
+                    .build());
+        }
+
+        returns.setTotalPrice(total);
+        returnRepository.save(returns);
+        returnItemsRepository.saveAll(returnItemList);
+
+        for (ReturnItems ri : returnItemList) {
+            Product product = ri.getProduct();
+            int snapshot = product.getStock() == null ? 0 : product.getStock();
+            inventoryHistoryRepository.save(InventoryHistory.builder()
+                    .product(product)
+                    .division(InventoryDivision.RETURN_IN)
+                    .quantity(ri.getQuantity())
+                    .stock(snapshot)
+                    .note(pharmacy.getPharmacyName())
+                    .build());
+        }
+
+        return ReturnResponseDto.builder()
+                .returnId(returns.getReturnId())
+                .pharmacyId(pharmacy.getPharmacyId())
+                .pharmacyName(pharmacy.getPharmacyName())
+                .orderId(dto.getOrderId())
+                .createdAt(returns.getCreatedAt())
+                .totalPrice(total)
+                .status(returns.getStatus().name())
+                .reason(dto.getReason()) // ⬅️ 최상위에만 reason
+                .items(itemResponses)
+                .build();
     }
-    if (req.getItems() == null || req.getItems().isEmpty()) {
-      throw new RuntimeException("반품 요청 품목이 없습니다.");
+
+    @Transactional
+    public Map<String, Object> getAllReturns(int page, int size, String status, String pharmacyName) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        Page<Returns> returnsPage;
+        if (status != null && pharmacyName != null) {
+            returnsPage = returnRepository.findByStatusAndPharmacy_PharmacyNameContainingIgnoreCase(
+                    ReturnStatus.valueOf(status), pharmacyName, pageable);
+        } else if (status != null) {
+            returnsPage = returnRepository.findByStatus(ReturnStatus.valueOf(status), pageable);
+        } else if (pharmacyName != null) {
+            returnsPage = returnRepository.findByPharmacy_PharmacyNameContainingIgnoreCase(pharmacyName, pageable);
+        } else {
+            returnsPage = returnRepository.findAll(pageable);
+        }
+
+        return convertToPagedReturnResponse(returnsPage);
     }
 
-    List<OrderItem> orderItems = orderItemRepo.findByOrders(orders);
-    Map<Long, OrderItem> orderedItemMap = orderItems.stream()
-        .collect(Collectors
-            .toMap(oi -> oi.getProduct().getProductId(), oi -> oi));
+    @Transactional
+    public Map<String, Object> getReturnsByPharmacy(Long pharmacyId, int page, int size, String status) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-    final List<ReturnStatus> statuses = List.of(
-        ReturnStatus.REQUESTED,
-        ReturnStatus.APPROVED,
-        ReturnStatus.RECEIVED,
-        ReturnStatus.COMPLETED
-    );
+        Page<Returns> returnsPage;
+        if (status != null) {
+            returnsPage = returnRepository.findByPharmacy_PharmacyIdAndStatus(
+                    pharmacyId, ReturnStatus.valueOf(status), pageable);
+        } else {
+            returnsPage = returnRepository.findByPharmacy_PharmacyId(pharmacyId, pageable);
+        }
 
-    BigDecimal totalPrice = BigDecimal.ZERO;
-    List<ReturnItem> returnItems = new ArrayList<>();
+        return convertToPagedReturnResponse(returnsPage);
+    }
 
-    Map<Long, Integer> orderedQtyMap = orderItems.stream()
-        .collect(Collectors
-            .toMap(oi -> oi.getProduct().getProductId(), OrderItem::getQuantity));
+    private Map<String, Object> convertToPagedReturnResponse(Page<Returns> returnsPage) {
+        List<ReturnResponseDto> returnResponses = returnsPage.getContent().stream().map(ret -> {
+            List<ReturnItems> items = returnItemsRepository.findByReturns(ret);
 
-    for (ReturnCreateRequest.Item reqItem : req.getItems()) {
-      Product product = productRepo.findById(reqItem.getProductId())
-          .orElseThrow(() -> new RuntimeException("제품 정보를 찾을 수 없습니다."));
+            List<ReturnItemResponseDto> itemDtos = items.stream().map(item ->
+                    ReturnItemResponseDto.builder()
+                            .productId(item.getProduct().getProductId())
+                            .productName(item.getProduct().getProductName())
+                            .manufacturer(item.getProduct().getManufacturer())
+                            .quantity(item.getQuantity())
+                            .unitPrice(item.getUnitPrice())
+                            .subtotalPrice(item.getSubtotalPrice())
+                            .build()
+            ).toList();
 
-      int quantity = reqItem.getQuantity();
+            return ReturnResponseDto.builder()
+                    .returnId(ret.getReturnId())
+                    .pharmacyId(ret.getPharmacy().getPharmacyId())
+                    .pharmacyName(ret.getPharmacy().getPharmacyName())
+                    .orderId(null)
+                    .createdAt(ret.getCreatedAt())
+                    .updatedAt(ret.getUpdatedAt())
+                    .totalPrice(ret.getTotalPrice())
+                    .status(ret.getStatus().name())
+                    .reason(ret.getReason())
+                    .items(itemDtos)
+                    .build();
+        }).toList();
 
-      // 반품 가능 수량 제한
-      int orderedQty = orderedQtyMap.getOrDefault(product.getProductId(), 0);
-      long already = returnItemRepo.sumReturnedQtyForOrderAndProduct(
-          orders, product.getProductId(), statuses
-      );
-      long left = Math.max(0L, (long) orderedQty - already);
-      if (quantity > left) {
-        throw new RuntimeException(
-            String.format("반품 가능 수량을 초과했습니다. (주문수량=%d개, 누적반품=%d개)", orderedQty, already)
+        return Map.of(
+                "success", true,
+                "data", returnResponses,
+                "totalPages", returnsPage.getTotalPages(),
+                "totalElements", returnsPage.getTotalElements(),
+                "currentPage", returnsPage.getNumber()
         );
-      }
-
-      // 반품 단가 고정
-      OrderItem orderedItem = orderedItemMap.get(product.getProductId());
-      if (orderedItem == null) {
-        throw new RuntimeException("발주 내역에 없는 제품은 반품할 수 없습니다.");
-      }
-      BigDecimal unitPrice = orderedItem.getUnitPrice();
-      BigDecimal subtotalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
-      totalPrice = totalPrice.add(subtotalPrice);
-
-      ReturnItem returnItem = ReturnItem.builder()
-          .returns(null) // 나중에 세팅
-          .product(product)
-          .quantity(quantity)
-          .unitPrice(unitPrice)
-          .subtotalPrice(subtotalPrice)
-          .build();
-      returnItems.add(returnItem);
     }
 
-    Returns returns = Returns.builder()
-        .pharmacy(pharmacy)
-        .orders(orders)
-        .status(ReturnStatus.REQUESTED)
-        .reason(req.getReason())
-        .totalPrice(totalPrice)
-        .build();
-    returnRepo.save(returns);
+    @Transactional
+    public void updateStatus(Long returnId, ReturnStatus status) {
+        Returns returns = returnRepository.findById(returnId)
+                .orElseThrow(() -> new RuntimeException("반품 정보 없음"));
 
-    for (ReturnItem returnItem : returnItems) {
-      returnItem.setReturns(returns);
+        if (returns.getStatus() == ReturnStatus.REJECTED || returns.getStatus() == ReturnStatus.COMPLETED) {
+            throw new RuntimeException("이미 처리된 반품입니다.");
+        }
+
+        returns.setStatus(status);
+        returns.setUpdatedAt(LocalDateTime.now());
     }
-    returnItemRepo.saveAll(returnItems);
 
-    return new ReturnCreateResponse(returns.getReturnId());
-  }
+    @Transactional
+    public void approve(Long returnId) {
+        Returns returns = returnRepository.findById(returnId)
+                .orElseThrow(() -> new RuntimeException("반품 정보 없음"));
+        if (returns.getStatus() != ReturnStatus.REQUESTED) {
+            throw new RuntimeException("이미 처리된 상태입니다.");
+        }
 
-  /**
-   * 본사에서 반품 요청 목록을 조회합니다. 기간이나 상태를 지정하지 않으면 모든 반품 요청을 조회합니다.
-   */
-  @Transactional(readOnly = true)
-  public Page<ReturnListResponse> getReturns(
-      ReturnStatus status, Region region, LocalDateTime start, LocalDateTime end,
-      int page, int size
-  ) {
-    Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.DESC, "createdAt"));
-    return returnRepo.findByStatusAndRegionAndCreatedAtBetween(
-            status, region, start, end, pageable)
-        .map(returns -> ReturnListResponse.builder()
-            .returnId(returns.getReturnId())
-            .pharmacyId(returns.getPharmacy().getPharmacyId())
-            .pharmacyName(returns.getPharmacy().getPharmacyName())
-            .status(returns.getStatus())
-            .summary(makeSummary(returns))
-            .reason(returns.getReason())
-            .totalPrice(returns.getTotalPrice())
-            .createdAt(returns.getCreatedAt())
-            .build());
-  }
+        List<ReturnItems> items = returnItemsRepository.findByReturns(returns);
+        for (ReturnItems ri : items) {
+            int qty = ri.getQuantity();
+            productRepository.restoreStock(ri.getProduct().getProductId(), qty);
+            Product p = productRepository.findById(ri.getProduct().getProductId()).orElseThrow();
+            int after = p.getStock() == null ? 0 : p.getStock();
 
-  /**
-   * 가맹점에서 반품 요청 목록을 조회합니다. 상태를 지정하지 않으면 해당 가맹점의 모든 반품 요청을 조회합니다.
-   */
-  @Transactional(readOnly = true)
-  public Page<ReturnListResponse> getReturnsByPharmacy(
-      Long pharmacyId, ReturnStatus status, int page, int size
-  ) {
-    Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.DESC, "createdAt"));
-    return returnRepo.findByPharmacy_PharmacyIdAndStatus(pharmacyId, status, pageable)
-        .map(returns -> ReturnListResponse.builder()
-            .returnId(returns.getReturnId())
-            .pharmacyId(pharmacyId)
-            .pharmacyName(returns.getPharmacy().getPharmacyName())
-            .status(returns.getStatus())
-            .summary(makeSummary(returns))
-            .reason(returns.getReason())
-            .totalPrice(returns.getTotalPrice())
-            .createdAt(returns.getCreatedAt())
-            .build());
-  }
+            inventoryHistoryRepository.save(InventoryHistory.builder()
+                    .product(p)
+                    .division(InventoryDivision.IN)
+                    .quantity(qty)
+                    .stock(after)
+                    .note(returns.getPharmacy().getPharmacyName())
+                    .build());
+        }
 
-  /**
-   * 반품 요청 상세를 조회합니다.
-   */
-  @Transactional(readOnly = true)
-  public ReturnDetailResponse getReturnById(Long returnId) {
-    Returns returns = returnRepo.findById(returnId)
-        .orElseThrow(() -> new RuntimeException("반품 요청 정보를 찾을 수 없습니다."));
+        returns.setStatus(ReturnStatus.APPROVED);
+        returns.setUpdatedAt(LocalDateTime.now());
+    }
 
-    List<ReturnItem> items = returnItemRepo.findByReturns(returns);
-    List<ReturnDetailResponse.Item> itemsList = items.stream()
-        .map(item -> ReturnDetailResponse.Item.builder()
-            .productId(item.getProduct().getProductId())
-            .productName(item.getProduct().getProductName())
-            .mainCategory(item.getProduct().getMainCategory())
-            .subCategory(item.getProduct().getSubCategory())
-            .manufacturer(item.getProduct().getManufacturer())
-            .productImgUrl(item.getProduct().getProductImgUrl())
-            .quantity(item.getQuantity())
-            .unitPrice(item.getUnitPrice())
-            .subtotalPrice(item.getSubtotalPrice())
-            .build()
+    public ReturnResponseDto getReturnDetail(Long returnId) {
+        Returns returns = returnRepository.findById(returnId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 반품이 존재하지 않습니다."));
+
+        Pharmacy pharmacy = returns.getPharmacy();
+        List<ReturnItems> items = returnItemsRepository.findByReturns(returns);
+
+        List<ReturnItemResponseDto> itemDtos = items.stream().map(item ->
+                ReturnItemResponseDto.builder()
+                        .productId(item.getProduct().getProductId())
+                        .productName(item.getProduct().getProductName())
+                        .manufacturer(item.getProduct().getManufacturer())
+                        .quantity(item.getQuantity())
+                        .unitPrice(item.getUnitPrice())
+                        .subtotalPrice(item.getSubtotalPrice())
+                        .build()
         ).toList();
 
-    return ReturnDetailResponse.builder()
-        .returnId(returns.getReturnId())
-        .pharmacyId(returns.getPharmacy().getPharmacyId())
-        .pharmacyName(returns.getPharmacy().getPharmacyName())
-        .status(returns.getStatus())
-        .summary(makeSummary(items))
-        .reason(returns.getReason())
-        .totalPrice(returns.getTotalPrice())
-        .createdAt(returns.getCreatedAt())
-        .updatedAt(returns.getUpdatedAt())
-        .items(itemsList)
-        .build();
-  }
-
-  private String makeSummary(Returns returns) {
-    List<ReturnItem> items = returnItemRepo.findByReturns(returns);
-    String firstProductName = items.get(0).getProduct().getProductName();
-    int count = items.size();
-    return (count > 1) ? firstProductName + " 외 " + (count - 1) + "개" : firstProductName;
-  }
-
-  private String makeSummary(List<ReturnItem> items) {
-    String firstProductName = items.get(0).getProduct().getProductName();
-    int count = items.size();
-    return (count > 1) ? firstProductName + " 외 " + (count - 1) + "개" : firstProductName;
-  }
-
-  /**
-   * 반품 요청의 상태를 업데이트합니다. 업데이트 상태가 COMPLETED인 경우, 유저의 미정산 잔액을 감소시키고 제품의 재고를 복구합니다.
-   */
-  @Transactional
-  public void updateReturnStatus(Long returnId, ReturnUpdateRequest req) {
-    Returns returns = returnRepo.findById(returnId)
-        .orElseThrow(() -> new RuntimeException("반품 요청 정보를 찾을 수 없습니다."));
-
-    if (returns.getStatus() == ReturnStatus.CANCELED) {
-      throw new RuntimeException("이미 취소된 반품 요청입니다.");
-    } else if (returns.getStatus() == ReturnStatus.COMPLETED) {
-      throw new RuntimeException("이미 완료된 반품 요청입니다.");
+        return ReturnResponseDto.builder()
+                .returnId(returns.getReturnId())
+                .pharmacyId(pharmacy.getPharmacyId())
+                .pharmacyName(pharmacy.getPharmacyName())
+                .orderId(null)
+                .createdAt(returns.getCreatedAt())
+                .updatedAt(returns.getUpdatedAt())
+                .status(returns.getStatus().name())
+                .totalPrice(returns.getTotalPrice())
+                .reason(returns.getReason())
+                .items(itemDtos)
+                .build();
     }
 
-    if (req.getStatus() == ReturnStatus.COMPLETED) {
-      balanceTxService.createBalanceTx(
-          returns.getPharmacy().getPharmacyId(), BalanceTxType.RETURN, returns.getTotalPrice()
-      );
-
-      List<ReturnItem> items = returnItemRepo.findByReturns(returns);
-      for (ReturnItem ri : items) {
-        stockTxService.createStockTx(
-            ri.getProduct().getProductId(), StockTxType.RETURN, ri.getQuantity()
-        );
-      }
+    @Transactional
+    public void reject(Long returnId) {
+        Returns returns = returnRepository.findById(returnId)
+                .orElseThrow(() -> new RuntimeException("반품 정보 없음"));
+        if (returns.getStatus() != ReturnStatus.REQUESTED) {
+            throw new RuntimeException("이미 처리된 상태입니다.");
+        }
+        returns.setStatus(ReturnStatus.REJECTED);
+        returns.setUpdatedAt(LocalDateTime.now());
     }
 
-    returns.setStatus(req.getStatus());
-    returnRepo.save(returns);
-  }
+    @Transactional
+    public void deleteReturn(Long returnId) {
+        Returns returns = returnRepository.findById(returnId)
+                .orElseThrow(() -> new RuntimeException("반품 내역을 찾을 수 없습니다."));
 
-  /**
-   * 반품 요청을 삭제합니다.
-   */
-  @Transactional
-  public void deleteReturn(Long returnId) {
-    Returns returns = returnRepo.findById(returnId)
-        .orElseThrow(() -> new RuntimeException("반품 요청 정보를 찾을 수 없습니다."));
+        returnItemsRepository.deleteAllByReturns(returns);
+        returnRepository.delete(returns);
+    }
 
-    returnItemRepo.deleteAllByReturns(returns);
-    returnRepo.delete(returns);
-  }
 }

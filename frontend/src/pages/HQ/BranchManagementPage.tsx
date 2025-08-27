@@ -11,23 +11,19 @@ import {
 } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
-import { pharmacyRequestAPI } from '../../api';
+import { managementAPI } from '../../api';
 import { SearchBox } from '../../components/SearchBox';
 import {
+  BRANCH_REQUEST_STATUS_COLORS,
+  BRANCH_REQUEST_STATUS_TEXT,
   DATE_FORMAT,
   PAGE_SIZE,
-  PHARMACY_REQUEST_STATUS_COLORS,
-  PHARMACY_REQUEST_STATUS_TEXT,
 } from '../../constants';
-import type {
-  PharmacyRequestDetail,
-  PharmacyRequestList,
-  PharmacyRequestStatus,
-} from '../../types';
+import type { BranchRequest, BranchRequestStatus } from '../../types';
 
-const getStatusTag = (status: PharmacyRequestStatus) => {
-  const color = PHARMACY_REQUEST_STATUS_COLORS[status];
-  const text = PHARMACY_REQUEST_STATUS_TEXT[status];
+const getStatusTag = (status: BranchRequestStatus) => {
+  const color = BRANCH_REQUEST_STATUS_COLORS[status];
+  const text = BRANCH_REQUEST_STATUS_TEXT[status];
   return (
     <Tag bordered={true} color={color} style={{ cursor: 'default' }}>
       {text}
@@ -38,7 +34,7 @@ const getStatusTag = (status: PharmacyRequestStatus) => {
 export default function BranchManagementPage() {
   const [messageApi, contextHolder] = message.useMessage();
 
-  const [requests, setRequests] = useState<PharmacyRequestList[]>([]);
+  const [requests, setRequests] = useState<BranchRequest[]>([]);
   const [search, setSearch] = useState({
     field: 'pharmacyId' as 'pharmacyId' | 'pharmacyName',
     keyword: undefined as string | undefined,
@@ -53,7 +49,7 @@ export default function BranchManagementPage() {
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const res = await pharmacyRequestAPI.getPharmacyRequests({
+      const res = await managementAPI.getBranchRequests({
         page: currentPage - 1,
         size: PAGE_SIZE,
         // field: search.appliedField,
@@ -61,9 +57,9 @@ export default function BranchManagementPage() {
       });
 
       if (res.success) {
-        const { data, page } = res;
+        const { data, totalElements } = res;
         setRequests(data);
-        setTotal(page.totalElements);
+        setTotal(totalElements);
       }
     } catch (e: any) {
       console.error('약국 등록 요청 목록 로딩 실패:', e);
@@ -83,9 +79,12 @@ export default function BranchManagementPage() {
 
   const handleApprove = async (pharmacyId: number) => {
     try {
-      await pharmacyRequestAPI.approve(pharmacyId);
-      messageApi.success('요청이 승인 처리되었습니다.');
-      fetchRequests();
+      const res = await managementAPI.approveBranch(pharmacyId);
+
+      if (res.success) {
+        messageApi.success('요청이 승인 처리되었습니다.');
+        fetchRequests();
+      }
     } catch (e: any) {
       console.error('요청 승인 처리 실패:', e);
       messageApi.error(e.response?.data?.message || '요청 승인 처리 중 오류가 발생했습니다.');
@@ -94,16 +93,19 @@ export default function BranchManagementPage() {
 
   const handleReject = async (pharmacyId: number) => {
     try {
-      await pharmacyRequestAPI.reject(pharmacyId);
-      messageApi.success('요청이 거절 처리되었습니다.');
-      fetchRequests();
+      const res = await managementAPI.rejectBranch(pharmacyId);
+
+      if (res.success) {
+        messageApi.success('요청이 거절 처리되었습니다.');
+        fetchRequests();
+      }
     } catch (e: any) {
       console.error('요청 거절 처리 실패:', e);
       messageApi.error(e.response?.data?.message || '요청 거절 처리 중 오류가 발생했습니다.');
     }
   };
 
-  const tableColumns: TableProps<PharmacyRequestList>['columns'] = [
+  const tableColumns: TableProps<BranchRequest>['columns'] = [
     {
       title: '지점코드',
       dataIndex: ['pharmacy', 'pharmacyId'],
@@ -124,42 +126,44 @@ export default function BranchManagementPage() {
       title: '상태',
       dataIndex: ['request', 'status'],
       key: 'request.status',
-      render: (_, record) => getStatusTag(record.status),
+      render: (_, record) => getStatusTag(record.request.status),
     },
   ];
 
-  const expandedRowRender = (record: PharmacyRequestDetail) => {
+  const expandedRowRender = (record: BranchRequest) => {
     return (
       <>
         <Descriptions bordered column={2} size="middle">
-          <Descriptions.Item label="대표자명">{record.representativeName}</Descriptions.Item>
-          <Descriptions.Item label="사업자등록번호">{record.bizRegNo}</Descriptions.Item>
-          <Descriptions.Item label="주소">{`${record.address} ${record.detailAddress}`}</Descriptions.Item>
-          <Descriptions.Item label="요청일시">
-            {dayjs(record.requestedAt).format(DATE_FORMAT.KR_DEFAULT)}
+          <Descriptions.Item label="대표자명">
+            {record.pharmacy.representativeName}
           </Descriptions.Item>
-          <Descriptions.Item label="연락처">{record.contact}</Descriptions.Item>
+          <Descriptions.Item label="사업자등록번호">{record.pharmacy.bizRegNo}</Descriptions.Item>
+          <Descriptions.Item label="주소">{`${record.pharmacy.address} ${record.pharmacy.detailAddress}`}</Descriptions.Item>
+          <Descriptions.Item label="요청일시">
+            {dayjs(record.request.requestedAt).format(DATE_FORMAT.KR_DEFAULT)}
+          </Descriptions.Item>
+          <Descriptions.Item label="연락처">{record.pharmacy.contact}</Descriptions.Item>
           <Descriptions.Item label="검토일시">
-            {record.processedAt
-              ? dayjs(record.processedAt).format(DATE_FORMAT.KR_DEFAULT)
+            {record.request.reviewedAt
+              ? dayjs(record.request.reviewedAt).format(DATE_FORMAT.KR_DEFAULT)
               : '미검토'}
           </Descriptions.Item>
           <Descriptions.Item label="상태">
             <Flex wrap justify="space-between" align="center">
-              {getStatusTag(record.status)}
-              {record && record.status === 'PENDING' && (
+              {getStatusTag(record.request.status)}
+              {record && record.request.status === 'PENDING' && (
                 <Space>
                   <Button
                     type="primary"
                     size="small"
-                    onClick={() => handleApprove(record.pharmacyRequestId)}
+                    onClick={() => handleApprove(record.pharmacy.pharmacyId)}
                   >
                     승인
                   </Button>
                   <Button
                     danger
                     size="small"
-                    onClick={() => handleReject(record.pharmacyRequestId)}
+                    onClick={() => handleReject(record.pharmacy.pharmacyId)}
                   >
                     거절
                   </Button>
@@ -203,7 +207,7 @@ export default function BranchManagementPage() {
         columns={tableColumns}
         dataSource={requests}
         loading={loading}
-        rowKey={(record) => record.pharmacyRequestId}
+        rowKey={(record) => record.request.id}
         pagination={{
           position: ['bottomCenter'],
           pageSize: PAGE_SIZE,

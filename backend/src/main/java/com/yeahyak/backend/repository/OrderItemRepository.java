@@ -1,13 +1,12 @@
 package com.yeahyak.backend.repository;
 
-import com.yeahyak.backend.entity.OrderItem;
-import com.yeahyak.backend.entity.Orders;
-import java.util.List;
+import com.yeahyak.backend.entity.Order;
+import com.yeahyak.backend.entity.OrderItems;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
+import java.util.List;
 
-  List<OrderItem> findByOrders(Orders orders);
-
-  void deleteAllByOrders(Orders orders);
+public interface OrderItemRepository extends JpaRepository<OrderItems, Long> {
+    List<OrderItems> findByOrders(Order order);
+    List<OrderItems> findByOrdersIn(List<Order> orders);
 }
