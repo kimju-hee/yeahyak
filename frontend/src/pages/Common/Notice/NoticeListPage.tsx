@@ -15,7 +15,7 @@ import { noticeAPI } from '../../../api';
 import { SearchBox } from '../../../components/SearchBox';
 import { DATE_FORMAT, PAGE_SIZE } from '../../../constants';
 import { useAuthStore } from '../../../stores/authStore';
-import { USER_ROLE, type NoticeListRes, type NoticeType, type User } from '../../../types';
+import { USER_ROLE, type NoticeList, type NoticeType, type User } from '../../../types';
 
 export default function NoticeListPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -23,9 +23,9 @@ export default function NoticeListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const user = useAuthStore((state) => state.user) as User;
-  const basePath = user.role === USER_ROLE.PHARMACY ? '/branch' : '/hq';
+  const basePath = user.role === USER_ROLE.ADMIN ? '/hq' : '/branch';
 
-  const [notices, setNotices] = useState<NoticeListRes[]>([]);
+  const [notices, setNotices] = useState<NoticeList[]>([]);
   const [activeTab, setActiveTab] = useState<NoticeType>(
     (searchParams.get('type') as NoticeType) || 'NOTICE',
   );
@@ -47,9 +47,9 @@ export default function NoticeListPage() {
       });
 
       if (res.success) {
-        const { data, totalElements } = res;
+        const { data, page } = res;
         setNotices(data);
-        setTotal(totalElements);
+        setTotal(page.totalElements);
       } else {
         setNotices([]);
         setTotal(0);
@@ -89,7 +89,7 @@ export default function NoticeListPage() {
     setCurrentPage(1);
   };
 
-  const tableColumns: TableProps<NoticeListRes>['columns'] = [
+  const tableColumns: TableProps<NoticeList>['columns'] = [
     { title: '번호', dataIndex: 'noticeId', key: 'noticeId', width: '80px' },
     { title: '제목', dataIndex: 'title', key: 'title', ellipsis: true },
     {

@@ -1,6 +1,5 @@
 import { Button, Flex, Form, Input } from 'antd';
 import { useEffect } from 'react';
-import type { Region } from '../types';
 
 declare global {
   interface Window {
@@ -12,15 +11,15 @@ interface AddressInputProps {
   postcodeName: string;
   addressName: string;
   detailAddressName: string;
-  region: Region | string;
-  label: string;
+  regionName: string;
+  label?: string;
 }
 
 export default function AddressInput({
   postcodeName = '',
   addressName = '',
   detailAddressName = '',
-  region = '',
+  regionName = '',
   label = '주소',
 }: AddressInputProps) {
   const form = Form.useFormInstance();
@@ -38,15 +37,20 @@ export default function AddressInput({
   const handleSearchAddress = () => {
     new window.daum.Postcode({
       oncomplete: function (data: any) {
-        const postcode = data.zonecode;
-        const address = data.userSelectedType === 'R' ? data.roadAddress : data.jibunAddress;
-        const region = data.sido;
-        form.setFieldsValue({
-          [postcodeName]: postcode,
-          [addressName]: address,
-          [detailAddressName]: '',
-          [region]: region,
-        });
+        try {
+          const postcode = data.zonecode;
+          const address = data.userSelectedType === 'R' ? data.roadAddress : data.jibunAddress;
+          const region = data.sido;
+
+          form.setFieldsValue({
+            [postcodeName]: postcode,
+            [addressName]: address,
+            [detailAddressName]: '',
+            [regionName]: region,
+          });
+        } catch (error) {
+          console.error('주소 설정 중 오류가 발생했습니다:', error);
+        }
       },
     }).open();
   };
@@ -63,7 +67,7 @@ export default function AddressInput({
           >
             <Input readOnly placeholder="우편번호" />
           </Form.Item>
-          <Form.Item name={region} noStyle>
+          <Form.Item name={regionName} noStyle>
             <Input readOnly placeholder="지역" />
           </Form.Item>
           <Button onClick={handleSearchAddress}>주소 검색</Button>

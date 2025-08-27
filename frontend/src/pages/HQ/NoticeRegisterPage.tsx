@@ -15,10 +15,10 @@ import {
 } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { aiAPI, announcementAPI } from '../../api';
+import { aiAPI, noticeAPI } from '../../api';
 import TiptapEditor from '../../components/TiptapEditor';
-import { ANNOUNCEMENT_TYPE_OPTIONS } from '../../constants';
-import { ANNOUNCEMENT_TYPE } from '../../types';
+import { NOTICE_TYPE_OPTIONS } from '../../constants';
+import { NOTICE_TYPE } from '../../types';
 import { validateAttachmentFile } from '../../utils';
 
 export default function NoticeRegisterPage() {
@@ -88,13 +88,13 @@ export default function NoticeRegisterPage() {
 
       let res;
       switch (watchedType) {
-        case ANNOUNCEMENT_TYPE.LAW:
+        case NOTICE_TYPE.LAW:
           res = await aiAPI.summarizeLaw({ file });
           break;
-        case ANNOUNCEMENT_TYPE.EPIDEMIC:
+        case NOTICE_TYPE.EPIDEMIC:
           res = await aiAPI.summarizeEpidemic({ file });
           break;
-        case ANNOUNCEMENT_TYPE.NEW_PRODUCT:
+        case NOTICE_TYPE.NEW_PRODUCT:
           res = await aiAPI.summarizeNewProduct({ file });
           break;
         default:
@@ -103,7 +103,7 @@ export default function NoticeRegisterPage() {
       }
 
       if (res.success) {
-        const raw = watchedType === ANNOUNCEMENT_TYPE.EPIDEMIC ? res.data.notice : res.data.summary;
+        const raw = watchedType === NOTICE_TYPE.EPIDEMIC ? res.data.notice : res.data.summary;
         form.setFieldsValue({ content: raw });
         messageApi.success('AI가 문서를 요약했습니다!');
       }
@@ -125,13 +125,13 @@ export default function NoticeRegisterPage() {
         },
         file: fileList[0]?.originFileObj || undefined,
       };
-      const res = await announcementAPI.createAnnouncement(payload);
+      const res = await noticeAPI.createNotice(payload);
 
       if (res.success) {
-        const id = res.data[0]?.announcementId;
+        const id = res.data[0]?.noticeId;
         if (id) {
           messageApi.success('공지사항이 등록되었습니다.');
-          navigate(`/hq/announcements/${id}`);
+          navigate(`/hq/notices/${id}`);
         }
       }
     } catch (e: any) {
@@ -200,7 +200,7 @@ export default function NoticeRegisterPage() {
             rules={[{ required: true, message: '카테고리를 선택해주세요.' }]}
             style={{ flex: 1 }}
           >
-            <Select placeholder="카테고리 선택" options={[...ANNOUNCEMENT_TYPE_OPTIONS]} />
+            <Select placeholder="카테고리 선택" options={[...NOTICE_TYPE_OPTIONS]} />
           </Form.Item>
           <Form.Item
             name="title"
@@ -233,7 +233,7 @@ export default function NoticeRegisterPage() {
             title={
               !watchedType
                 ? '카테고리를 먼저 선택해주세요'
-                : watchedType === ANNOUNCEMENT_TYPE.NOTICE
+                : watchedType === NOTICE_TYPE.GENERAL
                   ? '안내 카테고리는 AI 요약을 지원하지 않습니다'
                   : fileList.length === 0
                     ? '첨부파일을 업로드해주세요'
@@ -244,7 +244,7 @@ export default function NoticeRegisterPage() {
             <Button
               type="primary"
               disabled={
-                !watchedType || watchedType === ANNOUNCEMENT_TYPE.NOTICE || fileList.length === 0
+                !watchedType || watchedType === NOTICE_TYPE.GENERAL || fileList.length === 0
               }
               onClick={handleAiSummarize}
               loading={aiLoading}

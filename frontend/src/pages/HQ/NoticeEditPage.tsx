@@ -14,11 +14,11 @@ import {
 } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { aiAPI, announcementAPI } from '../../api';
-import { AnnouncementEditSkeleton } from '../../components/skeletons';
+import { aiAPI, noticeAPI } from '../../api';
+import { NoticeEditSkeleton } from '../../components/skeletons';
 import TiptapEditor from '../../components/TiptapEditor';
-import { ANNOUNCEMENT_TYPE_OPTIONS } from '../../constants';
-import { ANNOUNCEMENT_TYPE, type Announcement } from '../../types';
+import { NOTICE_TYPE_OPTIONS } from '../../constants';
+import { NOTICE_TYPE, type NoticeDetail } from '../../types';
 import { validateAttachmentFile } from '../../utils';
 
 export default function NoticeEditPage() {
@@ -39,25 +39,25 @@ export default function NoticeEditPage() {
   const fetchAnnouncement = async () => {
     setLoading(true);
     try {
-      const res = await announcementAPI.getAnnouncement(Number(id));
+      const res = await noticeAPI.getNotice(Number(id));
 
       if (res.success) {
-        const announcement: Announcement = res.data[0];
+        const notice: NoticeDetail = res.data[0];
         form.setFieldsValue({
-          type: announcement.type,
-          title: announcement.title,
-          content: announcement.content,
-          attachmentUrl: announcement.attachmentUrl || '',
+          type: notice.type,
+          title: notice.title,
+          content: notice.content,
+          attachmentUrl: notice.attachmentUrl || '',
         });
 
-        if (announcement.attachmentUrl) {
+        if (notice.attachmentUrl) {
           setFileList([
             {
               uid: '-1',
-              name: announcement.attachmentUrl.split('/').pop() || '첨부파일',
+              name: notice.attachmentUrl.split('/').pop() || '첨부파일',
               status: 'done',
-              url: announcement.attachmentUrl,
-            },
+              url: notice.attachmentUrl,
+            } as UploadFile,
           ]);
         } else {
           setFileList([]);
@@ -114,13 +114,13 @@ export default function NoticeEditPage() {
 
       let res;
       switch (watchedType) {
-        case ANNOUNCEMENT_TYPE.LAW:
+        case NOTICE_TYPE.LAW:
           res = await aiAPI.summarizeLaw({ file });
           break;
-        case ANNOUNCEMENT_TYPE.EPIDEMIC:
+        case NOTICE_TYPE.EPIDEMIC:
           res = await aiAPI.summarizeEpidemic({ file });
           break;
-        case ANNOUNCEMENT_TYPE.NEW_PRODUCT:
+        case NOTICE_TYPE.NEW_PRODUCT:
           res = await aiAPI.summarizeNewProduct({ file });
           break;
         default:
@@ -129,7 +129,7 @@ export default function NoticeEditPage() {
       }
 
       if (res.success) {
-        const raw = watchedType === ANNOUNCEMENT_TYPE.EPIDEMIC ? res.data.notice : res.data.summary;
+        const raw = watchedType === NOTICE_TYPE.EPIDEMIC ? res.data.notice : res.data.summary;
         form.setFieldsValue({ content: raw });
         messageApi.success('AI가 문서를 요약했습니다!');
       }
@@ -152,12 +152,9 @@ export default function NoticeEditPage() {
         },
         file: fileList[0]?.originFileObj || undefined,
       };
-      const res = await announcementAPI.updateAnnouncement(Number(id), payload);
-
-      if (res.success) {
-        messageApi.success('공지사항이 수정되었습니다.');
-        navigate(`/hq/announcements/${id}`);
-      }
+      await noticeAPI.updateNotice(Number(id), payload);
+      messageApi.success('공지사항이 수정되었습니다.');
+      navigate(`/hq/announcements/${id}`);
     } catch (e: any) {
       console.error('공지사항 수정 실패:', e);
       messageApi.error(e.response?.data?.message || '공지사항 수정 중 오류가 발생했습니다.');
@@ -210,11 +207,11 @@ export default function NoticeEditPage() {
       </Typography.Title>
 
       {loading ? (
-        <AnnouncementEditSkeleton />
+        <NoticeEditSkeleton />
       ) : (
         <Form
           form={form}
-          name="announcement-edit"
+          name="notice-edit"
           layout="vertical"
           onValuesChange={handleFormValuesChange}
           onFinish={handleSubmit}
@@ -227,7 +224,7 @@ export default function NoticeEditPage() {
               rules={[{ required: true, message: '카테고리를 선택해주세요.' }]}
               style={{ flex: 1 }}
             >
-              <Select options={[...ANNOUNCEMENT_TYPE_OPTIONS]} disabled />
+              <Select options={[...NOTICE_TYPE_OPTIONS]} disabled />
             </Form.Item>
             <Form.Item
               name="title"
@@ -261,7 +258,7 @@ export default function NoticeEditPage() {
               title={
                 !watchedType
                   ? '카테고리를 먼저 선택해주세요'
-                  : watchedType === ANNOUNCEMENT_TYPE.NOTICE
+                  : watchedType === NOTICE_TYPE.GENERAL
                     ? '안내 카테고리는 AI 요약을 지원하지 않습니다'
                     : fileList.length === 0
                       ? '첨부파일을 업로드해주세요'
@@ -272,7 +269,7 @@ export default function NoticeEditPage() {
               <Button
                 type="primary"
                 disabled={
-                  !watchedType || watchedType === ANNOUNCEMENT_TYPE.NOTICE || fileList.length === 0
+                  !watchedType || watchedType === NOTICE_TYPE.GENERAL || fileList.length === 0
                 }
                 onClick={handleAiSummarize}
                 loading={aiLoading}

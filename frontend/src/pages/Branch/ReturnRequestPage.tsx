@@ -31,14 +31,14 @@ import { useAuthStore } from '../../stores/authStore';
 import { useReturnCartStore } from '../../stores/returnCartStore';
 import {
   ORDER_STATUS,
-  type OrderDetailResItem,
+  type OrderDetailItem,
   type OrderDetailResponse,
-  type OrderListRes,
+  type OrderList,
   type Pharmacy,
   type ReturnCartItem,
-  type ReturnCreateReq,
+  type ReturnCreateRequest,
   type ReturnDetailResponse,
-  type ReturnListRes,
+  type ReturnList,
   type ReturnStatus,
 } from '../../types';
 import { PLACEHOLDER } from '../../utils';
@@ -64,7 +64,7 @@ export default function ReturnRequestPage() {
   const pharmacyId = profile.pharmacyId;
   const { items, addItem, removeItem, clearCart, getTotalPrice } = useReturnCartStore();
 
-  const [returns, setReturns] = useState<ReturnListRes[]>([]);
+  const [returns, setReturns] = useState<ReturnList[]>([]);
   const [currentStatusFilter, setCurrentStatusFilter] = useState<ReturnStatus | undefined>(
     undefined,
   );
@@ -76,11 +76,11 @@ export default function ReturnRequestPage() {
   const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
 
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
-  const [orders, setOrders] = useState<OrderListRes[]>([]);
+  const [orders, setOrders] = useState<OrderList[]>([]);
   const [ordersCurrentPage, setOrdersCurrentPage] = useState<number>(1);
   const [ordersTotal, setOrdersTotal] = useState<number>(0);
   const [ordersLoading, setOrdersLoading] = useState<boolean>(false);
-  const [selectedOrder, setSelectedOrder] = useState<Order | undefined>(undefined);
+  const [selectedOrder, setSelectedOrder] = useState<OrderList | undefined>(undefined);
   const [orderDetail, setOrderDetail] = useState<OrderDetailResponse | undefined>(undefined);
   const [orderDetailLoading, setOrderDetailLoading] = useState<boolean>(false);
   const [orderItems, setOrderItems] = useState<OrderDetailItem[]>([]);
@@ -100,9 +100,9 @@ export default function ReturnRequestPage() {
       });
 
       if (res.success) {
-        const { data, totalElements } = res;
+        const { data, page } = res;
         setReturns(data);
-        setReturnsTotal(totalElements);
+        setReturnsTotal(page.totalElements);
       } else {
         setReturns([]);
         setReturnsTotal(0);
@@ -142,9 +142,9 @@ export default function ReturnRequestPage() {
         status: ORDER_STATUS.COMPLETED,
       });
       if (res.success) {
-        const { data, totalElements } = res;
+        const { data, page } = res;
         setOrders(data);
-        setOrdersTotal(totalElements);
+        setOrdersTotal(page.totalElements);
       }
     } catch (e: any) {
       console.error('주문 목록 로딩 실패:', e);
@@ -163,7 +163,7 @@ export default function ReturnRequestPage() {
 
       if (res.success) {
         setOrderDetail(res);
-        setOrderItems(res.data.items as OrderDetailResItem[]);
+        setOrderItems(res.data.items as OrderDetailItem[]);
         form.setFieldsValue({
           productId: undefined,
           quantity: undefined,
@@ -232,7 +232,7 @@ export default function ReturnRequestPage() {
       const { reason } = values;
       const reasonText = Array.isArray(reason) ? reason.join(', ') : reason;
 
-      const payload: ReturnCreateReq = {
+      const payload: ReturnCreateRequest = {
         pharmacyId: pharmacyId,
         orderId: selectedOrder.orderId,
         reason: reasonText,
@@ -249,7 +249,7 @@ export default function ReturnRequestPage() {
       if (res.success) {
         messageApi.success('반품 요청이 완료되었습니다.');
         fetchReturns(currentStatusFilter);
-        updateProfile({ outstandingBalance: outstandingBalance + res.data.totalPrice });
+        updateProfile({ outstandingBalance: outstandingBalance + res.data.totalPrice }); // FIXME: 우짜지...
         clearCart();
         setSelectedOrder(undefined);
         form.resetFields(['orderId', 'productId', 'quantity', 'unitPrice']);
@@ -276,7 +276,7 @@ export default function ReturnRequestPage() {
     if (newPage !== returnsCurrentPage) setReturnsCurrentPage(newPage);
   };
 
-  const handleExpand = (expanded: boolean, record: ReturnListRes) => {
+  const handleExpand = (expanded: boolean, record: ReturnList) => {
     const returnId = record.returnId;
     if (expanded) fetchReturnDetail(returnId);
     setExpandedRowKeys(
@@ -315,7 +315,7 @@ export default function ReturnRequestPage() {
   ];
 
   // 반품내역 테이블
-  const returnsColumns: TableProps<ReturnListRes>['columns'] = [
+  const returnsColumns: TableProps<ReturnList>['columns'] = [
     { title: '반품번호', dataIndex: 'returnId', key: 'returnId' },
     {
       title: '일시',
@@ -325,14 +325,8 @@ export default function ReturnRequestPage() {
     },
     {
       title: '요약',
-      key: 'returnSummary',
-      render: (_, record) => {
-        if (record.items.length > 1) {
-          return `${record.items[0].productName} 외 ${record.items.length - 1}건`;
-        } else {
-          return `${record.items[0].productName}`;
-        }
-      },
+      dataIndex: 'summary',
+      key: 'summary',
     },
     { title: '사유', dataIndex: 'reason', key: 'reason' },
     {
@@ -355,7 +349,7 @@ export default function ReturnRequestPage() {
   ];
 
   // 반품내역 테이블 상세
-  const expandedRowRender = (record: ReturnListRes) => {
+  const expandedRowRender = (record: ReturnList) => {
     const detailData = expandedRowData[record.returnId];
     const isLoading = expandedRowLoading[record.returnId];
     if (isLoading) return <Spin />;
@@ -531,11 +525,7 @@ export default function ReturnRequestPage() {
                     size="small"
                   >
                     <Descriptions.Item label="주문번호">{order.orderId}</Descriptions.Item>
-                    <Descriptions.Item label="요약">
-                      {order.items.length > 1
-                        ? `${order.items[0].productName} 외 ${order.items.length - 1}건`
-                        : `${order.items[0].productName}`}
-                    </Descriptions.Item>
+                    <Descriptions.Item label="요약">{order.summary}</Descriptions.Item>
                     <Descriptions.Item label="합계">
                       {order.totalPrice.toLocaleString()}원
                     </Descriptions.Item>

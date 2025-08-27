@@ -16,7 +16,7 @@ import { API_BASE_URL } from '../../../api/client';
 import { NoticeDetailSkeleton } from '../../../components/skeletons';
 import { DATE_FORMAT, NOTICE_TYPE_TEXT } from '../../../constants';
 import { useAuthStore } from '../../../stores/authStore';
-import { USER_ROLE, type NoticeDetailRes, type User } from '../../../types';
+import { USER_ROLE, type NoticeDetail, type User } from '../../../types';
 
 export default function NoticeDetailPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -25,10 +25,10 @@ export default function NoticeDetailPage() {
   const location = useLocation();
 
   const user = useAuthStore((state) => state.user) as User;
-  const basePath = user.role === USER_ROLE.PHARMACY ? '/branch' : '/hq';
+  const basePath = user.role === USER_ROLE.ADMIN ? '/hq' : '/branch';
   const returnTo = location.state?.returnTo;
 
-  const [notice, setNotice] = useState<NoticeDetailRes>();
+  const [notice, setNotice] = useState<NoticeDetail>();
   const [loading, setLoading] = useState(false);
 
   const fetchNotice = async () => {
@@ -91,19 +91,16 @@ export default function NoticeDetailPage() {
   const handleDelete = async () => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
       try {
-        const res = await noticeAPI.deleteNotice(Number(id));
-
-        if (res.success) {
-          messageApi.success('공지사항이 삭제되었습니다.');
-          if (returnTo) {
-            const params = new URLSearchParams();
-            params.set('type', returnTo.type);
-            if (returnTo.page > 1) params.set('page', returnTo.page.toString());
-            if (returnTo.keyword) params.set('keyword', returnTo.keyword);
-            navigate(`${basePath}/notices?${params.toString()}`);
-          } else {
-            navigate(`${basePath}/notices`);
-          }
+        await noticeAPI.deleteNotice(Number(id));
+        messageApi.success('공지사항이 삭제되었습니다.');
+        if (returnTo) {
+          const params = new URLSearchParams();
+          params.set('type', returnTo.type);
+          if (returnTo.page > 1) params.set('page', returnTo.page.toString());
+          if (returnTo.keyword) params.set('keyword', returnTo.keyword);
+          navigate(`${basePath}/notices?${params.toString()}`);
+        } else {
+          navigate(`${basePath}/notices`);
         }
       } catch (e: any) {
         console.error('공지사항 삭제 실패:', e);

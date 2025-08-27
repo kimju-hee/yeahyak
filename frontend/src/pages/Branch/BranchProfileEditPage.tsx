@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { authAPI } from '../../api';
 import AddressInput from '../../components/AddressInput';
 import { useAuthStore } from '../../stores/authStore';
-import type { BranchProfileUpdateRequest, Pharmacy } from '../../types/pharmacy.type';
+import type { Pharmacy, PharmacyUpdateRequest } from '../../types';
 import { formatBizRegNo, formatContact, handleNumberOnlyKeyDown } from '../../utils';
 
 export default function BranchProfileEditPage() {
@@ -27,9 +27,9 @@ export default function BranchProfileEditPage() {
     });
   }, [profile]);
 
-  const handleSubmit = async (values: Omit<BranchProfileUpdateRequest, 'status'>) => {
+  const handleSubmit = async (values: Omit<PharmacyUpdateRequest, 'status'>) => {
     try {
-      const payload: BranchProfileUpdateRequest = {
+      const payload: PharmacyUpdateRequest = {
         ...values,
       };
       const response = await authAPI.updatePharmacy(profile.pharmacyId, payload);
@@ -81,6 +81,7 @@ export default function BranchProfileEditPage() {
             postcodeName="postcode"
             addressName="address"
             detailAddressName="detailAddress"
+            region="region"
             label="주소"
           />
           <Form.Item

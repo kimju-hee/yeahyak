@@ -31,7 +31,7 @@ const md = new MarkdownIt({ html: false, breaks: true, linkify: true });
 const renderMarkdown: GetProp<typeof Bubble, 'messageRender'> = (raw) => {
   const html = md.render(String(raw));
   const safe = DOMPurify.sanitize(html);
-  return <div dangerouslySetInnerHTML={{ __html: safe }} />;
+  return <div className="chat-bubble-markdown" dangerouslySetInnerHTML={{ __html: safe }} />;
 };
 
 const roles: GetProp<typeof Bubble.List, 'roles'> = {
@@ -42,7 +42,7 @@ const roles: GetProp<typeof Bubble.List, 'roles'> = {
   AI: {
     placement: 'start',
     shape: 'corner',
-    avatar: { icon: <RobotOutlined />, style: { color: '#fa8c16', backgroundColor: '#fff7e6' } },
+    avatar: { icon: <RobotOutlined />, style: { color: '#1677ff', backgroundColor: '#e6f4ff' } },
     messageRender: renderMarkdown,
   },
 };
@@ -96,8 +96,8 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
         role: CHAT_ROLE.AI,
         content:
           type === CHAT_TYPE.FAQ
-            ? '안녕하세요 저는 운영도우미입니다. 무엇을 도와드릴까요?'
-            : '안녕하세요 저는 의약품 AI 어시스턴트입니다. 무엇을 도와드릴까요?',
+            ? '안녕하세요 저는 운영 도우미입니다! 무엇을 도와드릴까요?'
+            : '안녕하세요 저는 의약품 AI 어시스턴트입니다! 무엇을 도와드릴까요?',
         key: makeKey(),
       };
       setMessages([initialMessage]);
@@ -207,7 +207,7 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
         type="primary"
         style={{ insetInlineEnd: '24px' }}
         icon={<MessageOutlined />}
-        tooltip={{ title: '궁금한 점이 있으신가요?', placement: 'left' }}
+        tooltip={{ title: '도움이 필요하신가요?', placement: 'left' }}
       >
         <FloatButton
           icon={<QuestionCircleOutlined />}
@@ -226,12 +226,12 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
         <Rnd
           key={resizeKey}
           default={{ x: initialPosition.x, y: initialPosition.y, width: 360, height: 480 }}
-          minWidth={360}
-          minHeight={480}
+          minWidth={320}
+          minHeight={400}
           bounds={boundsRef?.current ?? undefined}
         >
           <Card
-            title={chatType === CHAT_TYPE.FAQ ? '운영도우미' : '의약품 AI 어시스턴트'}
+            title={chatType === CHAT_TYPE.FAQ ? '운영 도우미' : '의약품 AI 어시스턴트'}
             extra={
               <Button
                 type="text"

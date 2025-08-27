@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { noticeAPI, orderAPI } from '../../api';
 import { NOTICE_TYPE_TEXT } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
-import type { NoticeListRes, OrderListRes, Pharmacy, User } from '../../types';
+import type { NoticeList, OrderList, Pharmacy, User } from '../../types';
 import { calculateCreditInfo } from '../../utils';
 
 export default function BranchDashboardPage() {
@@ -16,21 +16,21 @@ export default function BranchDashboardPage() {
   const profile = useAuthStore((state) => state.profile) as Pharmacy;
   const pharmacyId = profile.pharmacyId;
 
-  const [latestAnnouncements, setLatestAnnouncements] = useState<NoticeListRes[]>([]);
-  const [recentOrder, setRecentOrder] = useState<OrderListRes[]>([]);
+  const [latestNotices, setLatestNotices] = useState<NoticeList[]>([]);
+  const [recentOrder, setRecentOrder] = useState<OrderList[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const noticeResponse = await noticeAPI.getNotices({ page: 0, size: 5 });
+        const noticeResponse = await noticeAPI.getNotices();
 
         if (noticeResponse.success && noticeResponse.data.length > 0) {
-          setLatestAnnouncements(noticeResponse.data);
+          setLatestNotices(noticeResponse.data);
         } else {
-          setLatestAnnouncements([]);
+          setLatestNotices([]);
         }
 
-        const orderResponse = await orderAPI.getBranchOrders({ pharmacyId, page: 0, size: 1 });
+        const orderResponse = await orderAPI.getOrdersBranch({ pharmacyId, page: 0, size: 1 });
 
         if (orderResponse.success && orderResponse.data.length > 0) {
           setRecentOrder(orderResponse.data);
@@ -42,7 +42,7 @@ export default function BranchDashboardPage() {
         messageApi.error(
           e.response?.data?.message || '대시보드 데이터 로딩 중 오류가 발생했습니다.',
         );
-        setLatestAnnouncements([]);
+        setLatestNotices([]);
         setRecentOrder([]);
       }
     };
@@ -110,7 +110,7 @@ export default function BranchDashboardPage() {
               variant="borderless"
             >
               <Table
-                dataSource={recentOrder[0].items}
+                dataSource={recentOrder[0].items} // FIXME: 우짜징...
                 columns={recentOrderItemsColumns}
                 pagination={false}
                 rowKey="productName"
@@ -133,7 +133,7 @@ export default function BranchDashboardPage() {
           <Card title="크레딧 현황" variant="borderless">
             <Space direction="vertical" style={{ width: '100%' }}>
               {(() => {
-                const creditInfo = calculateCreditInfo(user.point);
+                const creditInfo = calculateCreditInfo(profile.outstandingBalance);
                 return (
                   <>
                     <Statistic

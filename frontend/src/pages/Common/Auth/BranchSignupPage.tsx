@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../../../api';
 import AddressInput from '../../../components/AddressInput';
 import TermsAndPrivacyCheckbox from '../../../components/TermsAndPolicyCheckbox';
-import type { PharmacySignupReq } from '../../../types';
+import type { PharmacySignupRequest } from '../../../types';
 import {
   formatBizRegNo,
   formatContact,
@@ -19,7 +19,7 @@ export default function BranchSignupPage() {
   const navigate = useNavigate();
 
   const handleSubmit = async (
-    values: PharmacySignupReq & {
+    values: PharmacySignupRequest & {
       confirmPassword: string;
       agreement: boolean;
     },
@@ -42,11 +42,11 @@ export default function BranchSignupPage() {
     <>
       {contextHolder}
       <Flex vertical justify="center" align="center">
-        <Typography.Title level={1} style={{ marginBottom: '24px' }}>
+        <Typography.Title level={1} style={{ marginBottom: '48px' }}>
           예약 회원가입
         </Typography.Title>
 
-        <Card style={{ padding: '24px' }}>
+        <Card style={{ padding: '48px 48px' }}>
           <Form
             form={form}
             name="signup-branch"

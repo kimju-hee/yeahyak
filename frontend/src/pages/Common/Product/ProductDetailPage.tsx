@@ -18,7 +18,7 @@ import { productAPI } from '../../../api';
 import { ProductDetailSkeleton } from '../../../components/skeletons';
 import { useAuthStore } from '../../../stores/authStore';
 import { useOrderCartStore } from '../../../stores/orderCartStore';
-import { USER_ROLE, type OrderCartItem, type ProductDetailRes, type User } from '../../../types';
+import { USER_ROLE, type OrderCartItem, type ProductDetail, type User } from '../../../types';
 import { getProductImgSrc, PLACEHOLDER } from '../../../utils';
 
 export default function ProductDetailPage() {
@@ -32,7 +32,7 @@ export default function ProductDetailPage() {
   const basePath = user.role === USER_ROLE.PHARMACY ? '/branch' : '/hq';
   const returnTo = location.state?.returnTo;
 
-  const [product, setProduct] = useState<ProductDetailRes>();
+  const [product, setProduct] = useState<ProductDetail>();
   const [loading, setLoading] = useState(false);
 
   const fetchProduct = async () => {
@@ -62,20 +62,17 @@ export default function ProductDetailPage() {
   const handleDelete = async () => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
       try {
-        const res = await productAPI.deleteProduct(Number(id));
-
-        if (res.success) {
-          messageApi.success('제품이 삭제되었습니다.');
-          if (returnTo) {
-            const params = new URLSearchParams();
-            params.set('main', returnTo.main);
-            params.set('sub', returnTo.sub);
-            if (returnTo.page > 1) params.set('page', returnTo.page.toString());
-            if (returnTo.keyword) params.set('keyword', returnTo.keyword);
-            navigate(`${basePath}/products?${params.toString()}`);
-          } else {
-            navigate(`${basePath}/products`);
-          }
+        await productAPI.deleteProduct(Number(id));
+        messageApi.success('제품이 삭제되었습니다.');
+        if (returnTo) {
+          const params = new URLSearchParams();
+          params.set('main', returnTo.main);
+          params.set('sub', returnTo.sub);
+          if (returnTo.page > 1) params.set('page', returnTo.page.toString());
+          if (returnTo.keyword) params.set('keyword', returnTo.keyword);
+          navigate(`${basePath}/products?${params.toString()}`);
+        } else {
+          navigate(`${basePath}/products`);
         }
       } catch (e: any) {
         console.error('제품 삭제 실패:', e);
@@ -176,7 +173,9 @@ export default function ProductDetailPage() {
         <Divider />
 
         <Typography.Title level={4}>제품 상세 정보</Typography.Title>
-        <Typography.Paragraph>{product.details}</Typography.Paragraph>
+        <Typography>
+          <div dangerouslySetInnerHTML={{ __html: product.details ?? '' }} />
+        </Typography>
       </Card>
     </>
   );

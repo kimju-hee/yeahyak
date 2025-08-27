@@ -23,12 +23,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { aiAPI, productAPI } from '../../api';
 import { ProductEditSkeleton } from '../../components/skeletons';
-import {
-  DATE_FORMAT,
-  getProductSubCategoryOptions,
-  PRODUCT_MAIN_CATEGORY_OPTIONS,
-} from '../../constants';
-import type { ProductCreateRequest, ProductMainCategory } from '../../types';
+import { DATE_FORMAT, getProductSubCategoryOptions, MAIN_CATEGORY_OPTIONS } from '../../constants';
+import type { MainCategory, ProductCreateRequest } from '../../types';
 
 const getBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -80,7 +76,7 @@ export default function ProductEditPage() {
               status: 'done',
               url: product.productImgUrl,
               ...(isBase64 && { thumbUrl: product.productImgUrl }),
-            },
+            } as UploadFile,
           ]);
         } else {
           setImgFileList([]);
@@ -152,7 +148,7 @@ export default function ProductEditPage() {
     try {
       const payload = {
         productName: values.productName,
-        productCode: values.productCode,
+        productCode: values.insuranceCode,
         mainCategory: values.mainCategory,
         subCategory: values.subCategory,
         manufacturer: values.manufacturer,
@@ -160,14 +156,11 @@ export default function ProductEditPage() {
         unitPrice: values.unitPrice,
         details: values.details || '',
         productImgUrl: values.productImgUrl || '',
-        stock: values.stock,
+        stock: values.stockQty,
       };
-      const res = await productAPI.updateProduct(Number(id), payload);
-
-      if (res.success) {
-        messageApi.success('수정이 완료되었습니다.');
-        navigate(`/hq/products/${id}`);
-      }
+      await productAPI.updateProduct(Number(id), payload);
+      messageApi.success('수정이 완료되었습니다.');
+      navigate(`/hq/products/${id}`);
     } catch (e: any) {
       console.error('제품 정보 수정 실패:', e);
       messageApi.error(e.response?.data?.message || '제품 정보 수정 중 오류가 발생했습니다.');
@@ -307,7 +300,7 @@ export default function ProductEditPage() {
                   label="대분류"
                   rules={[{ required: true, message: '대분류를 입력하세요.' }]}
                 >
-                  <Select options={[...PRODUCT_MAIN_CATEGORY_OPTIONS]} />
+                  <Select options={[...MAIN_CATEGORY_OPTIONS]} />
                 </Form.Item>
                 <Form.Item
                   name="subCategory"
@@ -317,7 +310,7 @@ export default function ProductEditPage() {
                   <Select
                     options={
                       watchedMainCategory
-                        ? getProductSubCategoryOptions(watchedMainCategory as ProductMainCategory)
+                        ? getProductSubCategoryOptions(watchedMainCategory as MainCategory)
                         : []
                     }
                     placeholder="선택"

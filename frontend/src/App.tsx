@@ -4,8 +4,6 @@ import HqLayout from './layouts/HqLayout';
 import PublicLayout from './layouts/PublicLayout';
 import BranchDashboardPage from './pages/Branch/BranchDashboardPage';
 import BranchProfileEditPage from './pages/Branch/BranchProfileEditPage';
-import OrderRequestPage from './pages/Branch/OrderRequestPage';
-import ReturnRequestPage from './pages/Branch/ReturnRequestPage';
 import BranchSignupPage from './pages/Common/Auth/BranchSignupPage';
 import HqSignupPage from './pages/Common/Auth/HqSignupPage';
 import LoginPage from './pages/Common/Auth/LoginPage';
@@ -14,21 +12,8 @@ import PasswordChangePage from './pages/Common/Auth/PasswordChangePage';
 import ForbiddenPage from './pages/Common/Error/ForbiddenPage';
 import NotFoundPage from './pages/Common/Error/NotFoundPage';
 import ServerErrorPage from './pages/Common/Error/ServerErrorPage';
-import NoticeDetailPage from './pages/Common/Notice/NoticeDetailPage';
-import NoticeListPage from './pages/Common/Notice/NoticeListPage';
-import ProductDetailPage from './pages/Common/Product/ProductDetailPage';
-import ProductListPage from './pages/Common/Product/ProductListPage';
-import BranchManagementPage from './pages/HQ/BranchManagementPage';
-import CreditManagementPage from './pages/HQ/CreditManagementPage';
 import HqDashboardPage from './pages/HQ/HqDashboardPage';
 import HqProfileEditPage from './pages/HQ/HqProfileEditPage';
-import HqStockPage from './pages/HQ/HqStockPage';
-import NoticeEditPage from './pages/HQ/NoticeEditPage';
-import NoticeRegisterPage from './pages/HQ/NoticeRegisterPage';
-import OrderManagementPage from './pages/HQ/OrderManagementPage';
-import ProductEditPage from './pages/HQ/ProductEditPage';
-import ProductRegisterPage from './pages/HQ/ProductRegisterPage';
-import ReturnManagementPage from './pages/HQ/ReturnManagementPage';
 
 export default function App() {
   return (
@@ -54,12 +39,12 @@ export default function App() {
         <Route index element={<BranchDashboardPage />} />
         <Route path="password-change" element={<PasswordChangePage />} />
         <Route path="profile-edit" element={<BranchProfileEditPage />} />
-        <Route path="notices" element={<NoticeListPage />} />
+        {/* <Route path="notices" element={<NoticeListPage />} />
         <Route path="notices/:id" element={<NoticeDetailPage />} />
         <Route path="orders" element={<OrderRequestPage />} />
         <Route path="returns" element={<ReturnRequestPage />} />
         <Route path="products" element={<ProductListPage />} />
-        <Route path="products/:id" element={<ProductDetailPage />} />
+        <Route path="products/:id" element={<ProductDetailPage />} /> */}
       </Route>
       {/* 본사 */}
       {/*<Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>*/}
@@ -67,7 +52,7 @@ export default function App() {
         <Route index element={<HqDashboardPage />} />
         <Route path="password-change" element={<PasswordChangePage />} />
         <Route path="profile-edit" element={<HqProfileEditPage />} />
-        <Route path="notices" element={<NoticeListPage />} />
+        {/* <Route path="notices" element={<NoticeListPage />} />
         <Route path="notices/:id" element={<NoticeDetailPage />} />
         <Route path="notices/new" element={<NoticeRegisterPage />} />
         <Route path="notices/:id/edit" element={<NoticeEditPage />} />
@@ -79,7 +64,7 @@ export default function App() {
         <Route path="products/:id" element={<ProductDetailPage />} />
         <Route path="products/new" element={<ProductRegisterPage />} />
         <Route path="products/:id/edit" element={<ProductEditPage />} />
-        <Route path="stock" element={<HqStockPage />} />
+        <Route path="stock" element={<HqStockPage />} /> */}
       </Route>
     </Routes>
   );

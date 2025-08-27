@@ -12,52 +12,64 @@ interface LoginFormProps {
 export default function LoginForm({ role, form, handleSubmit }: LoginFormProps) {
   return (
     <Form name={`login-${role.toLowerCase()}`} form={form} onFinish={handleSubmit}>
-      <Flex vertical justify="center">
+      <Flex vertical justify="center" gap={4}>
         <Form.Item
           name="email"
           rules={[{ required: true, message: '이메일을 입력해주세요.' }]}
           validateTrigger="onSubmit"
         >
-          <Input prefix={<UserOutlined />} placeholder="이메일" />
+          <Input prefix={<UserOutlined />} placeholder="이메일" size="large" />
         </Form.Item>
         <Form.Item
           name="password"
           rules={[{ required: true, message: '비밀번호를 입력해주세요.' }]}
           validateTrigger="onSubmit"
         >
-          <Input prefix={<LockOutlined />} type="password" placeholder="비밀번호" />
+          <Input prefix={<LockOutlined />} type="password" placeholder="비밀번호" size="large" />
         </Form.Item>
 
-        <Button type="primary" htmlType="submit" block style={{ marginBottom: '8px' }}>
+        <Button
+          type="primary"
+          htmlType="submit"
+          block
+          style={{ marginBottom: '16px' }}
+          size="large"
+        >
           로그인
         </Button>
 
         <Flex justify="center" align="center" gap="small">
           {role === 'PHARMACY' ? (
             <>
-              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
+              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap', fontSize: '16px' }}>
                 아이디 찾기
               </Link>
               <Divider type="vertical" />
-              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
+              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap', fontSize: '16px' }}>
                 비밀번호 찾기
               </Link>
               <Divider type="vertical" />
-              <Link to="/signup-branch" style={{ color: 'black', whiteSpace: 'nowrap' }}>
+              <Link
+                to="/signup-branch"
+                style={{ color: 'black', whiteSpace: 'nowrap', fontSize: '16px' }}
+              >
                 회원가입
               </Link>
             </>
           ) : (
             <>
-              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
+              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap', fontSize: '16px' }}>
                 아이디 찾기
               </Link>
               <Divider type="vertical" />
-              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
+              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap', fontSize: '16px' }}>
                 비밀번호 찾기
               </Link>
               <Divider type="vertical" />
-              <Link to="/signup-hq" style={{ color: 'black', whiteSpace: 'nowrap' }}>
+              <Link
+                to="/signup-hq"
+                style={{ color: 'black', whiteSpace: 'nowrap', fontSize: '16px' }}
+              >
                 회원가입
               </Link>
             </>
