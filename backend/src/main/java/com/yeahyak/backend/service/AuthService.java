@@ -118,106 +118,106 @@ public class AuthService {
    * 관리자로 로그인합니다.
    */
   public AdminLoginResponse adminLogin(LoginRequest req) {
+    Authentication auth;
     try {
-      Authentication auth = authenticationManager.authenticate(
+      auth = authenticationManager.authenticate(
           new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword())
       );
-
-      User user = userRepo.findByEmail(req.getEmail())
-          .orElseThrow(() -> new RuntimeException("해당 이메일의 사용자를 찾을 수 없습니다."));
-
-      if (user.getRole() != UserRole.ADMIN) {
-        throw new RuntimeException("가맹점으로 로그인해주세요.");
-      }
-
-      Admin admin = adminRepo.findByUser_UserId(user.getUserId())
-          .orElseThrow(() -> new RuntimeException("관리자 정보를 찾을 수 없습니다."));
-
       SecurityContextHolder.getContext().setAuthentication(auth);
-
-      String accessToken = jwtProvider.createAccessToken(user);
-
-      UserInfo userInfo = new UserInfo(
-          user.getUserId(),
-          user.getEmail(),
-          user.getRole()
-      );
-
-      AdminProfile profile = new AdminProfile(
-          admin.getAdminId(),
-          admin.getAdminName(),
-          admin.getDepartment()
-      );
-
-      return new AdminLoginResponse(accessToken, userInfo, profile);
     } catch (AuthenticationException e) {
       throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.");
     }
+
+    User user = userRepo.findByEmail(req.getEmail())
+        .orElseThrow(() -> new RuntimeException("해당 이메일의 사용자를 찾을 수 없습니다."));
+
+    if (user.getRole() != UserRole.ADMIN) {
+      throw new RuntimeException("가맹점으로 로그인해주세요.");
+    }
+
+    Admin admin = adminRepo.findByUser_UserId(user.getUserId())
+        .orElseThrow(() -> new RuntimeException("관리자 정보를 찾을 수 없습니다."));
+
+    String accessToken = jwtProvider.createAccessToken(user);
+
+    UserInfo userInfo = new UserInfo(
+        user.getUserId(),
+        user.getEmail(),
+        user.getRole()
+    );
+
+    AdminProfile profile = new AdminProfile(
+        admin.getAdminId(),
+        admin.getAdminName(),
+        admin.getDepartment()
+    );
+
+    return new AdminLoginResponse(accessToken, userInfo, profile);
   }
 
   /**
    * 가맹점으로 로그인합니다.
    */
   public PharmacyLoginResponse pharmacylogin(LoginRequest req) {
+    Authentication auth;
     try {
-      Authentication auth = authenticationManager.authenticate(
+      auth = authenticationManager.authenticate(
           new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword())
       );
-
-      User user = userRepo.findByEmail(req.getEmail())
-          .orElseThrow(() -> new RuntimeException("해당 이메일의 사용자를 찾을 수 없습니다."));
-
-      if (user.getRole() != UserRole.PHARMACY) {
-        throw new RuntimeException("관리자로 로그인해주세요.");
-      }
-
-      boolean hasPharmacy = pharmacyRepo.existsByUser_UserId(user.getUserId());
-      if (!hasPharmacy) {
-        PharmacyRequest pharmacyRequest = pharmacyRequestRepo
-            .findByUser_UserId(user.getUserId())
-            .orElse(null);
-
-        if (pharmacyRequest == null) {
-          throw new RuntimeException("약국 등록 요청이 존재하지 않습니다. 관리자에게 문의해주세요.");
-        }
-
-        switch (pharmacyRequest.getStatus()) {
-          case PENDING -> throw new RuntimeException("약국 등록 요청이 승인 대기 중입니다.");
-          case REJECTED -> throw new RuntimeException("약국 등록 요청이 거부되었습니다.");
-          default -> throw new RuntimeException("약국 등록 요청 상태가 올바르지 않습니다. 관리자에게 문의해주세요.");
-        }
-      }
-
-      Pharmacy pharmacy = pharmacyRepo.findByUser_UserId(user.getUserId())
-          .orElseThrow(() -> new RuntimeException("가맹점 정보를 찾을 수 없습니다."));
-
       SecurityContextHolder.getContext().setAuthentication(auth);
-
-      String accessToken = jwtProvider.createAccessToken(user);
-
-      UserInfo userInfo = new UserInfo(
-          user.getUserId(),
-          user.getEmail(),
-          user.getRole()
-      );
-
-      PharmacyProfile profile = new PharmacyProfile(
-          pharmacy.getPharmacyId(),
-          pharmacy.getPharmacyName(),
-          pharmacy.getBizRegNo(),
-          pharmacy.getRepresentativeName(),
-          pharmacy.getPostcode(),
-          pharmacy.getAddress(),
-          pharmacy.getDetailAddress(),
-          pharmacy.getRegion(),
-          pharmacy.getContact(),
-          pharmacy.getOutstandingBalance()
-      );
-
-      return new PharmacyLoginResponse(accessToken, userInfo, profile);
     } catch (AuthenticationException e) {
-      throw new RuntimeException("이메일 또는 비밀번호가 올바르지 않습니다.");
+      throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.");
     }
+
+    User user = userRepo.findByEmail(req.getEmail())
+        .orElseThrow(() -> new RuntimeException("해당 이메일의 사용자를 찾을 수 없습니다."));
+
+    if (user.getRole() != UserRole.PHARMACY) {
+      throw new RuntimeException("관리자로 로그인해주세요.");
+    }
+
+    boolean hasPharmacy = pharmacyRepo.existsByUser_UserId(user.getUserId());
+    if (!hasPharmacy) {
+      PharmacyRequest pharmacyRequest = pharmacyRequestRepo
+          .findByUser_UserId(user.getUserId())
+          .orElse(null);
+
+      if (pharmacyRequest == null) {
+        throw new RuntimeException("약국 등록 요청이 존재하지 않습니다. 관리자에게 문의해주세요.");
+      }
+
+      switch (pharmacyRequest.getStatus()) {
+        case PENDING -> throw new RuntimeException("약국 등록 요청이 승인 대기 중입니다.");
+        case REJECTED -> throw new RuntimeException("약국 등록 요청이 거부되었습니다.");
+        default -> throw new RuntimeException("약국 등록 요청 상태가 올바르지 않습니다. 관리자에게 문의해주세요.");
+      }
+    }
+
+    Pharmacy pharmacy = pharmacyRepo.findByUser_UserId(user.getUserId())
+        .orElseThrow(() -> new RuntimeException("가맹점 정보를 찾을 수 없습니다."));
+
+    String accessToken = jwtProvider.createAccessToken(user);
+
+    UserInfo userInfo = new UserInfo(
+        user.getUserId(),
+        user.getEmail(),
+        user.getRole()
+    );
+
+    PharmacyProfile profile = new PharmacyProfile(
+        pharmacy.getPharmacyId(),
+        pharmacy.getPharmacyName(),
+        pharmacy.getBizRegNo(),
+        pharmacy.getRepresentativeName(),
+        pharmacy.getPostcode(),
+        pharmacy.getAddress(),
+        pharmacy.getDetailAddress(),
+        pharmacy.getRegion(),
+        pharmacy.getContact(),
+        pharmacy.getOutstandingBalance()
+    );
+
+    return new PharmacyLoginResponse(accessToken, userInfo, profile);
   }
 
   /**

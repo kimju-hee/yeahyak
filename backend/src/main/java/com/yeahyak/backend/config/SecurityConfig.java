@@ -29,7 +29,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
-@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -37,7 +36,36 @@ public class SecurityConfig {
 
   @Bean
   public PasswordEncoder passwordEncoder() {
-    return new BCryptPasswordEncoder(BCryptVersion.$2Y);
+    BCryptPasswordEncoder enc2a = new BCryptPasswordEncoder(BCryptPasswordEncoder.BCryptVersion.$2A);
+    BCryptPasswordEncoder enc2y = new BCryptPasswordEncoder(BCryptPasswordEncoder.BCryptVersion.$2Y);
+
+    return new PasswordEncoder() {
+      @Override
+      public String encode(CharSequence rawPassword) {
+        return enc2y.encode(rawPassword);
+      }
+
+      @Override
+      public boolean matches(CharSequence rawPassword, String encodedPassword) {
+        if (encodedPassword == null) return false;
+
+        String enc = encodedPassword.startsWith("{bcrypt}")
+            ? encodedPassword.substring("{bcrypt}".length())
+            : encodedPassword;
+
+        if (enc.startsWith("$2y$")) return enc2y.matches(rawPassword, enc);
+        if (enc.startsWith("$2a$")) return enc2a.matches(rawPassword, enc);
+
+        return false;
+      }
+
+      @Override
+      public boolean upgradeEncoding(String encodedPassword) {
+        return encodedPassword != null
+            && !encodedPassword.startsWith("$2y$")
+            && !encodedPassword.startsWith("{bcrypt}$2y$");
+      }
+    };
   }
 
   @Bean
@@ -52,9 +80,8 @@ public class SecurityConfig {
   }
 
   @Bean
-  public RestTemplate restTemplate(RestTemplateBuilder builder) {
-    return builder.connectTimeout(Duration.ofSeconds(10)).readTimeout(Duration.ofSeconds(30))
-        .build();
+  public RestTemplate restTemplate() {
+    return new RestTemplate();
   }
 
   @Bean
@@ -78,14 +105,14 @@ public class SecurityConfig {
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
-        .csrf(AbstractHttpConfigurer::disable)
+        .csrf(csrf -> csrf.disable())
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .sessionManagement(sess -> sess
             .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         )
 
-        .formLogin(AbstractHttpConfigurer::disable)
-        .httpBasic(AbstractHttpConfigurer::disable)
+        .formLogin(form -> form.disable())
+        .httpBasic(basic -> basic.disable())
         .exceptionHandling(ex -> ex
             .authenticationEntryPoint((req, res, authEx) -> {
               res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -106,11 +133,16 @@ public class SecurityConfig {
                 "/api/auth/admin/login",
                 "/api/auth/pharmacy/login",
                 "/api/auth/refresh",
-                "/api/auth/logout"
+                "/api/auth/logout",
+                "/auth/admin/signup",
+                "/auth/pharmacy/signup",
+                "/auth/admin/login",
+                "/auth/pharmacy/login",
+                "/auth/refresh",
+                "/auth/logout"
             ).permitAll()
             .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/docs/**").permitAll()
-            .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-            .requestMatchers("/actuator/**").hasRole("ADMIN")
+            .requestMatchers("/actuator/**", "/health", "/error").permitAll()
             .anyRequest().authenticated()
         );
 
