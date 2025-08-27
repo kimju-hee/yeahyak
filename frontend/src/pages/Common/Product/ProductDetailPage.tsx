@@ -176,7 +176,9 @@ export default function ProductDetailPage() {
         <Divider />
 
         <Typography.Title level={4}>제품 상세 정보</Typography.Title>
-        <Typography.Paragraph>{product.details}</Typography.Paragraph>
+        <Typography>
+          <div dangerouslySetInnerHTML={{ __html: product.details ?? '' }} />
+        </Typography>
       </Card>
     </>
   );
