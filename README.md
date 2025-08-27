@@ -3,13 +3,25 @@
 
 <img src="images/login.png" width="600"/>
 
-- 배포 URL :
+- 배포 URL : http://4.230.25.25/
 
 <br>
 
 ## 프로젝트 소개
 - 예약은 약국 프랜차이즈 본사와 가맹 약국의 발주 및 재고 관리를 자동화하는 SaaS 플랫폼입니다.
 - AI 기반 자동화를 통해 업무 부담을 줄이고 효율성을 높입니다.
+
+---
+
+## 👥 참여 인원
+![JinHo](https://img.shields.io/badge/JinHo-FFCC80?style=for-the-badge)
+![kimju-hee](https://img.shields.io/badge/kimju--hee-AED581?style=for-the-badge)
+![No gwan beom](https://img.shields.io/badge/No_gwan_beom-81D4FA?style=for-the-badge)
+![red0pyo](https://img.shields.io/badge/red0pyo-CE93D8?style=for-the-badge)
+![s0nghyunje0ng](https://img.shields.io/badge/s0nghyunje0ng-F8BBD0?style=for-the-badge)
+![YDH](https://img.shields.io/badge/YDH-BCAAA4?style=for-the-badge)
+![aitch_yoon](https://img.shields.io/badge/aitch__yoon-80DEEA?style=for-the-badge)
+![YWS00](https://img.shields.io/badge/YWS00-FFE082?style=for-the-badge)
 
 ---
 
@@ -40,17 +52,7 @@
 
 ---
 
-## 👥 참여 인원
-![JinHo](https://img.shields.io/badge/JinHo-FFCC80?style=for-the-badge)
-![kimju-hee](https://img.shields.io/badge/kimju--hee-AED581?style=for-the-badge)
-![No gwan beom](https://img.shields.io/badge/No_gwan_beom-81D4FA?style=for-the-badge)
-![red0pyo](https://img.shields.io/badge/red0pyo-CE93D8?style=for-the-badge)
-![s0nghyunje0ng](https://img.shields.io/badge/s0nghyunje0ng-F8BBD0?style=for-the-badge)
-![YDH](https://img.shields.io/badge/YDH-BCAAA4?style=for-the-badge)
-![aitch_yoon](https://img.shields.io/badge/aitch__yoon-80DEEA?style=for-the-badge)
-![YWS00](https://img.shields.io/badge/YWS00-FFE082?style=for-the-badge)
 
----
 
 ## 🖥️ 주요 기능
 
@@ -67,7 +69,10 @@
 | ![가맹점 관리](images/login-status.png) |
 
 ### 2. 수요 예측 기반 발주 추천 시스템
-[이미지 추가 예정]
+
+| 수요 예측 시스템               |
+|-------------------------|
+| ![가맹점 관리](images/2.png) |
 
 ### 3-4. 챗봇 기능
 의약품 상담과 운영 지원을 돕는 두 가지 AI 챗봇을 제공합니다
@@ -90,3 +95,12 @@
 |-------------|
 | ![본사-가맹점 통합 플랫폼](images/6-1.png) |
 발주 + 반품 + 상품 페이지 추가로 넣을 예정
+
+| 본사 발주 관리 | 가맹점 발주 요청 |
+|----------------|------------------|
+| ![본사 발주 관리](images/5-2.png) | ![가맹점 발주 요청](images/5-3.png) |
+
+| 상품 페이지 |
+|-------------|
+| ![상품 페이지](images/5-4.png) |
+
