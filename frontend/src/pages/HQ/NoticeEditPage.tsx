@@ -21,7 +21,7 @@ import { ANNOUNCEMENT_TYPE_OPTIONS } from '../../constants';
 import { ANNOUNCEMENT_TYPE, type Announcement } from '../../types';
 import { validateAttachmentFile } from '../../utils';
 
-export default function AnnouncementEditPage() {
+export default function NoticeEditPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [modal, modalContextHolder] = Modal.useModal();
   const { id } = useParams();

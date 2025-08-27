@@ -1,18 +1,16 @@
 import { PRODUCT_ENDPOINT } from '../constants';
 import type {
-  ProductCreateRequest,
-  ProductCreateResponse,
-  ProductDeleteResponse,
+  ProductCreateReq,
+  ProductCreateRes,
   ProductDetailResponse,
   ProductListParams,
   ProductListResponse,
-  ProductUpdateRequest,
-  ProductUpdateResponse,
+  ProductUpdateReq,
 } from '../types';
 import { instance } from './client';
 
 // 상품 생성
-export const createProduct = async (data: ProductCreateRequest): Promise<ProductCreateResponse> => {
+export const createProduct = async (data: ProductCreateReq): Promise<ProductCreateRes> => {
   const response = await instance.post(PRODUCT_ENDPOINT.CREATE, data);
   console.log('📦 상품 생성 응답:', response.data);
   return response.data;
@@ -33,17 +31,14 @@ export const getProduct = async (productId: number): Promise<ProductDetailRespon
 };
 
 // 상품 수정
-export const updateProduct = async (
-  productId: number,
-  data: ProductUpdateRequest,
-): Promise<ProductUpdateResponse> => {
-  const response = await instance.put(PRODUCT_ENDPOINT.UPDATE(productId), data);
+export const updateProduct = async (productId: number, data: ProductUpdateReq) => {
+  const response = await instance.patch(PRODUCT_ENDPOINT.UPDATE(productId), data);
   console.log('📦 상품 수정 응답:', response.data);
   return response.data;
 };
 
 // 상품 삭제
-export const deleteProduct = async (productId: number): Promise<ProductDeleteResponse> => {
+export const deleteProduct = async (productId: number) => {
   const response = await instance.delete(PRODUCT_ENDPOINT.DELETE(productId));
   console.log('📦 상품 삭제 응답:', response.data);
   return response.data;

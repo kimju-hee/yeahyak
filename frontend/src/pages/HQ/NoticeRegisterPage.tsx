@@ -21,7 +21,7 @@ import { ANNOUNCEMENT_TYPE_OPTIONS } from '../../constants';
 import { ANNOUNCEMENT_TYPE } from '../../types';
 import { validateAttachmentFile } from '../../utils';
 
-export default function AnnouncementRegisterPage() {
+export default function NoticeRegisterPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [modal, modalContextHolder] = Modal.useModal();
   const [form] = Form.useForm();

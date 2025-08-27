@@ -1,4 +1,4 @@
-export const REGION_OPTIONS = [
+export const REGION_CASCADER_OPTIONS = [
   {
     value: '수도권',
     label: '수도권',
@@ -8,13 +8,13 @@ export const REGION_OPTIONS = [
       { value: '경기', label: '경기' },
     ],
   },
-  { value: '강원', label: '강원' },
+  { value: '강원특별자치도', label: '강원특별자치도' },
   {
     value: '충청',
     label: '충청',
     children: [
       { value: '대전', label: '대전' },
-      { value: '세종', label: '세종' },
+      { value: '세종특별자치시', label: '세종특별자치시' },
       { value: '충북', label: '충북' },
       { value: '충남', label: '충남' },
     ],
@@ -35,9 +35,9 @@ export const REGION_OPTIONS = [
     label: '호남',
     children: [
       { value: '광주', label: '광주' },
-      { value: '전북', label: '전북' },
+      { value: '전북특별자치도', label: '전북특별자치도' },
       { value: '전남', label: '전남' },
     ],
   },
-  { value: '제주', label: '제주' },
+  { value: '제주특별자치도', label: '제주특별자치도' },
 ];

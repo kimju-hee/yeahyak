@@ -1,5 +1,6 @@
 import { Button, Flex, Form, Input } from 'antd';
 import { useEffect } from 'react';
+import type { Region } from '../types';
 
 declare global {
   interface Window {
@@ -11,6 +12,7 @@ interface AddressInputProps {
   postcodeName: string;
   addressName: string;
   detailAddressName: string;
+  region: Region | string;
   label: string;
 }
 
@@ -18,6 +20,7 @@ export default function AddressInput({
   postcodeName = '',
   addressName = '',
   detailAddressName = '',
+  region = '',
   label = '주소',
 }: AddressInputProps) {
   const form = Form.useFormInstance();
@@ -37,10 +40,12 @@ export default function AddressInput({
       oncomplete: function (data: any) {
         const postcode = data.zonecode;
         const address = data.userSelectedType === 'R' ? data.roadAddress : data.jibunAddress;
+        const region = data.sido;
         form.setFieldsValue({
           [postcodeName]: postcode,
           [addressName]: address,
           [detailAddressName]: '',
+          [region]: region,
         });
       },
     }).open();
@@ -57,6 +62,9 @@ export default function AddressInput({
             validateTrigger="onSubmit"
           >
             <Input readOnly placeholder="우편번호" />
+          </Form.Item>
+          <Form.Item name={region} noStyle>
+            <Input readOnly placeholder="지역" />
           </Form.Item>
           <Button onClick={handleSearchAddress}>주소 검색</Button>
         </Flex>

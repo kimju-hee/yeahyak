@@ -25,7 +25,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import {
   PRODUCT_CATEGORIES,
   USER_ROLE,
-  type Product,
+  type ProductListRes,
   type ProductMainCategory,
   type ProductSubCategoryWithAll,
   type User,
@@ -39,9 +39,9 @@ export default function ProductListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const user = useAuthStore((state) => state.user) as User;
-  const basePath = user.role === USER_ROLE.BRANCH ? '/branch' : '/hq';
+  const basePath = user.role === USER_ROLE.PHARMACY ? '/branch' : '/hq';
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductListRes[]>([]);
   const [activeMainCategory, setActiveMainCategory] = useState<ProductMainCategory>(
     (searchParams.get('main') as ProductMainCategory) || '전문의약품',
   );

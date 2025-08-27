@@ -1,40 +1,40 @@
 import { AI_ENDPOINT } from '../constants';
-import type { ChatbotRequest, ChatbotResponse } from '../types';
-import { aiInstance } from './client';
+import type { ChatbotReq, ChatbotResponse } from '../types';
+import { aiInstance, instance } from './client';
 
 // FAQ 챗봇
-export const chatFAQ = async (data: ChatbotRequest): Promise<ChatbotResponse> => {
-  const response = await aiInstance.post(AI_ENDPOINT.FAQ, data);
+export const chatFAQ = async (data: ChatbotReq): Promise<ChatbotResponse> => {
+  const response = await instance.post(AI_ENDPOINT.FAQ, data);
   console.log('🤖 FAQ 챗봇 응답:', response);
   return response.data;
 };
 
-// QnA 챗봇
-export const chatQnA = async (data: ChatbotRequest): Promise<ChatbotResponse> => {
-  const response = await aiInstance.post(AI_ENDPOINT.QNA, data);
-  console.log('🤖 QnA 챗봇 응답:', response);
+// QNA 챗봇
+export const chatQNA = async (data: ChatbotReq): Promise<ChatbotResponse> => {
+  const response = await instance.post(AI_ENDPOINT.QNA, data);
+  console.log('🤖 QNA 챗봇 응답:', response);
   return response.data;
 };
 
-// 법률 AI 요약
+// 법령 AI 요약
 export const summarizeLaw = async (data: { file: File }) => {
   const formData = new FormData();
   formData.append('file', data.file);
-  const response = await aiInstance.post(AI_ENDPOINT.LAW_AI, formData, {
+  const response = await aiInstance.post(AI_ENDPOINT.LAW, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
-  console.log('🤖 법률 AI 요약 응답:', response);
+  console.log('🤖 법령 AI 요약 응답:', response);
   return response.data;
 };
 
-// 전염병 AI 요약
+// 감염병 AI 요약
 export const summarizeEpidemic = async (data: { file: File }) => {
   const formData = new FormData();
   formData.append('file', data.file);
-  const response = await aiInstance.post(AI_ENDPOINT.EPIDEMIC_AI, formData, {
+  const response = await aiInstance.post(AI_ENDPOINT.EPIDEMIC, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
-  console.log('🤖 전염병 AI 요약 응답:', response);
+  console.log('🤖 감염병 AI 요약 응답:', response);
   return response.data;
 };
 
@@ -42,7 +42,7 @@ export const summarizeEpidemic = async (data: { file: File }) => {
 export const summarizeNewProduct = async (data: { file: File }) => {
   const formData = new FormData();
   formData.append('file', data.file);
-  const response = await aiInstance.post(AI_ENDPOINT.NEW_PRODUCT_AI, formData, {
+  const response = await aiInstance.post(AI_ENDPOINT.NEW_PRODUCT, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   console.log('🤖 신제품 AI 요약 응답:', response);

@@ -13,14 +13,14 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { Rnd } from 'react-rnd';
 import { aiAPI } from '../api';
 import { useAuthStore } from '../stores/authStore';
+import type { User } from '../types';
 import {
   CHAT_ROLE,
   CHAT_TYPE,
-  type ChatbotRequest,
+  type ChatbotReq,
   type ChatMessage,
   type ChatType,
-} from '../types/ai.type';
-import type { User } from '../types/profile.type';
+} from '../types/chatbot.type';
 
 interface ChatbotProps {
   boundsRef: RefObject<HTMLDivElement | null>;
@@ -114,92 +114,91 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
 
   // handleSend수정
   const handleSend = useCallback(
-  async (raw: string) => {
-    if (!raw.trim() || !chatType || requesting) return;
+    async (raw: string) => {
+      if (!raw.trim() || !chatType || requesting) return;
 
-    const userMessage: ChatMessage = {
-      role: CHAT_ROLE.USER,
-      content: raw.trim(),
-      key: makeKey(),
-    };
-    const loadingMessage: ChatMessage = {
-      role: CHAT_ROLE.AI,
-      content: '',
-      key: makeKey(),
-      loading: true,
-    };
-    setMessages((prev) => [...prev, userMessage, loadingMessage]);
-    setContent('');
+      const userMessage: ChatMessage = {
+        role: CHAT_ROLE.USER,
+        content: raw.trim(),
+        key: makeKey(),
+      };
+      const loadingMessage: ChatMessage = {
+        role: CHAT_ROLE.AI,
+        content: '',
+        key: makeKey(),
+        loading: true,
+      };
+      setMessages((prev) => [...prev, userMessage, loadingMessage]);
+      setContent('');
 
-    // ✅ 공통(FAQ/QNA 모두): 직전 메시지 + 방금 보낸 메시지
-    const merged = [...messages, userMessage];
+      // ✅ 공통(FAQ/QNA 모두): 직전 메시지 + 방금 보낸 메시지
+      const merged = [...messages, userMessage];
 
-    setRequesting(true);
-    const controller = new AbortController();
-    abortController.current = controller;
+      setRequesting(true);
+      const controller = new AbortController();
+      abortController.current = controller;
 
-    try {
-      let response;
+      try {
+        let response;
 
-      if (chatType === CHAT_TYPE.FAQ) {
-        // ✅ FAQ는 기존처럼 role 그대로 보냄
-        const payload: ChatbotRequest = {
-          userId: user.userId,
-          chatType: CHAT_TYPE.FAQ,
-          query: raw.trim(),
-          history: merged.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        };
-        response = await aiAPI.chatFAQ(payload);
-      } else {
-        // ✅ QNA는 history를 type: 'human' | 'ai'로 변환, chatType도 강제 'QNA'
-        const payloadQna = {
-          userId: user.userId,
-          chatType: 'QNA', // ← 'ONA'로 찍혀도 여기서 강제 교정
-          query: raw.trim(),
-          history: merged.map((m) => ({
-            type: m.role === CHAT_ROLE.AI ? 'ai' : 'human',
-            content: m.content,
-          })),
-        };
-        // 타입이 role 기반이면 캐스팅만
-        response = await aiAPI.chatQnA(payloadQna as unknown as ChatbotRequest);
+        if (chatType === CHAT_TYPE.FAQ) {
+          // ✅ FAQ는 기존처럼 role 그대로 보냄
+          const payload: ChatbotReq = {
+            userId: user.userId,
+            type: CHAT_TYPE.FAQ,
+            question: raw.trim(),
+            history: merged.map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+          };
+          response = await aiAPI.chatFAQ(payload);
+        } else {
+          // ✅ QNA는 history를 type: 'human' | 'ai'로 변환, chatType도 강제 'QNA'
+          const payloadQna = {
+            userId: user.userId,
+            chatType: 'QNA', // ← 'ONA'로 찍혀도 여기서 강제 교정
+            query: raw.trim(),
+            history: merged.map((m) => ({
+              type: m.role === CHAT_ROLE.AI ? 'ai' : 'human',
+              content: m.content,
+            })),
+          };
+          // 타입이 role 기반이면 캐스팅만
+          response = await aiAPI.chatQNA(payloadQna as unknown as ChatbotReq);
+        }
+
+        if (response.success) {
+          const aiMessage: ChatMessage = {
+            role: CHAT_ROLE.AI,
+            content: response.data.answer || '응답이 없습니다.',
+            key: makeKey(),
+          };
+          setMessages((prev) => prev.slice(0, -1).concat(aiMessage));
+        }
+      } catch (e: any) {
+        if (e.name === 'AbortError' || e.name === 'CanceledError') {
+          const cancelMessage = {
+            role: CHAT_ROLE.AI,
+            content: '답변 요청 취소됨',
+            key: makeKey(),
+          };
+          setMessages((prev) => prev.slice(0, -1).concat(cancelMessage));
+        } else {
+          const errorMessage = {
+            role: CHAT_ROLE.AI,
+            content: '알 수 없는 오류가 발생했습니다.',
+            key: makeKey(),
+          };
+          setMessages((prev) => prev.slice(0, -1).concat(errorMessage));
+        }
+      } finally {
+        setRequesting(false);
+        abortController.current = null;
       }
-
-      if (response.success) {
-        const aiMessage: ChatMessage = {
-          role: CHAT_ROLE.AI,
-          content: response.data.reply || '응답이 없습니다.',
-          key: makeKey(),
-        };
-        setMessages((prev) => prev.slice(0, -1).concat(aiMessage));
-      }
-    } catch (e: any) {
-      if (e.name === 'AbortError' || e.name === 'CanceledError') {
-        const cancelMessage = {
-          role: CHAT_ROLE.AI,
-          content: '답변 요청 취소됨',
-          key: makeKey(),
-        };
-        setMessages((prev) => prev.slice(0, -1).concat(cancelMessage));
-      } else {
-        const errorMessage = {
-          role: CHAT_ROLE.AI,
-          content: '알 수 없는 오류가 발생했습니다.',
-          key: makeKey(),
-        };
-        setMessages((prev) => prev.slice(0, -1).concat(errorMessage));
-      }
-    } finally {
-      setRequesting(false);
-      abortController.current = null;
-    }
-  },
-  [chatType, requesting, makeKey, messages, user.userId],
-);
-
+    },
+    [chatType, requesting, makeKey, messages, user.userId],
+  );
 
   return (
     <>

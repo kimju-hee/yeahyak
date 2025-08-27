@@ -1,4 +1,8 @@
-import axios from 'axios';
+import axios, {
+  type AxiosInstance,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from 'axios';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const AI_API_BASE_URL = import.meta.env.VITE_AI_API_BASE_URL;
@@ -20,46 +24,64 @@ const refreshInstance = axios.create({
   timeout: 30000,
 });
 
-const attachAuth = (client: typeof instance) => {
-  client.interceptors.request.use((config) => {
+const attachAuth = (client: AxiosInstance) => {
+  client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     if (config.url && config.url !== '/auth/refresh') {
       const token = localStorage.getItem('accessToken');
       if (token) {
-        config.headers = config.headers ?? {};
-        config.headers.Authorization = `Bearer ${token}`;
+        const h = config.headers as any;
+        if (h && typeof h.set === 'function') {
+          h.set('Authorization', `Bearer ${token}`);
+        } else {
+          config.headers = (config.headers || {}) as any;
+          (config.headers as any)['Authorization'] = `Bearer ${token}`;
+        }
       }
     }
     return config;
   });
 };
 
-instance.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    const status = error.response?.status;
+const attach401Refresh = (client: AxiosInstance) => {
+  client.interceptors.response.use(
+    (response: AxiosResponse) => response,
+    async (error) => {
+      const originalRequest = error.config || {};
+      const status = error.response?.status;
 
-    if (status !== 401 || originalRequest._retry) {
-      return Promise.reject(error);
-    }
+      if (status !== 401 || (originalRequest as any)._retry) {
+        return Promise.reject(error);
+      }
+      (originalRequest as any)._retry = true;
 
-    originalRequest._retry = true;
-    try {
-      const { data } = await refreshInstance.post('/auth/refresh');
-      localStorage.setItem('accessToken', data.accessToken);
+      try {
+        const { data } = await refreshInstance.post('/auth/refresh');
+        const newToken = data?.data?.accessToken;
+        if (!newToken) {
+          throw new Error('No access token in refresh response');
+        }
 
-      originalRequest.headers = {
-        ...(originalRequest.headers || {}),
-        Authorization: `Bearer ${data.accessToken}`,
-      };
-      return instance(originalRequest);
-    } catch (refreshError) {
-      localStorage.removeItem('accessToken');
-      window.location.replace('/login');
-      return Promise.reject(refreshError);
-    }
-  },
-);
+        localStorage.setItem('accessToken', newToken);
+
+        const h = originalRequest.headers as any;
+        if (h && typeof h.set === 'function') {
+          h.set('Authorization', `Bearer ${newToken}`);
+        } else {
+          originalRequest.headers = (originalRequest.headers || {}) as any;
+          (originalRequest.headers as any)['Authorization'] = `Bearer ${newToken}`;
+        }
+
+        return client(originalRequest);
+      } catch (refreshError) {
+        localStorage.removeItem('accessToken');
+        window.location.replace('/login');
+        return Promise.reject(refreshError);
+      }
+    },
+  );
+};
 
 attachAuth(instance);
 attachAuth(aiInstance);
+attach401Refresh(instance);
+attach401Refresh(aiInstance);

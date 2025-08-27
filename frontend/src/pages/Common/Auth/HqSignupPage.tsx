@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../../../api';
 import TermsAndPrivacyCheckbox from '../../../components/TermsAndPolicyCheckbox';
 import { ADMIN_DEPARTMENT_OPTIONS } from '../../../constants';
-import type { AdminSignupRequest } from '../../../types/auth.type';
+import type { AdminSignupReq } from '../../../types/auth.type';
 import {
   passwordConfirmRule,
   passwordNotSameAsIdRule,
@@ -16,7 +16,7 @@ export default function HqSignupPage() {
   const navigate = useNavigate();
 
   const handleSubmit = async (
-    values: AdminSignupRequest & {
+    values: AdminSignupReq & {
       confirmPassword: string;
       agreement: boolean;
     },
@@ -30,7 +30,7 @@ export default function HqSignupPage() {
         navigate('/login', { replace: true });
       }
     } catch (e: any) {
-      console.error('본사 회원가입 실패:', e);
+      console.error('관리자 회원가입 실패:', e);
       messageApi.error(e.response?.data?.message || '회원가입 중 오류가 발생했습니다.');
     }
   };

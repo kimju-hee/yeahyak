@@ -1,11 +1,11 @@
 import { Card, Flex, Skeleton, Space, Typography } from 'antd';
-import { USER_ROLE } from '../../types/profile.type';
+import { USER_ROLE } from '../../types';
 
-interface AnnouncementDetailSkeletonProps {
+interface NoticeDetailSkeletonProps {
   userRole: string;
 }
 
-export function AnnouncementDetailSkeleton({ userRole }: AnnouncementDetailSkeletonProps) {
+export function NoticeDetailSkeleton({ userRole }: NoticeDetailSkeletonProps) {
   return (
     <>
       <Typography.Title level={3} style={{ marginBottom: '24px' }}>

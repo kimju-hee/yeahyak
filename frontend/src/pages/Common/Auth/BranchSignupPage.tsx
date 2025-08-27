@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../../../api';
 import AddressInput from '../../../components/AddressInput';
 import TermsAndPrivacyCheckbox from '../../../components/TermsAndPolicyCheckbox';
-import type { BranchSignupRequest } from '../../../types';
+import type { PharmacySignupReq } from '../../../types';
 import {
   formatBizRegNo,
   formatContact,
@@ -19,21 +19,21 @@ export default function BranchSignupPage() {
   const navigate = useNavigate();
 
   const handleSubmit = async (
-    values: BranchSignupRequest & {
+    values: PharmacySignupReq & {
       confirmPassword: string;
       agreement: boolean;
     },
   ) => {
     try {
       const { confirmPassword, agreement, ...payload } = values;
-      const res = await authAPI.branchSignup(payload);
+      const res = await authAPI.pharmacySignup(payload);
 
       if (res.success) {
         messageApi.success('회원가입이 완료되었습니다.');
         navigate('/login', { replace: true });
       }
     } catch (e: any) {
-      console.error('가맹점 회원가입 실패:', e);
+      console.error('약국 회원가입 실패:', e);
       messageApi.error(e.response?.data?.message || '회원가입 중 오류가 발생했습니다.');
     }
   };
@@ -130,6 +130,7 @@ export default function BranchSignupPage() {
                 postcodeName="postcode"
                 addressName="address"
                 detailAddressName="detailAddress"
+                region="region"
                 label="주소"
               />
               <Form.Item
@@ -151,6 +152,7 @@ export default function BranchSignupPage() {
                   onKeyDown={handleNumberOnlyKeyDown}
                 />
               </Form.Item>
+
               <TermsAndPrivacyCheckbox />
 
               <Button type="primary" htmlType="submit" block>

@@ -7,7 +7,7 @@ import {
 
 export const PRODUCT_ENDPOINT = {
   CREATE: '/products',
-  LIST: '/products/filter',
+  LIST: '/products',
   DETAIL: (productId: number) => `/products/${productId}`,
   UPDATE: (productId: number) => `/products/${productId}`,
   DELETE: (productId: number) => `/products/${productId}`,

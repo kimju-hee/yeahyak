@@ -1,85 +1,102 @@
+import type { Region } from '.';
 import type { ApiResponse, PaginatedResponse } from './api.type';
-
-export interface Order {
-  orderId: number;
-  pharmacyId: number;
-  pharmacyName: string;
-  totalPrice: number;
-  status: OrderStatus;
-  createdAt: string;
-  updatedAt?: string;
-  items: OrderItem[] | OrderDetailItem[];
-}
 
 export const ORDER_STATUS = {
   REQUESTED: 'REQUESTED',
   APPROVED: 'APPROVED',
-  PROCESSING: 'PROCESSING',
+  PREPARING: 'PREPARING',
   SHIPPING: 'SHIPPING',
   COMPLETED: 'COMPLETED',
-  REJECTED: 'REJECTED',
+  CANCELED: 'CANCELED',
 } as const;
 export type OrderStatus = keyof typeof ORDER_STATUS;
 export type OrderStatusColorMap = { [key in OrderStatus]: string };
 export type OrderStatusTextMap = { [key in OrderStatus]: string };
 
-export interface OrderItem {
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  subtotalPrice: number;
-}
-
-export interface OrderDetailItem extends OrderItem {
+export interface OrderCartItem {
   productId: number;
-  manufacturer: string;
-  mainCategory: string;
-  subCategory: string;
-}
-
-export interface OrderItemRequest {
-  productId: number;
-  quantity: number;
-  unitPrice: number;
-  subtotalPrice: number;
-}
-
-export interface OrderCartItem extends OrderItemRequest {
   productName: string;
   manufacturer: string;
   productImgUrl?: string;
+  quantity: number;
+  unitPrice: number;
+  subtotalPrice: number;
 }
 
-export interface OrderCreateRequest {
+export interface OrderCreateReq {
   pharmacyId: number;
-  items: OrderItemRequest[];
+  items: OrderCreateItemReq[];
+}
+
+export interface OrderCreateItemReq {
+  productId: number;
+  quantity: number;
+  unitPrice: number;
+  subtotalPrice: number;
+}
+
+export interface OrderCreateRes {
+  orderId: number;
+}
+
+export interface OrderUpdateReq {
+  status: OrderStatus;
+}
+
+export interface OrderDetailRes {
+  orderId: number;
+  pharmacyId: number;
+  pharmacyName: string;
+  status: OrderStatus;
+  summary: string;
+  totalPrice: number;
+  createdAt: string;
+  updatedAt?: string;
+  items: OrderDetailResItem[];
+}
+
+export interface OrderDetailResItem {
+  productId: number;
+  productName: string;
+  mainCategory: string;
+  subCategory: string;
+  manufacturer: string;
+  productImgUrl: string;
+  quantity: number;
+  unitPrice: number;
+  subtotalPrice: number;
+}
+
+export interface OrderListRes {
+  orderId: number;
+  pharmacyId: number;
+  pharmacyName: string;
+  status: OrderStatus;
+  summary: string;
+  totalPrice: number;
+  createdAt: string;
 }
 
 export interface OrderListBranchParams {
   pharmacyId: number;
+  status?: OrderStatus;
   page?: number;
   size?: number;
-  status?: OrderStatus;
 }
 
-export interface OrderListAdminParams {
-  pharmacyName?: string;
+export interface OrderListHqParams {
+  status?: OrderStatus;
+  region?: Region;
+  start?: string;
+  end?: string;
   page?: number;
   size?: number;
-  status?: OrderStatus;
 }
 
-export interface OrderStatusUpdateRequest {
-  status: OrderStatus;
-}
-
-export interface OrderForecastRequest {
+export interface OrderForecastReq {
   file: File;
 }
-export type OrderCreateResponse = ApiResponse<Order>;
-export type OrderListResponse = PaginatedResponse<Order>;
-export type OrderDetailResponse = ApiResponse<Order>;
-export type OrderApproveResponse = ApiResponse<string>;
-export type OrderRejectResponse = ApiResponse<string>;
-export type OrderStatusUpdateResponse = ApiResponse<string>;
-export type OrderDeleteResponse = ApiResponse<string>;
+
+export type OrderCreateResponse = ApiResponse<OrderCreateRes>;
+export type OrderListResponse = PaginatedResponse<OrderDetailRes>;
+export type OrderDetailResponse = ApiResponse<OrderDetailRes>;

@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { profileAPI } from '../../api';
 import { ADMIN_DEPARTMENT_OPTIONS } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
-import type { Admin, AdminDepartment, AdminProfileUpdateRequest } from '../../types/profile.type';
+import type { Admin, AdminDepartment, AdminProfileUpdateRequest } from '../../types/pharmacy.type';
 
 export default function HqProfileEditPage() {
   const [messageApi, contextHolder] = message.useMessage();

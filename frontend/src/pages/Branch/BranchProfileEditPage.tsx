@@ -1,9 +1,9 @@
 import { Button, Card, Flex, Form, Input, message, Typography } from 'antd';
 import { useEffect } from 'react';
-import { profileAPI } from '../../api';
+import { authAPI } from '../../api';
 import AddressInput from '../../components/AddressInput';
 import { useAuthStore } from '../../stores/authStore';
-import type { BranchProfileUpdateRequest, Pharmacy } from '../../types/profile.type';
+import type { BranchProfileUpdateRequest, Pharmacy } from '../../types/pharmacy.type';
 import { formatBizRegNo, formatContact, handleNumberOnlyKeyDown } from '../../utils';
 
 export default function BranchProfileEditPage() {
@@ -31,11 +31,8 @@ export default function BranchProfileEditPage() {
     try {
       const payload: BranchProfileUpdateRequest = {
         ...values,
-        pharmacyId: profile.pharmacyId,
-        userId: profile.userId,
-        status: profile.status,
       };
-      const response = await profileAPI.updateBranchProfile(payload);
+      const response = await authAPI.updatePharmacy(profile.pharmacyId, payload);
 
       if (response.success) {
         updateProfile(payload);

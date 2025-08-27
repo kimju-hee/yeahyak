@@ -11,49 +11,49 @@ import {
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { announcementAPI } from '../../../api';
+import { noticeAPI } from '../../../api';
 import { API_BASE_URL } from '../../../api/client';
-import { AnnouncementDetailSkeleton } from '../../../components/skeletons';
-import { ANNOUNCEMENT_TYPE_TEXT, DATE_FORMAT } from '../../../constants';
+import { NoticeDetailSkeleton } from '../../../components/skeletons';
+import { DATE_FORMAT, NOTICE_TYPE_TEXT } from '../../../constants';
 import { useAuthStore } from '../../../stores/authStore';
-import { USER_ROLE, type Announcement, type User } from '../../../types';
+import { USER_ROLE, type NoticeDetailRes, type User } from '../../../types';
 
-export default function AnnouncementDetailPage() {
+export default function NoticeDetailPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
   const user = useAuthStore((state) => state.user) as User;
-  const basePath = user.role === USER_ROLE.BRANCH ? '/branch' : '/hq';
+  const basePath = user.role === USER_ROLE.PHARMACY ? '/branch' : '/hq';
   const returnTo = location.state?.returnTo;
 
-  const [announcement, setAnnouncement] = useState<Announcement>();
+  const [notice, setNotice] = useState<NoticeDetailRes>();
   const [loading, setLoading] = useState(false);
 
-  const fetchAnnouncement = async () => {
+  const fetchNotice = async () => {
     setLoading(true);
     try {
-      const res = await announcementAPI.getAnnouncement(Number(id));
+      const res = await noticeAPI.getNotice(Number(id));
 
       if (res.success) {
-        setAnnouncement(res.data[0]);
+        setNotice(res.data);
       }
     } catch (e: any) {
       console.error('공지사항 상세 로딩 실패:', e);
       messageApi.error(e.response?.data?.message || '공지사항 로딩 중 오류가 발생했습니다.');
-      setAnnouncement(undefined);
+      setNotice(undefined);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAnnouncement();
+    fetchNotice();
   }, [id]);
 
-  if (loading) return <AnnouncementDetailSkeleton userRole={user.role} />;
-  if (!announcement) return <Typography.Text>해당 공지사항을 찾을 수 없습니다.</Typography.Text>;
+  if (loading) return <NoticeDetailSkeleton userRole={user.role} />;
+  if (!notice) return <Typography.Text>해당 공지사항을 찾을 수 없습니다.</Typography.Text>;
 
   const toAbsUrl = (url: string) => (url.startsWith('http') ? url : `${API_BASE_URL}${url}`);
 
@@ -91,7 +91,7 @@ export default function AnnouncementDetailPage() {
   const handleDelete = async () => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
       try {
-        const res = await announcementAPI.deleteAnnouncement(Number(id));
+        const res = await noticeAPI.deleteNotice(Number(id));
 
         if (res.success) {
           messageApi.success('공지사항이 삭제되었습니다.');
@@ -100,9 +100,9 @@ export default function AnnouncementDetailPage() {
             params.set('type', returnTo.type);
             if (returnTo.page > 1) params.set('page', returnTo.page.toString());
             if (returnTo.keyword) params.set('keyword', returnTo.keyword);
-            navigate(`${basePath}/announcements?${params.toString()}`);
+            navigate(`${basePath}/notices?${params.toString()}`);
           } else {
-            navigate(`${basePath}/announcements`);
+            navigate(`${basePath}/notices`);
           }
         }
       } catch (e: any) {
@@ -113,23 +113,23 @@ export default function AnnouncementDetailPage() {
   };
 
   const descriptionsItems: DescriptionsProps['items'] = [
-    { key: 'title', label: '제목', children: announcement.title },
-    { key: 'type', label: '카테고리', children: ANNOUNCEMENT_TYPE_TEXT[announcement.type] },
+    { key: 'title', label: '제목', children: notice.title },
+    { key: 'type', label: '카테고리', children: NOTICE_TYPE_TEXT[notice.type] },
     {
       key: 'createdAt',
       label: '작성일시',
-      children: dayjs(announcement.createdAt).format(DATE_FORMAT.DEFAULT),
+      children: dayjs(notice.createdAt).format(DATE_FORMAT.DEFAULT),
     },
   ];
 
-  if (announcement.attachmentUrl) {
-    const fileName = announcement.attachmentUrl.split('/').pop() || '첨부파일';
+  if (notice.attachmentUrl) {
+    const fileName = notice.attachmentUrl.split('/').pop() || '첨부파일';
     descriptionsItems.push({
       key: 'attachmentUrl',
       label: '첨부파일',
       children: (
         <Typography.Link
-          onClick={() => handleDownload(announcement.attachmentUrl!, fileName)}
+          onClick={() => handleDownload(notice.attachmentUrl!, fileName)}
           style={{ cursor: 'pointer' }}
         >
           {fileName}
@@ -156,7 +156,7 @@ export default function AnnouncementDetailPage() {
 
       <Card style={{ marginBottom: '24px', padding: '24px' }}>
         <Typography>
-          <div dangerouslySetInnerHTML={{ __html: announcement.content }} />
+          <div dangerouslySetInnerHTML={{ __html: notice.content }} />
         </Typography>
       </Card>
 
@@ -169,9 +169,9 @@ export default function AnnouncementDetailPage() {
               params.set('type', returnTo.type);
               if (returnTo.page > 1) params.set('page', returnTo.page.toString());
               if (returnTo.keyword) params.set('keyword', returnTo.keyword);
-              navigate(`${basePath}/announcements?${params.toString()}`);
+              navigate(`${basePath}/notices?${params.toString()}`);
             } else {
-              navigate(`${basePath}/announcements`);
+              navigate(`${basePath}/notices`);
             }
           }}
         >
@@ -183,7 +183,7 @@ export default function AnnouncementDetailPage() {
             <Button type="text" danger onClick={handleDelete}>
               삭제
             </Button>
-            <Button type="primary" onClick={() => navigate(`${basePath}/announcements/${id}/edit`)}>
+            <Button type="primary" onClick={() => navigate(`${basePath}/notices/${id}/edit`)}>
               수정
             </Button>
           </Space>

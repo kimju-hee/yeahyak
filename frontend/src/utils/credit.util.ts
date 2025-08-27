@@ -1,15 +1,10 @@
-import { CREDIT_CONSTANTS } from '../constants';
+import { CREDIT_CONSTANTS } from '../constants/pharmacy.constant';
 
-/**
- * 사용자 포인트를 기반으로 크레딧 정보를 계산합니다.
- * @param userPoint 사용자 포인트 (0에서 -10000000 사이)
- * @returns 크레딧 정보 객체
- */
-export const calculateCreditInfo = (userPoint: number) => {
-  // 사용한 금액 (절댓값)
-  const usedAmount = Math.abs(Math.min(userPoint, 0));
+export const calculateCreditInfo = (outstandingBalance: number) => {
+  // 사용한 금액: 현재 포인트
+  const usedAmount = Math.max(0, Math.min(outstandingBalance, CREDIT_CONSTANTS.CREDIT_LIMIT));
 
-  // 남은 금액
+  // 남은 금액: 한도 - 포인트
   const remainingAmount = CREDIT_CONSTANTS.CREDIT_LIMIT - usedAmount;
 
   // 사용 비율 (퍼센트)
@@ -19,8 +14,7 @@ export const calculateCreditInfo = (userPoint: number) => {
   const remainingPercent = Math.max(0, 100 - usagePercent);
 
   // 색상 결정
-  const strokeColor =
-    remainingPercent >= 50 ? '#52c41a' : remainingPercent >= 20 ? '#faad14' : '#f5222d';
+  const strokeColor = usagePercent <= 50 ? '#52c41a' : usagePercent <= 80 ? '#faad14' : '#f5222d';
 
   return {
     usedAmount,

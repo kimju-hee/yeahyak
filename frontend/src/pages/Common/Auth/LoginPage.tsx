@@ -1,7 +1,7 @@
 import { Card, Carousel, Flex, Form, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { adminLogin, branchLogin } from '../../../api/auth.api';
+import { authAPI } from '../../../api';
 import {
   landing_main,
   landing_sub_01,
@@ -12,11 +12,10 @@ import {
 import LoginForm from '../../../components/LoginForm';
 import { useAuthStore } from '../../../stores/authStore';
 import {
-  PHARMACY_STATUS,
   USER_ROLE,
-  type AdminLoginResponse,
-  type BranchLoginResponse,
-  type LoginRequest,
+  type AdminLoginRes,
+  type LoginReq,
+  type PharmacyLoginRes,
   type UserRole,
 } from '../../../types';
 
@@ -26,11 +25,11 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { isAuthenticated, user, setAuth } = useAuthStore();
 
-  const [activeTab, setActiveTab] = useState<UserRole>(USER_ROLE.BRANCH);
+  const [activeTab, setActiveTab] = useState<UserRole>(USER_ROLE.PHARMACY);
 
   useEffect(() => {
     if (isAuthenticated) {
-      if (user?.role === USER_ROLE.BRANCH) {
+      if (user?.role === USER_ROLE.PHARMACY) {
         navigate('/branch', { replace: true });
       } else {
         navigate('/hq', { replace: true });
@@ -38,26 +37,20 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, user, navigate]);
 
-  const handleSubmit = async (values: LoginRequest) => {
+  const handleSubmit = async (values: LoginReq) => {
     try {
-      if (activeTab === USER_ROLE.BRANCH) {
-        const res = await branchLogin({ email: values.email, password: values.password });
+      if (activeTab === USER_ROLE.PHARMACY) {
+        const res = await authAPI.pharmacyLogin({ email: values.email, password: values.password });
 
         if (res.success) {
-          const branchData = res.data as BranchLoginResponse;
-          if (branchData.profile.status === PHARMACY_STATUS.PENDING) {
-            throw new Error('승인 대기 중인 계정입니다. 관리자에게 문의하세요.');
-          }
-          if (branchData.profile.status === PHARMACY_STATUS.REJECTED) {
-            throw new Error('승인 거절된 계정입니다. 관리자에게 문의하세요.');
-          }
-          setAuth(branchData);
+          const pharmacyData = res.data as PharmacyLoginRes;
+          setAuth(pharmacyData);
         }
       } else {
-        const res = await adminLogin({ email: values.email, password: values.password });
+        const res = await authAPI.adminLogin({ email: values.email, password: values.password });
 
         if (res.success) {
-          const adminData = res.data as AdminLoginResponse;
+          const adminData = res.data as AdminLoginRes;
           setAuth(adminData);
         }
       }
@@ -71,7 +64,7 @@ export default function LoginPage() {
   };
 
   const tabList = [
-    { key: USER_ROLE.BRANCH, tab: '가맹점 로그인' },
+    { key: USER_ROLE.PHARMACY, tab: '가맹점 로그인' },
     { key: USER_ROLE.ADMIN, tab: '본사 로그인' },
   ];
 

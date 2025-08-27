@@ -1,7 +1,7 @@
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { Button, Divider, Flex, Form, Input } from 'antd';
 import { Link } from 'react-router-dom';
-import type { UserRole } from '../types/profile.type';
+import type { UserRole } from '../types';
 
 interface LoginFormProps {
   role: UserRole;
@@ -33,7 +33,7 @@ export default function LoginForm({ role, form, handleSubmit }: LoginFormProps) 
         </Button>
 
         <Flex justify="center" align="center" gap="small">
-          {role === 'BRANCH' ? (
+          {role === 'PHARMACY' ? (
             <>
               <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 아이디 찾기

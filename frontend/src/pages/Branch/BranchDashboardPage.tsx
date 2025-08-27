@@ -2,10 +2,10 @@ import { Card, Col, List, message, Progress, Row, Space, Statistic, Table, Typog
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { announcementAPI, orderAPI } from '../../api';
-import { ANNOUNCEMENT_TYPE_TEXT } from '../../constants';
+import { noticeAPI, orderAPI } from '../../api';
+import { NOTICE_TYPE_TEXT } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
-import { type Announcement, type Order, type Pharmacy, type User } from '../../types';
+import type { NoticeListRes, OrderListRes, Pharmacy, User } from '../../types';
 import { calculateCreditInfo } from '../../utils';
 
 export default function BranchDashboardPage() {
@@ -16,16 +16,16 @@ export default function BranchDashboardPage() {
   const profile = useAuthStore((state) => state.profile) as Pharmacy;
   const pharmacyId = profile.pharmacyId;
 
-  const [latestAnnouncements, setLatestAnnouncements] = useState<Announcement[]>([]);
-  const [recentOrder, setRecentOrder] = useState<Order[]>([]);
+  const [latestAnnouncements, setLatestAnnouncements] = useState<NoticeListRes[]>([]);
+  const [recentOrder, setRecentOrder] = useState<OrderListRes[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const announcementResponse = await announcementAPI.getAnnouncements({ page: 0, size: 5 });
+        const noticeResponse = await noticeAPI.getNotices({ page: 0, size: 5 });
 
-        if (announcementResponse.success && announcementResponse.data.length > 0) {
-          setLatestAnnouncements(announcementResponse.data);
+        if (noticeResponse.success && noticeResponse.data.length > 0) {
+          setLatestAnnouncements(noticeResponse.data);
         } else {
           setLatestAnnouncements([]);
         }
@@ -74,19 +74,19 @@ export default function BranchDashboardPage() {
         <Col span={24}>
           <Card title="최근 공지사항" variant="borderless">
             <List
-              dataSource={latestAnnouncements}
+              dataSource={latestNotices}
               renderItem={(item) => (
-                <List.Item key={item.announcementId}>
+                <List.Item key={item.noticeId}>
                   <List.Item.Meta
                     title={
                       <Typography.Link
                         onClick={() => {
-                          navigate(`/branch/announcements/${item.announcementId}`, {
+                          navigate(`/branch/notices/${item.noticeId}`, {
                             state: { returnTo: { type: item.type, page: 1, keyword: '' } },
                           });
                         }}
                       >
-                        {`[${ANNOUNCEMENT_TYPE_TEXT[item.type]}] ${item.title}`}
+                        {`[${NOTICE_TYPE_TEXT[item.type]}] ${item.title}`}
                       </Typography.Link>
                     }
                   />

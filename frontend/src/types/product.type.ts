@@ -1,19 +1,4 @@
-import type { PaginatedResponse } from './api.type';
-
-export interface Product {
-  productId: number;
-  productName: string;
-  productCode: string;
-  mainCategory: ProductMainCategory;
-  subCategory: ProductSubCategory;
-  manufacturer: string;
-  unit: string;
-  unitPrice: number;
-  details?: string;
-  productImgUrl?: string;
-  createdAt: string;
-  stock: number;
-}
+import type { ApiResponse, PaginatedResponse } from './api.type';
 
 export const PRODUCT_CATEGORIES = {
   전문의약품: [
@@ -45,9 +30,9 @@ export type ProductSubCategoryTextMap = { [key in ProductSubCategory]: string };
 
 export type ProductSubCategoryWithAll = '전체' | ProductSubCategory;
 
-export interface ProductCreateRequest {
+export interface ProductCreateReq {
   productName: string;
-  productCode: string;
+  insuranceCode: string;
   mainCategory: ProductMainCategory;
   subCategory: ProductSubCategory;
   manufacturer: string;
@@ -55,7 +40,27 @@ export interface ProductCreateRequest {
   unitPrice: number;
   details?: string;
   productImgUrl?: string;
-  stock: number;
+  stockQty: number;
+}
+
+export interface ProductCreateRes {
+  productId: number;
+  stockTxId: number;
+}
+
+export interface ProductDetailRes {
+  productId: number;
+  productName: string;
+  insuranceCode: string;
+  mainCategory: ProductMainCategory;
+  subCategory: ProductSubCategory;
+  manufacturer: string;
+  unit: string;
+  unitPrice: number;
+  details?: string;
+  productImgUrl?: string;
+  createdAt: string;
+  stockQty: number;
 }
 
 export interface ProductListParams {
@@ -66,9 +71,20 @@ export interface ProductListParams {
   keyword?: string;
 }
 
-export interface ProductUpdateRequest {
+export interface ProductListRes {
+  productId: number;
   productName: string;
-  productCode: string;
+  manufacturer: string;
+  unit: string;
+  unitPrice: number;
+  productImgUrl?: string;
+  stockQty: number;
+  latestStockInAt: string;
+}
+
+export interface ProductUpdateReq {
+  productName: string;
+  insuranceCode: string;
   mainCategory: ProductMainCategory;
   subCategory: ProductSubCategory;
   manufacturer: string;
@@ -76,11 +92,8 @@ export interface ProductUpdateRequest {
   unitPrice: number;
   details?: string;
   productImgUrl?: string;
-  stock: number;
 }
 
-export type ProductCreateResponse = PaginatedResponse<number>;
-export type ProductListResponse = PaginatedResponse<Product>;
-export type ProductDetailResponse = PaginatedResponse<Product>;
-export type ProductUpdateResponse = PaginatedResponse<Product>;
-export type ProductDeleteResponse = PaginatedResponse<string>;
+export type ProductCreateResponse = ApiResponse<ProductCreateRes>;
+export type ProductListResponse = PaginatedResponse<ProductListRes>;
+export type ProductDetailResponse = PaginatedResponse<ProductDetailRes>;

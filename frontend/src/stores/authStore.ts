@@ -1,14 +1,13 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { AdminLoginResponse, BranchLoginResponse } from '../types/auth.type';
-import { type Admin, type Pharmacy, type User } from '../types/profile.type';
+import type { Admin, AdminLoginRes, Pharmacy, PharmacyLoginRes, User } from '../types';
 
 interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
   profile: Admin | Pharmacy | null;
 
-  setAuth: (data: BranchLoginResponse | AdminLoginResponse) => void;
+  setAuth: (data: PharmacyLoginRes | AdminLoginRes) => void;
   clearAuth: () => void;
   updateUser: (updatedFields: Partial<User>) => void;
   updateProfile: (updatedFields: Partial<Admin> | Partial<Pharmacy>) => void;

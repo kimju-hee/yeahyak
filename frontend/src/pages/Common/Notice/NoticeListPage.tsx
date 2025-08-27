@@ -11,23 +11,23 @@ import {
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { announcementAPI } from '../../../api';
+import { noticeAPI } from '../../../api';
 import { SearchBox } from '../../../components/SearchBox';
 import { DATE_FORMAT, PAGE_SIZE } from '../../../constants';
 import { useAuthStore } from '../../../stores/authStore';
-import { USER_ROLE, type Announcement, type AnnouncementType, type User } from '../../../types';
+import { USER_ROLE, type NoticeListRes, type NoticeType, type User } from '../../../types';
 
-export default function AnnouncementListPage() {
+export default function NoticeListPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const user = useAuthStore((state) => state.user) as User;
-  const basePath = user.role === USER_ROLE.BRANCH ? '/branch' : '/hq';
+  const basePath = user.role === USER_ROLE.PHARMACY ? '/branch' : '/hq';
 
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [activeTab, setActiveTab] = useState<AnnouncementType>(
-    (searchParams.get('type') as AnnouncementType) || 'NOTICE',
+  const [notices, setNotices] = useState<NoticeListRes[]>([]);
+  const [activeTab, setActiveTab] = useState<NoticeType>(
+    (searchParams.get('type') as NoticeType) || 'NOTICE',
   );
   const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
   const [appliedKeyword, setAppliedKeyword] = useState(searchParams.get('keyword') || '');
@@ -36,10 +36,10 @@ export default function AnnouncementListPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const fetchAnnouncements = async () => {
+  const fetchNotices = async () => {
     setLoading(true);
     try {
-      const res = await announcementAPI.getAnnouncements({
+      const res = await noticeAPI.getNotices({
         type: activeTab,
         page: currentPage - 1,
         size: PAGE_SIZE,
@@ -48,16 +48,16 @@ export default function AnnouncementListPage() {
 
       if (res.success) {
         const { data, totalElements } = res;
-        setAnnouncements(data);
+        setNotices(data);
         setTotal(totalElements);
       } else {
-        setAnnouncements([]);
+        setNotices([]);
         setTotal(0);
       }
     } catch (e: any) {
       console.error('공지사항 목록 로딩 실패:', e);
       messageApi.error(e.response?.data?.message || '공지사항 목록 로딩 중 오류가 발생했습니다.');
-      setAnnouncements([]);
+      setNotices([]);
       setTotal(0);
     } finally {
       setLoading(false);
@@ -65,7 +65,7 @@ export default function AnnouncementListPage() {
   };
 
   useEffect(() => {
-    fetchAnnouncements();
+    fetchNotices();
   }, [activeTab, currentPage, appliedKeyword]);
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export default function AnnouncementListPage() {
   }, [activeTab, currentPage, appliedKeyword]);
 
   const handleTabChange = (key: string) => {
-    setActiveTab(key as AnnouncementType);
+    setActiveTab(key as NoticeType);
     setKeyword('');
     setAppliedKeyword('');
     setCurrentPage(1);
@@ -89,8 +89,8 @@ export default function AnnouncementListPage() {
     setCurrentPage(1);
   };
 
-  const tableColumns: TableProps<Announcement>['columns'] = [
-    { title: '번호', dataIndex: 'announcementId', key: 'announcementId', width: '80px' },
+  const tableColumns: TableProps<NoticeListRes>['columns'] = [
+    { title: '번호', dataIndex: 'noticeId', key: 'noticeId', width: '80px' },
     { title: '제목', dataIndex: 'title', key: 'title', ellipsis: true },
     {
       title: '작성 일시',
@@ -106,12 +106,12 @@ export default function AnnouncementListPage() {
       <Table
         bordered
         columns={tableColumns}
-        dataSource={announcements}
+        dataSource={notices}
         loading={loading}
-        rowKey="announcementId"
+        rowKey="noticeId"
         onRow={(record) => ({
           onClick: () => {
-            navigate(`${basePath}/announcements/${record.announcementId}`, {
+            navigate(`${basePath}/notices/${record.noticeId}`, {
               state: { returnTo: { type: activeTab, page: currentPage, keyword: appliedKeyword } },
             });
           },
@@ -130,7 +130,7 @@ export default function AnnouncementListPage() {
   };
 
   const tabsItems: TabsProps['items'] = [
-    { key: 'NOTICE', label: '안내', children: renderTable() },
+    { key: 'GENERAL', label: '안내', children: renderTable() },
     { key: 'EPIDEMIC', label: '감염병', children: renderTable() },
     { key: 'LAW', label: '법령', children: renderTable() },
     { key: 'NEW_PRODUCT', label: '신제품', children: renderTable() },
@@ -156,7 +156,7 @@ export default function AnnouncementListPage() {
         />
 
         {user.role === USER_ROLE.ADMIN && (
-          <Button type="primary" onClick={() => navigate(`${basePath}/announcements/new`)}>
+          <Button type="primary" onClick={() => navigate(`${basePath}/notices/new`)}>
             작성
           </Button>
         )}

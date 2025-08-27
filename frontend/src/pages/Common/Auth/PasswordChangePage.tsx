@@ -2,8 +2,8 @@ import { Button, Card, Flex, Form, Input, message, Typography } from 'antd';
 import { useEffect } from 'react';
 import { authAPI } from '../../../api';
 import { useAuthStore } from '../../../stores/authStore';
-import type { PasswordChangeRequest } from '../../../types/auth.type';
-import type { User } from '../../../types/profile.type';
+
+import type { PasswordChangeReq, User } from '../../../types';
 import {
   passwordConfirmRule,
   passwordNotSameAsCurrentRule,
@@ -26,9 +26,9 @@ export default function PasswordChangePage() {
     });
   }, [form, user]);
 
-  const handleSubmit = async (values: PasswordChangeRequest & { confirmNewPassword: string }) => {
+  const handleSubmit = async (values: PasswordChangeReq & { confirmNewPassword: string }) => {
     try {
-      const payload: PasswordChangeRequest = {
+      const payload: PasswordChangeReq = {
         currentPassword: values.currentPassword,
         newPassword: values.newPassword,
       };

@@ -1,4 +1,4 @@
-export { AnnouncementDetailSkeleton } from './AnnouncementDetailSkeleton';
-export { AnnouncementEditSkeleton } from './AnnouncementEditSkeleton';
+export { NoticeDetailSkeleton } from './NoticeDetailSkeleton';
+export { NoticeEditSkeleton } from './NoticeEditSkeleton';
 export { ProductDetailSkeleton } from './ProductDetailSkeleton';
 export { ProductEditSkeleton } from './ProductEditSkeleton';

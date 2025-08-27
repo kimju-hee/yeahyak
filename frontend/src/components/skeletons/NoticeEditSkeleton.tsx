@@ -1,6 +1,6 @@
 import { Card, Flex, Skeleton } from 'antd';
 
-export function AnnouncementEditSkeleton() {
+export function NoticeEditSkeleton() {
   return (
     <>
       <Skeleton.Input style={{ marginBottom: '16px' }} active block />
