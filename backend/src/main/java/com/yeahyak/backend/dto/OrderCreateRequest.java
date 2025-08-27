@@ -22,7 +22,7 @@ public class OrderCreateRequest {
 
   @NotEmpty
   @Valid
-  private List<Item> items;
+  private List<OrderCreateRequest.Item> items;
 
   @Getter
   @Setter

@@ -26,6 +26,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 재고 거래(입고/출고) 관련 API를 처리하는 컨트롤러입니다.
+ */
 @RestController
 @RequestMapping(value = "/api/stock-txs", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor

@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -40,11 +41,21 @@ public class ForecastService {
 
   public List<ForecastProduct> forecastOrder(MultipartFile file) {
     try {
-      HttpHeaders headers = new HttpHeaders();
-      headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+      HttpHeaders partHeaders = new HttpHeaders();
+      partHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+
+      ByteArrayResource resource = new ByteArrayResource(file.getBytes()) {
+        @Override
+        public String getFilename() {
+          return file.getOriginalFilename();
+        }
+      };
 
       MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-      body.add("file", file.getResource());
+      body.add("file", new HttpEntity<>(resource, partHeaders));
+
+      HttpHeaders headers = new HttpHeaders();
+      headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
       HttpEntity<MultiValueMap<String, Object>> httpEntity = new HttpEntity<>(body, headers);
 

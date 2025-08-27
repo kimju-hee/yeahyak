@@ -27,7 +27,7 @@ public class OrderDetailResponse {
   private BigDecimal totalPrice;
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
-  private List<Item> items;
+  private List<OrderDetailResponse.Item> items;
 
   @Getter
   @Setter

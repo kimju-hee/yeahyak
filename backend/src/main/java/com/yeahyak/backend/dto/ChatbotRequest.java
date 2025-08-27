@@ -23,7 +23,6 @@ public class ChatbotRequest {
   @NotNull
   private Long userId;
 
-  @NotNull
   private ChatbotType type;
 
   @NotBlank

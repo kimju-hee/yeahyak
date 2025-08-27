@@ -104,7 +104,7 @@ public class OrderService {
           .orElseThrow(() -> new RuntimeException("제품 정보를 찾을 수 없습니다."));
 
       stockTxService.createStockTx(
-          product.getProductId(), StockTxType.OUT, reqItem.getQuantity()
+          product.getProductId(), StockTxType.ORDER, reqItem.getQuantity()
       );
     }
 
@@ -223,13 +223,13 @@ public class OrderService {
 
     if (req.getStatus() == OrderStatus.CANCELED) {
       balanceTxService.createBalanceTx(
-          orders.getPharmacy().getPharmacyId(), BalanceTxType.CANCEL, orders.getTotalPrice()
+          orders.getPharmacy().getPharmacyId(), BalanceTxType.ORDER_CANCEL, orders.getTotalPrice()
       );
 
       List<OrderItem> items = orderItemRepo.findByOrders(orders);
       for (OrderItem oi : items) {
         stockTxService.createStockTx(
-            oi.getProduct().getProductId(), StockTxType.CANCEL_IN, oi.getQuantity()
+            oi.getProduct().getProductId(), StockTxType.ORDER_CANCEL, oi.getQuantity()
         );
       }
     }

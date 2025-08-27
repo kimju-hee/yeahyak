@@ -31,7 +31,7 @@ public class ReturnCreateRequest {
 
   @NotEmpty
   @Valid
-  private List<Item> items;
+  private List<ReturnCreateRequest.Item> items;
 
   @Getter
   @Setter

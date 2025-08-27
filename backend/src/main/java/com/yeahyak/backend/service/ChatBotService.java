@@ -1,6 +1,7 @@
 package com.yeahyak.backend.service;
 
 import com.yeahyak.backend.dto.ApiResponse;
+import com.yeahyak.backend.dto.ChatMessage;
 import com.yeahyak.backend.dto.ChatbotRequest;
 import com.yeahyak.backend.dto.ChatbotResponse;
 import com.yeahyak.backend.entity.Chatbot;
@@ -10,6 +11,7 @@ import com.yeahyak.backend.repository.ChatbotRepository;
 import com.yeahyak.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,11 +47,11 @@ public class ChatbotService {
         (req.getHistory() == null ? 0 : req.getHistory().size()));
 
     // 0) 사용자 조회
-    User user = userRepo.findById(req.getUserId())
+    final User user = userRepo.findById(req.getUserId())
         .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
     // 질문 시각
-    LocalDateTime askedAt = LocalDateTime.now();
+    final LocalDateTime askedAt = LocalDateTime.now();
 
     // 1) AI 호출
     String endpoint =
@@ -57,12 +59,21 @@ public class ChatbotService {
     String url = aiServiceUrl + endpoint;
 
     Map<String, Object> payload = new HashMap<>();
-    if (req.getType() == ChatbotType.QNA) {
-      payload.put("query", req.getQuestion());
-      payload.put("history", req.getHistory() != null ? req.getHistory() : List.of());
-    } else {
-      payload.put("question", req.getQuestion());
+    payload.put("question", req.getQuestion());
+
+    List<Map<String, String>> historyPayload = new ArrayList<>();
+    if (req.getHistory() != null) {
+      for (ChatMessage m : req.getHistory()) {
+        String type = (m.getRole() != null && m.getRole().name().equalsIgnoreCase("USER"))
+            ? "user"
+            : "ai";
+        Map<String, String> item = new HashMap<>();
+        item.put("type", type);
+        item.put("content", m.getContent());
+        historyPayload.add(item);
+      }
     }
+    payload.put("history", historyPayload);
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);

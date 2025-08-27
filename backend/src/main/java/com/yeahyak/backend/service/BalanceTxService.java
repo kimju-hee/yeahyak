@@ -39,7 +39,7 @@ public class BalanceTxService {
         balanceTxRepo.increaseBalance(pharmacyId, amount);
         after = before.add(amount);
       }
-      case RETURN, CANCEL -> {
+      case RETURN, ORDER_CANCEL -> {
         balanceTxRepo.decreaseBalance(pharmacyId, amount);
         after = before.subtract(amount);
       }

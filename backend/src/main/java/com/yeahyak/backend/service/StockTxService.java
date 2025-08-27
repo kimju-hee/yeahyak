@@ -31,8 +31,8 @@ public class StockTxService {
   @Transactional
   public Long createStockTx(Long productId, StockTxType type, int amount) {
     boolean isIn = switch (type) {
-      case IN, REJECT_IN, CANCEL_IN, RETURN_IN -> true;
-      case OUT -> false;
+      case IN, ORDER_CANCEL, RETURN -> true;
+      case ORDER -> false;
       default -> throw new RuntimeException("잘못된 거래 유형입니다.");
     };
 

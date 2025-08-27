@@ -78,7 +78,7 @@ public class ReturnController {
    * (가맹점) 반품 목록을 조회합니다.
    */
   @PreAuthorize("hasRole('PHARMACY')")
-  @GetMapping("/branch}")
+  @GetMapping("/branch")
   public ResponseEntity<ApiResponse<List<ReturnListResponse>>> getReturnsForBranch(
       @RequestParam Long pharmacyId,
       @RequestParam(required = false) ReturnStatus status,
@@ -93,7 +93,7 @@ public class ReturnController {
   /**
    * (본사, 가맹점) 반품 상세를 조회합니다.
    */
-  @PreAuthorize("isAuthenticated()")
+  
   @GetMapping("/{returnId}")
   public ResponseEntity<ApiResponse<ReturnDetailResponse>> getReturnDetail(
       @PathVariable Long returnId

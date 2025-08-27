@@ -19,10 +19,7 @@ public class ApiResponse<T> {
 
   private boolean success;
   private T data;
-
-  private Integer totalPages;
-  private Long totalElements;
-  private Integer currentPage;
+  private PageInfo page;
 
   public static <T> ApiResponse<T> ok(T data) {
     return ApiResponse.<T>builder()
@@ -35,9 +32,22 @@ public class ApiResponse<T> {
     return ApiResponse.<List<T>>builder()
         .success(true)
         .data(page.getContent())
-        .totalPages(page.getTotalPages())
-        .totalElements(page.getTotalElements())
-        .currentPage(page.getNumber())
+        .page(new PageInfo(page))
         .build();
+  }
+
+  @Getter
+  @AllArgsConstructor
+  public static class PageInfo {
+
+    private int totalPages;
+    private long totalElements;
+    private int currentPage;
+
+    public PageInfo(Page<?> page) {
+      this.totalPages = page.getTotalPages();
+      this.totalElements = page.getTotalElements();
+      this.currentPage = page.getNumber();
+    }
   }
 }

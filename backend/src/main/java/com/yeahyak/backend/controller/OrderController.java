@@ -77,7 +77,7 @@ public class OrderController {
    * (가맹점) 발주 목록을 조회합니다. (상태 + 페이지네이션)
    */
   @PreAuthorize("hasRole('PHARMACY')")
-  @GetMapping("/branch}")
+  @GetMapping("/branch")
   public ResponseEntity<ApiResponse<List<OrderListResponse>>> getOrdersForBranch(
       @RequestParam Long pharmacyId,
       @RequestParam(required = false) OrderStatus status,

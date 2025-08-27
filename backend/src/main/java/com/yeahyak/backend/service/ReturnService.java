@@ -1,20 +1,5 @@
 package com.yeahyak.backend.service;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Sort.Direction;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.yeahyak.backend.dto.ReturnCreateRequest;
 import com.yeahyak.backend.dto.ReturnCreateResponse;
 import com.yeahyak.backend.dto.ReturnDetailResponse;
@@ -37,8 +22,20 @@ import com.yeahyak.backend.repository.ProductRepository;
 import com.yeahyak.backend.repository.ReturnItemRepository;
 import com.yeahyak.backend.repository.ReturnRepository;
 import com.yeahyak.backend.repository.StockTxRepository;
-
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 반품 요청과 관련된 비즈니스 로직을 처리하는 서비스 클래스입니다.
@@ -262,7 +259,7 @@ public class ReturnService {
       List<ReturnItem> items = returnItemRepo.findByReturns(returns);
       for (ReturnItem ri : items) {
         stockTxService.createStockTx(
-            ri.getProduct().getProductId(), StockTxType.RETURN_IN, ri.getQuantity()
+            ri.getProduct().getProductId(), StockTxType.RETURN, ri.getQuantity()
         );
       }
     }

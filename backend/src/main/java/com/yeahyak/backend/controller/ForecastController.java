@@ -1,6 +1,5 @@
 package com.yeahyak.backend.controller;
 
-
 import com.yeahyak.backend.dto.ApiResponse;
 import com.yeahyak.backend.dto.ForecastProduct;
 import com.yeahyak.backend.service.ForecastService;
@@ -16,7 +15,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-
+/**
+ * 발주 예측 API를 처리하는 컨트롤러입니다.
+ */
 @RestController
 @RequestMapping(value = "/api/forecast", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
