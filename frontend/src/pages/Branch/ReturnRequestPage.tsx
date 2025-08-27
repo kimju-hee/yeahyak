@@ -31,16 +31,15 @@ import { useAuthStore } from '../../stores/authStore';
 import { useReturnCartStore } from '../../stores/returnCartStore';
 import {
   ORDER_STATUS,
-  type Order,
   type OrderDetailItem,
   type OrderDetailResponse,
+  type OrderList,
   type Pharmacy,
-  type Return,
   type ReturnCartItem,
   type ReturnCreateRequest,
   type ReturnDetailResponse,
+  type ReturnList,
   type ReturnStatus,
-  type User,
 } from '../../types';
 import { PLACEHOLDER } from '../../utils';
 
@@ -59,14 +58,13 @@ export default function ReturnRequestPage() {
   const [form] = Form.useForm();
   const [returnForm] = Form.useForm();
 
-  const user = useAuthStore((state) => state.user) as User;
   const profile = useAuthStore((state) => state.profile) as Pharmacy;
-  const updateUser = useAuthStore((state) => state.updateUser);
-  const point = user.point;
+  const updateProfile = useAuthStore((state) => state.updateProfile);
+  const outstandingBalance = profile.outstandingBalance;
   const pharmacyId = profile.pharmacyId;
   const { items, addItem, removeItem, clearCart, getTotalPrice } = useReturnCartStore();
 
-  const [returns, setReturns] = useState<Return[]>([]);
+  const [returns, setReturns] = useState<ReturnList[]>([]);
   const [currentStatusFilter, setCurrentStatusFilter] = useState<ReturnStatus | undefined>(
     undefined,
   );
@@ -78,11 +76,11 @@ export default function ReturnRequestPage() {
   const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
 
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderList[]>([]);
   const [ordersCurrentPage, setOrdersCurrentPage] = useState<number>(1);
   const [ordersTotal, setOrdersTotal] = useState<number>(0);
   const [ordersLoading, setOrdersLoading] = useState<boolean>(false);
-  const [selectedOrder, setSelectedOrder] = useState<Order | undefined>(undefined);
+  const [selectedOrder, setSelectedOrder] = useState<OrderList | undefined>(undefined);
   const [orderDetail, setOrderDetail] = useState<OrderDetailResponse | undefined>(undefined);
   const [orderDetailLoading, setOrderDetailLoading] = useState<boolean>(false);
   const [orderItems, setOrderItems] = useState<OrderDetailItem[]>([]);
@@ -94,7 +92,7 @@ export default function ReturnRequestPage() {
   const fetchReturns = async (statusFilter: ReturnStatus | undefined) => {
     setReturnsLoading(true);
     try {
-      const res = await returnAPI.getBranchReturns({
+      const res = await returnAPI.getReturnsBranch({
         pharmacyId: pharmacyId,
         page: returnsCurrentPage - 1,
         size: PAGE_SIZE,
@@ -102,9 +100,9 @@ export default function ReturnRequestPage() {
       });
 
       if (res.success) {
-        const { data, totalElements } = res;
+        const { data, page } = res;
         setReturns(data);
-        setReturnsTotal(totalElements);
+        setReturnsTotal(page.totalElements);
       } else {
         setReturns([]);
         setReturnsTotal(0);
@@ -122,7 +120,7 @@ export default function ReturnRequestPage() {
   const fetchReturnDetail = async (returnId: number) => {
     setExpandedRowLoading((prev) => ({ ...prev, [returnId]: true }));
     try {
-      const res = await returnAPI.getBranchReturn(returnId);
+      const res = await returnAPI.getReturn(returnId);
       if (res.success) {
         setExpandedRowData((prev) => ({ ...prev, [returnId]: res }));
       }
@@ -137,16 +135,16 @@ export default function ReturnRequestPage() {
   const fetchOrders = async () => {
     setOrdersLoading(true);
     try {
-      const res = await orderAPI.getBranchOrders({
+      const res = await orderAPI.getOrdersBranch({
         pharmacyId: pharmacyId,
         page: ordersCurrentPage - 1,
         size: PAGE_SIZE,
         status: ORDER_STATUS.COMPLETED,
       });
       if (res.success) {
-        const { data, totalElements } = res;
+        const { data, page } = res;
         setOrders(data);
-        setOrdersTotal(totalElements);
+        setOrdersTotal(page.totalElements);
       }
     } catch (e: any) {
       console.error('주문 목록 로딩 실패:', e);
@@ -242,6 +240,7 @@ export default function ReturnRequestPage() {
           productId: item.productId,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
+          subtotalPrice: item.unitPrice * item.quantity,
         })),
       };
 
@@ -250,7 +249,7 @@ export default function ReturnRequestPage() {
       if (res.success) {
         messageApi.success('반품 요청이 완료되었습니다.');
         fetchReturns(currentStatusFilter);
-        updateUser({ point: point + res.data.totalPrice });
+        updateProfile({ outstandingBalance: outstandingBalance + res.data.totalPrice }); // FIXME: 우짜지...
         clearCart();
         setSelectedOrder(undefined);
         form.resetFields(['orderId', 'productId', 'quantity', 'unitPrice']);
@@ -277,7 +276,7 @@ export default function ReturnRequestPage() {
     if (newPage !== returnsCurrentPage) setReturnsCurrentPage(newPage);
   };
 
-  const handleExpand = (expanded: boolean, record: Return) => {
+  const handleExpand = (expanded: boolean, record: ReturnList) => {
     const returnId = record.returnId;
     if (expanded) fetchReturnDetail(returnId);
     setExpandedRowKeys(
@@ -316,7 +315,7 @@ export default function ReturnRequestPage() {
   ];
 
   // 반품내역 테이블
-  const returnsColumns: TableProps<Return>['columns'] = [
+  const returnsColumns: TableProps<ReturnList>['columns'] = [
     { title: '반품번호', dataIndex: 'returnId', key: 'returnId' },
     {
       title: '일시',
@@ -326,14 +325,8 @@ export default function ReturnRequestPage() {
     },
     {
       title: '요약',
-      key: 'returnSummary',
-      render: (_, record) => {
-        if (record.items.length > 1) {
-          return `${record.items[0].productName} 외 ${record.items.length - 1}건`;
-        } else {
-          return `${record.items[0].productName}`;
-        }
-      },
+      dataIndex: 'summary',
+      key: 'summary',
     },
     { title: '사유', dataIndex: 'reason', key: 'reason' },
     {
@@ -356,7 +349,7 @@ export default function ReturnRequestPage() {
   ];
 
   // 반품내역 테이블 상세
-  const expandedRowRender = (record: Return) => {
+  const expandedRowRender = (record: ReturnList) => {
     const detailData = expandedRowData[record.returnId];
     const isLoading = expandedRowLoading[record.returnId];
     if (isLoading) return <Spin />;
@@ -532,11 +525,7 @@ export default function ReturnRequestPage() {
                     size="small"
                   >
                     <Descriptions.Item label="주문번호">{order.orderId}</Descriptions.Item>
-                    <Descriptions.Item label="요약">
-                      {order.items.length > 1
-                        ? `${order.items[0].productName} 외 ${order.items.length - 1}건`
-                        : `${order.items[0].productName}`}
-                    </Descriptions.Item>
+                    <Descriptions.Item label="요약">{order.summary}</Descriptions.Item>
                     <Descriptions.Item label="합계">
                       {order.totalPrice.toLocaleString()}원
                     </Descriptions.Item>

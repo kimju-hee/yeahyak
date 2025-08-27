@@ -1,0 +1,48 @@
+package com.yeahyak.backend.dto;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import java.math.BigDecimal;
+import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class OrderCreateRequest {
+
+  @NotNull
+  private Long pharmacyId;
+
+  @NotEmpty
+  @Valid
+  private List<OrderCreateRequest.Item> items;
+
+  @Getter
+  @Setter
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class Item {
+
+    @NotNull
+    private Long productId;
+
+    @NotNull
+    @Positive
+    private Integer quantity;
+
+    @NotNull
+    @Positive
+    private BigDecimal unitPrice;
+
+    @NotNull
+    @Positive
+    private BigDecimal subtotalPrice;
+  }
+}

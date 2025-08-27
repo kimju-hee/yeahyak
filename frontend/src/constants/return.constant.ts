@@ -2,38 +2,35 @@ import type { ReturnStatus, ReturnStatusColorMap, ReturnStatusTextMap } from '..
 
 export const RETURN_ENDPOINT = {
   CREATE: '/returns',
-  LIST_BRANCH: '/branch/returns',
-  LIST_ADMIN: '/admin/returns',
-  DETAIL_BRANCH: (returnId: number) => `/branch/returns/${returnId}`,
-  DETAIL_ADMIN: (returnId: number) => `/admin/returns/${returnId}`,
-  APPROVE: (returnId: number) => `/admin/returns/${returnId}/approve`,
-  REJECT: (returnId: number) => `/admin/returns/${returnId}/reject`,
-  UPDATE_STATUS: (returnId: number) => `/admin/returns/${returnId}`,
-  DELETE: (returnId: number) => `/admin/returns/${returnId}`,
+  LIST_HQ: '/returns/hq',
+  LIST_BRANCH: '/returns/branch',
+  DETAIL: (returnId: number) => `/returns/${returnId}`,
+  UPDATE: (returnId: number) => `/returns/${returnId}/status`,
+  DELETE: (returnId: number) => `/returns/${returnId}`,
 } as const;
 
 export const RETURN_STATUS_OPTIONS = [
   { value: 'REQUESTED' as ReturnStatus, label: '대기' },
   { value: 'APPROVED' as ReturnStatus, label: '승인' },
-  { value: 'PROCESSING' as ReturnStatus, label: '처리중' },
+  { value: 'RECEIVED' as ReturnStatus, label: '수령' },
   { value: 'COMPLETED' as ReturnStatus, label: '완료' },
-  { value: 'REJECTED' as ReturnStatus, label: '반려' },
+  { value: 'CANCELED' as ReturnStatus, label: '취소' },
 ] as const;
 
 export const RETURN_STATUS_COLORS: ReturnStatusColorMap = {
   REQUESTED: 'orange',
   APPROVED: 'blue',
-  PROCESSING: 'blue',
+  RECEIVED: 'blue',
   COMPLETED: 'green',
-  REJECTED: 'default',
+  CANCELED: 'default',
 } as const;
 
 export const RETURN_STATUS_TEXT: ReturnStatusTextMap = {
   REQUESTED: '대기',
   APPROVED: '승인',
-  PROCESSING: '처리중',
+  RECEIVED: '수령',
   COMPLETED: '완료',
-  REJECTED: '반려',
+  CANCELED: '취소',
 } as const;
 
 export const RETURN_REASON_OPTIONS = [

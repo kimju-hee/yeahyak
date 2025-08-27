@@ -1,22 +1,15 @@
-import { Card, Carousel, Flex, Form, message } from 'antd';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { adminLogin, branchLogin } from '../../../api/auth.api';
-import {
-  landing_main,
-  landing_sub_01,
-  landing_sub_02,
-  landing_sub_03,
-  landing_sub_04,
-} from '../../../assets';
+import { Card, Form, message } from 'antd';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { authAPI } from '../../../api';
+import { landing01, landing02, landing03, landing04 } from '../../../assets';
 import LoginForm from '../../../components/LoginForm';
 import { useAuthStore } from '../../../stores/authStore';
 import {
-  PHARMACY_STATUS,
   USER_ROLE,
-  type AdminLoginResponse,
-  type BranchLoginResponse,
+  type AdminLogin,
   type LoginRequest,
+  type PharmacyLogin,
   type UserRole,
 } from '../../../types';
 
@@ -24,13 +17,41 @@ export default function LoginPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, user, setAuth } = useAuthStore();
+  const messageShownRef = useRef(false);
 
-  const [activeTab, setActiveTab] = useState<UserRole>(USER_ROLE.BRANCH);
+  const [activeTab, setActiveTab] = useState<UserRole>(USER_ROLE.PHARMACY);
+  const [currentImgIdx, setCurrentImgIdx] = useState(0);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
+
+  // 배경 이미지 배열
+  const backgroundImages = [landing01, landing02, landing03, landing04];
+
+  // 화면 크기 감지
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsSmallScreen(window.innerWidth < 1024);
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  // 회원가입 완료 메시지 처리
+  useEffect(() => {
+    if (location.state?.message && !messageShownRef.current) {
+      messageShownRef.current = true;
+      messageApi.success(location.state.message);
+      navigate('/login', { replace: true });
+    }
+  }, [location.state?.message, messageApi, navigate]);
 
   useEffect(() => {
     if (isAuthenticated) {
-      if (user?.role === USER_ROLE.BRANCH) {
+      if (user?.role === USER_ROLE.PHARMACY) {
         navigate('/branch', { replace: true });
       } else {
         navigate('/hq', { replace: true });
@@ -38,26 +59,35 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, user, navigate]);
 
+  // 배경 이미지 자동 전환
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImgIdx((prevIdx) => (prevIdx + 1) % backgroundImages.length);
+    }, 5000); // 5초마다 변경
+
+    return () => clearInterval(interval);
+  }, [backgroundImages.length]);
+
   const handleSubmit = async (values: LoginRequest) => {
     try {
-      if (activeTab === USER_ROLE.BRANCH) {
-        const res = await branchLogin({ email: values.email, password: values.password });
+      if (activeTab === USER_ROLE.PHARMACY) {
+        const res = await authAPI.pharmacyLogin({
+          email: values.email,
+          password: values.password,
+        });
 
         if (res.success) {
-          const branchData = res.data as BranchLoginResponse;
-          if (branchData.profile.status === PHARMACY_STATUS.PENDING) {
-            throw new Error('승인 대기 중인 계정입니다. 관리자에게 문의하세요.');
-          }
-          if (branchData.profile.status === PHARMACY_STATUS.REJECTED) {
-            throw new Error('승인 거절된 계정입니다. 관리자에게 문의하세요.');
-          }
-          setAuth(branchData);
+          const pharmacyData = res.data as PharmacyLogin;
+          setAuth(pharmacyData);
         }
       } else {
-        const res = await adminLogin({ email: values.email, password: values.password });
+        const res = await authAPI.adminLogin({
+          email: values.email,
+          password: values.password,
+        });
 
         if (res.success) {
-          const adminData = res.data as AdminLoginResponse;
+          const adminData = res.data as AdminLogin;
           setAuth(adminData);
         }
       }
@@ -71,7 +101,7 @@ export default function LoginPage() {
   };
 
   const tabList = [
-    { key: USER_ROLE.BRANCH, tab: '가맹점 로그인' },
+    { key: USER_ROLE.PHARMACY, tab: '가맹점 로그인' },
     { key: USER_ROLE.ADMIN, tab: '본사 로그인' },
   ];
 
@@ -82,70 +112,100 @@ export default function LoginPage() {
   };
 
   return (
-    <>
+    <div
+      style={{
+        position: 'relative',
+        minWidth: '1024px',
+        minHeight: '100vh',
+        width: '100%',
+        height: '100%',
+      }}
+    >
       {contextHolder}
-      <Flex vertical justify="center">
-        {/* 상단 섹션 - 메인 이미지와 로그인폼 */}
-        <div
+
+      {/* 배경 이미지 컨테이너 */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          minWidth: '1024px',
+          minHeight: '100vh',
+          zIndex: -1,
+          overflow: 'hidden',
+        }}
+      >
+        {/* 블러 처리된 배경 (빈 공간 채우기용) */}
+        <img
+          src={backgroundImages[currentImgIdx]}
+          alt="배경 블러"
           style={{
-            backgroundImage: `url(${landing_main})`,
-            backgroundSize: '100% auto',
-            backgroundPosition: 'center top',
-            position: 'relative',
-            width: '100%',
+            position: 'absolute',
+            top: '50%',
+            left: isSmallScreen ? '70%' : '50%', // 작은 화면 분기
+            transform: 'translate(-50%, -50%)',
+            minWidth: 'max(100%, 1024px)',
+            minHeight: '100%',
+            width: 'auto',
             height: 'auto',
-            aspectRatio: '2/1',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            objectFit: 'cover',
+            filter: 'blur(10px)',
+            opacity: 0.8,
+          }}
+        />
+        {/* 메인 이미지 (전체 보이게) */}
+        <img
+          src={backgroundImages[currentImgIdx]}
+          alt="배경"
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: isSmallScreen ? '70%' : '50%', // 작은 화면 분기
+            transform: 'translate(-50%, -50%)',
+            minWidth: 'max(100%, 1024px)',
+            maxHeight: '100%',
+            width: 'auto',
+            height: 'auto',
+            objectFit: 'contain',
+            zIndex: 1,
+          }}
+        />
+      </div>
+
+      {/* 콘텐츠 영역 */}
+      <div
+        style={{
+          position: 'relative',
+          minHeight: '100vh',
+          width: '100%',
+          minWidth: '1024px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          paddingTop: isSmallScreen ? '30%' : '0', // 작은 화면 분기
+          paddingRight: isSmallScreen ? '5%' : '15%', // 작은 화면 분기
+          zIndex: 1,
+        }}
+      >
+        {/* 로그인폼 */}
+        <Card
+          tabList={tabList}
+          activeTabKey={activeTab}
+          tabProps={{ centered: true, size: 'large' }}
+          onTabChange={onTabChange}
+          style={{
+            padding: '48px',
+            width: '480px', // 고정 너비
+            borderRadius: '16px',
+            boxShadow: '0px 9px 28px 8px rgba(0, 0, 0, 0.05)',
+            backdropFilter: 'blur(10px)',
           }}
         >
-          {/* 로그인폼 */}
-          <Card
-            tabList={tabList}
-            activeTabKey={activeTab}
-            tabProps={{ centered: true }}
-            onTabChange={onTabChange}
-            style={{
-              position: 'absolute',
-              top: '70%',
-              left: '75%',
-              transform: 'translate(-50%, -50%)',
-              padding: '24px',
-              zIndex: 2,
-              maxWidth: '400px',
-              borderRadius: '16px',
-              boxShadow: '-5px 0px 12px 4px rgba(0, 0, 0, 0.09)',
-            }}
-          >
-            <LoginForm role={activeTab} form={form} handleSubmit={handleSubmit} />
-          </Card>
-        </div>
-
-        {/* 하단 섹션 - 캐러셀 */}
-        <Carousel autoplay autoplaySpeed={6000} style={{ width: '100%', maxWidth: '1200px' }}>
-          <img
-            src={landing_sub_01}
-            alt="챗봇을 이용해 혼선 없는 체인 운영의 시작!"
-            style={{ width: '100%', height: 'auto', objectFit: 'contain' }}
-          />
-          <img
-            src={landing_sub_02}
-            alt="발주/반품 프로세스의 표준!"
-            style={{ width: '100%', height: 'auto', objectFit: 'contain' }}
-          />
-          <img
-            src={landing_sub_03}
-            alt="AI의 도움으로 오늘의 지침이 전국으로 즉시 반영!"
-            style={{ width: '100%', height: 'auto', objectFit: 'contain' }}
-          />
-          <img
-            src={landing_sub_04}
-            alt="손쉬운 의약품 정보 획득"
-            style={{ width: '100%', height: 'auto', objectFit: 'contain' }}
-          />
-        </Carousel>
-      </Flex>
-    </>
+          <LoginForm role={activeTab} form={form} handleSubmit={handleSubmit} />
+        </Card>
+      </div>
+    </div>
   );
 }

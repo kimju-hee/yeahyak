@@ -2,8 +2,8 @@ import { Button, Card, Flex, Form, Input, message, Typography } from 'antd';
 import { useEffect } from 'react';
 import { authAPI } from '../../../api';
 import { useAuthStore } from '../../../stores/authStore';
-import type { PasswordChangeRequest } from '../../../types/auth.type';
-import type { User } from '../../../types/profile.type';
+
+import type { PasswordChangeRequest, User } from '../../../types';
 import {
   passwordConfirmRule,
   passwordNotSameAsCurrentRule,
@@ -32,12 +32,11 @@ export default function PasswordChangePage() {
         currentPassword: values.currentPassword,
         newPassword: values.newPassword,
       };
-      const res = await authAPI.changePassword(payload);
+      await authAPI.changePassword(payload);
 
-      if (res.success) {
-        messageApi.success('비밀번호가 변경되었습니다!');
-        form.resetFields(['currentPassword', 'newPassword', 'confirmNewPassword']);
-      }
+      // 204 No Content 응답이므로 예외가 발생하지 않으면 성공
+      messageApi.success('비밀번호가 변경되었습니다!');
+      form.resetFields(['currentPassword', 'newPassword', 'confirmNewPassword']);
     } catch (e: any) {
       console.error('비밀번호 변경 실패:', e);
       messageApi.error(e.response?.data?.message || '비밀번호 변경 중 오류가 발생했습니다.');

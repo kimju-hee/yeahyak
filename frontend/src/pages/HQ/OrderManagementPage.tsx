@@ -25,9 +25,9 @@ import {
   ORDER_STATUS_OPTIONS,
   ORDER_STATUS_TEXT,
   PAGE_SIZE,
-  REGION_OPTIONS,
+  REGION_CASCADER_OPTIONS,
 } from '../../constants';
-import { ORDER_STATUS, type Order, type OrderStatus } from '../../types';
+import { ORDER_STATUS, type OrderDetail, type OrderList, type OrderStatus } from '../../types';
 
 const getStatusTag = (status: OrderStatus, isClickable: boolean) => {
   const color = ORDER_STATUS_COLORS[status];
@@ -47,7 +47,7 @@ export default function OrderManagementPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
 
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderList[]>([]);
   const [filters, setFilters] = useState({
     region: undefined as string | undefined,
     status: undefined as OrderStatus | undefined,
@@ -67,18 +67,18 @@ export default function OrderManagementPage() {
 
   const fetchStatistics = async () => {
     try {
-      const res = await orderAPI.getAdminOrders();
+      const res = await orderAPI.getOrdersHq();
 
       if (res.success) {
         const totalOrders = res.data.length;
         const calculatedStatistics = res.data.reduce(
-          (acc: any, order: Order) => {
-            if (order.status === ORDER_STATUS.PROCESSING) {
+          (acc: any, order: OrderList) => {
+            if (order.status === ORDER_STATUS.PREPARING) {
               acc.totalProcessing += 1;
             } else if (order.status === ORDER_STATUS.SHIPPING) {
               acc.totalShipping += 1;
             }
-            if (order.status !== ORDER_STATUS.REJECTED) {
+            if (order.status !== ORDER_STATUS.CANCELED) {
               acc.totalAmount += order.totalPrice || 0;
             }
             return acc;
@@ -98,7 +98,7 @@ export default function OrderManagementPage() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const res = await orderAPI.getAdminOrders({
+      const res = await orderAPI.getOrdersHq({
         page: currentPage - 1,
         size: PAGE_SIZE,
         // region: filters.region,
@@ -108,9 +108,9 @@ export default function OrderManagementPage() {
       });
 
       if (res.success) {
-        const { data, totalElements } = res;
+        const { data, page } = res;
         setOrders(data);
-        setTotal(totalElements);
+        setTotal(page.totalElements);
       }
     } catch (e: any) {
       console.error('발주 요청 목록 로딩 실패:', e);
@@ -153,19 +153,19 @@ export default function OrderManagementPage() {
       let res: any;
       switch (action) {
         case 'APPROVE':
-          res = await orderAPI.approveOrder(orderId);
+          res = await orderAPI.updateOrder(orderId, { status: ORDER_STATUS.APPROVED });
           break;
         case 'REJECT':
-          res = await orderAPI.rejectOrder(orderId);
+          res = await orderAPI.updateOrder(orderId, { status: ORDER_STATUS.CANCELED });
           break;
         case 'PROCESS':
-          res = await orderAPI.updateOrderStatus(orderId, { status: ORDER_STATUS.PROCESSING });
+          res = await orderAPI.updateOrder(orderId, { status: ORDER_STATUS.PREPARING });
           break;
         case 'SHIP':
-          res = await orderAPI.updateOrderStatus(orderId, { status: ORDER_STATUS.SHIPPING });
+          res = await orderAPI.updateOrder(orderId, { status: ORDER_STATUS.SHIPPING });
           break;
         case 'COMPLETE':
-          res = await orderAPI.updateOrderStatus(orderId, { status: ORDER_STATUS.COMPLETED });
+          res = await orderAPI.updateOrder(orderId, { status: ORDER_STATUS.COMPLETED });
           break;
       }
 
@@ -180,7 +180,7 @@ export default function OrderManagementPage() {
     }
   };
 
-  const renderStatusTagWithActions = (record: Order) => {
+  const renderStatusTagWithActions = (record: OrderList) => {
     if (record.status === ORDER_STATUS.REQUESTED) {
       return (
         <Popconfirm
@@ -210,7 +210,7 @@ export default function OrderManagementPage() {
         nextAction = 'PROCESS';
         confirmDescription = '처리중으로 변경하시겠습니까?';
         break;
-      case ORDER_STATUS.PROCESSING:
+      case ORDER_STATUS.PREPARING:
         nextAction = 'SHIP';
         confirmDescription = '배송중으로 변경하시겠습니까?';
         break;
@@ -241,19 +241,13 @@ export default function OrderManagementPage() {
     );
   };
 
-  const tableColumns: TableProps<Order>['columns'] = [
+  const tableColumns: TableProps<OrderList>['columns'] = [
     { title: '주문번호', dataIndex: 'orderId', key: 'orderId' },
     { title: '지점명', dataIndex: 'pharmacyName', key: 'pharmacyName' },
     {
       title: '주문요약',
-      key: 'orderSummary',
-      render: (_, record) => {
-        if (record.items.length > 1) {
-          return `${record.items[0].productName} 외 ${record.items.length - 1}건`;
-        } else {
-          return `${record.items[0].productName}`;
-        }
-      },
+      dataIndex: 'summary',
+      key: 'summary',
     },
     {
       title: '주문금액',
@@ -275,7 +269,7 @@ export default function OrderManagementPage() {
     },
   ];
 
-  const expandedRowRender = (record: Order) => {
+  const expandedRowRender = (record: OrderDetail) => {
     return (
       <>
         <Table
@@ -349,7 +343,7 @@ export default function OrderManagementPage() {
       <Form layout="vertical" form={form} onFinish={handleSearch}>
         <Space wrap align="end">
           <Form.Item label="지역" name="region">
-            <Cascader options={REGION_OPTIONS} placeholder="지역 선택" />
+            <Cascader options={REGION_CASCADER_OPTIONS} placeholder="지역 선택" />
           </Form.Item>
           <Form.Item label="상태" name="status">
             <Select allowClear options={[...ORDER_STATUS_OPTIONS]} placeholder="상태 선택" />

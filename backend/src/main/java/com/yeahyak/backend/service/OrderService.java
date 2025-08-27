@@ -1,290 +1,252 @@
 package com.yeahyak.backend.service;
 
-import com.yeahyak.backend.dto.OrderItemRequest;
-import com.yeahyak.backend.dto.OrderItemResponse;
-import com.yeahyak.backend.dto.OrderRequest;
-import com.yeahyak.backend.dto.OrderResponse;
-import com.yeahyak.backend.entity.*;
-import com.yeahyak.backend.entity.enums.CreditStatus;
-import com.yeahyak.backend.entity.enums.InventoryDivision;
+import com.yeahyak.backend.dto.OrderCreateRequest;
+import com.yeahyak.backend.dto.OrderCreateResponse;
+import com.yeahyak.backend.dto.OrderDetailResponse;
+import com.yeahyak.backend.dto.OrderListResponse;
+import com.yeahyak.backend.dto.OrderUpdateRequest;
+import com.yeahyak.backend.entity.OrderItem;
+import com.yeahyak.backend.entity.Orders;
+import com.yeahyak.backend.entity.Pharmacy;
+import com.yeahyak.backend.entity.Product;
+import com.yeahyak.backend.entity.enums.BalanceTxType;
 import com.yeahyak.backend.entity.enums.OrderStatus;
-import com.yeahyak.backend.entity.enums.Status;
-import com.yeahyak.backend.repository.*;
-import jakarta.transaction.Transactional;
+import com.yeahyak.backend.entity.enums.Region;
+import com.yeahyak.backend.entity.enums.StockTxType;
+import com.yeahyak.backend.repository.OrderItemRepository;
+import com.yeahyak.backend.repository.OrderRepository;
+import com.yeahyak.backend.repository.PharmacyRepository;
+import com.yeahyak.backend.repository.ProductRepository;
+import com.yeahyak.backend.repository.StockTxRepository;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
+/**
+ * 발주 요청과 관련된 비즈니스 로직을 처리하는 서비스 클래스입니다.
+ */
 @Service
 @RequiredArgsConstructor
 public class OrderService {
 
-    private final PharmacyRepository pharmacyRepository;
-    private final OrderRepository orderRepository;
-    private final ProductRepository productRepository;
-    private final OrderItemRepository orderItemRepository;
-    private final InventoryHistoryRepository inventoryHistoryRepository;
+  private final OrderRepository orderRepo;
+  private final OrderItemRepository orderItemRepo;
+  private final PharmacyRepository pharmacyRepo;
+  private final ProductRepository productRepo;
+  private final StockTxRepository stockTxRepo;
+  private final BalanceTxService balanceTxService;
+  private final StockTxService stockTxService;
 
-    @Transactional
-    public OrderResponse createOrder(OrderRequest request) {
-        Pharmacy pharmacy = pharmacyRepository.findById(request.getPharmacyId())
-                .orElseThrow(() -> new IllegalArgumentException("약국이 존재하지 않습니다."));
-        if (pharmacy.getStatus() != Status.ACTIVE) throw new IllegalStateException("승인된 약국만 발주를 생성할 수 있습니다.");
+  /**
+   * 발주 요청을 생성합니다.
+   */
+  @Transactional
+  public OrderCreateResponse createOrder(OrderCreateRequest req) {
+    Pharmacy pharmacy = pharmacyRepo.findById(req.getPharmacyId())
+        .orElseThrow(() -> new RuntimeException("가맹점 정보를 찾을 수 없습니다."));
 
-        int totalPrice = 0;
-        List<OrderItemResponse> itemResponses = new ArrayList<>();
-
-        for (OrderItemRequest itemRequest : request.getItems()) {
-            Product product = productRepository.findById(itemRequest.getProductId())
-                    .orElseThrow(() -> new IllegalArgumentException("해당 제품이 존재하지 않습니다."));
-            if (itemRequest.getQuantity() <= 0) throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
-            int subtotal = itemRequest.getQuantity() * itemRequest.getUnitPrice();
-            totalPrice += subtotal;
-            itemResponses.add(OrderItemResponse.builder()
-                    .productName(product.getProductName())
-                    .quantity(itemRequest.getQuantity())
-                    .unitPrice(itemRequest.getUnitPrice())
-                    .subtotalPrice(subtotal)
-                    .build());
-        }
-
-        User owner = pharmacy.getUser();
-        long next = owner.getPoint() - totalPrice;
-        if (next < -10_000_000L) throw new IllegalStateException("CREDIT_LIMIT_EXCEEDED");
-        owner.setPoint((int) next);
-
-        Order order = Order.builder()
-                .pharmacy(pharmacy)
-                .status(OrderStatus.REQUESTED)
-                .createdAt(LocalDateTime.now())
-                .totalPrice(totalPrice)
-                .build();
-        orderRepository.save(order);
-
-        for (OrderItemRequest itemRequest : request.getItems()) {
-            Long pid = itemRequest.getProductId();
-            int qty  = itemRequest.getQuantity();
-
-            int updated = productRepository.tryDeductStock(pid, qty);
-            if (updated == 0) {
-                throw new IllegalStateException("OUT_OF_STOCK: productId=" + pid);
-            }
-
-            Product product = productRepository.findById(pid).orElseThrow();
-            int afterStock = product.getStock() == null ? 0 : product.getStock();
-
-            int subtotal = qty * itemRequest.getUnitPrice();
-            OrderItems orderItem = OrderItems.builder()
-                    .orders(order)
-                    .product(product)
-                    .quantity(qty)
-                    .unitPrice(itemRequest.getUnitPrice())
-                    .subtotalPrice(subtotal)
-                    .build();
-            orderItemRepository.save(orderItem);
-
-            inventoryHistoryRepository.save(InventoryHistory.builder()
-                    .product(product)
-                    .division(InventoryDivision.OUT)
-                    .quantity(qty)
-                    .stock(afterStock)
-                    .note(pharmacy.getPharmacyName())
-                    .build());
-        }
-
-        if (next < 0 && orderRepository.existsByPharmacy(pharmacy)) {
-            owner.setCreditStatus(CreditStatus.SETTLEMENT_REQUIRED);
-        }
-
-        return OrderResponse.builder()
-                .orderId(order.getOrderId())
-                .pharmacyName(pharmacy.getPharmacyName())
-                .createdAt(order.getCreatedAt())
-                .totalPrice(totalPrice)
-                .status(order.getStatus().name())
-                .items(itemResponses)
-                .build();
+    if (req.getItems() == null || req.getItems().isEmpty()) {
+      throw new RuntimeException("발주 요청 품목이 없습니다.");
     }
 
+    BigDecimal totalPrice = BigDecimal.ZERO;
+    List<OrderItem> orderItems = new ArrayList<>();
 
-    @Transactional
-    public List<OrderResponse> getAllOrders() {
-        List<Order> orders = orderRepository.findAll();
+    for (OrderCreateRequest.Item reqItem : req.getItems()) {
+      Product product = productRepo.findById(reqItem.getProductId())
+          .orElseThrow(() -> new RuntimeException("제품 정보를 찾을 수 없습니다."));
 
-        return orders.stream().map(order -> {
-            List<OrderItems> items = orderItemRepository.findByOrders(order);
+      int quantity = reqItem.getQuantity();
 
-            List<OrderItemResponse> itemResponses = items.stream().map(item ->
-                    OrderItemResponse.builder()
-                            .productName(item.getProduct().getProductName())
-                            .quantity(item.getQuantity())
-                            .unitPrice(item.getUnitPrice())
-                            .subtotalPrice(item.getSubtotalPrice())
-                            .build()
-            ).toList();
+      BigDecimal unitPrice = product.getUnitPrice();
+      BigDecimal subtotalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
+      totalPrice = totalPrice.add(subtotalPrice);
 
-            return OrderResponse.builder()
-                    .orderId(order.getOrderId())
-                    .pharmacyName(order.getPharmacy().getPharmacyName())
-                    .createdAt(order.getCreatedAt())
-                    .totalPrice(order.getTotalPrice())
-                    .status(order.getStatus().name())
-                    .items(itemResponses)
-                    .build();
-        }).toList();
+      OrderItem orderItem = OrderItem.builder()
+          .orders(null) // 나중에 세팅
+          .product(product)
+          .quantity(quantity)
+          .unitPrice(unitPrice)
+          .subtotalPrice(subtotalPrice)
+          .build();
+      orderItems.add(orderItem);
     }
 
-    public Map<String, Object> getAllOrders(int page, int size, OrderStatus status, String pharmacyName) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Order> orders = orderRepository.findAllWithFilters(status, pharmacyName, pageable);
-        return convertToPagedResponse(orders);
+    BigDecimal balance = pharmacy.getOutstandingBalance();
+    BigDecimal limit = new BigDecimal("10000000");
+    BigDecimal next = balance.add(totalPrice);
+    if (next.compareTo(limit) > 0) {
+      throw new RuntimeException("외상 한도를 초과합니다.");
     }
 
-    public Map<String, Object> getOrdersByPharmacy(Long pharmacyId, int page, int size, OrderStatus status) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Order> orders = orderRepository.findByPharmacyAndOptionalStatus(pharmacyId, status, pageable);
-        return convertToPagedResponse(orders);
+    balanceTxService.createBalanceTx(
+        pharmacy.getPharmacyId(), BalanceTxType.ORDER, totalPrice
+    );
+
+    Orders orders = Orders.builder()
+        .pharmacy(pharmacy)
+        .status(OrderStatus.REQUESTED)
+        .totalPrice(totalPrice)
+        .build();
+    orderRepo.save(orders);
+
+    for (OrderCreateRequest.Item reqItem : req.getItems()) {
+      Product product = productRepo.findById(reqItem.getProductId())
+          .orElseThrow(() -> new RuntimeException("제품 정보를 찾을 수 없습니다."));
+
+      stockTxService.createStockTx(
+          product.getProductId(), StockTxType.ORDER, reqItem.getQuantity()
+      );
     }
 
-    private Map<String, Object> convertToPagedResponse(Page<Order> orders) {
-        List<OrderResponse> orderResponses = orders.getContent().stream().map(order -> {
-            List<OrderItems> items = orderItemRepository.findByOrders(order);
-            List<OrderItemResponse> itemResponses = items.stream().map(item ->
-                    OrderItemResponse.builder()
-                            .productName(item.getProduct().getProductName())
-                            .quantity(item.getQuantity())
-                            .unitPrice(item.getUnitPrice())
-                            .subtotalPrice(item.getSubtotalPrice())
-                            .build()
-            ).toList();
-
-            return OrderResponse.builder()
-                    .orderId(order.getOrderId())
-                    .pharmacyId(order.getPharmacy().getPharmacyId())
-                    .pharmacyName(order.getPharmacy().getPharmacyName())
-                    .createdAt(order.getCreatedAt())
-                    .totalPrice(order.getTotalPrice())
-                    .status(order.getStatus().name())
-                    .updatedAt(order.getUpdatedAt())
-                    .items(itemResponses)
-                    .build();
-        }).toList();
-
-        return Map.of(
-                "success", true,
-                "data", orderResponses,
-                "totalPages", orders.getTotalPages(),
-                "totalElements", orders.getTotalElements(),
-                "currentPage", orders.getNumber()
-        );
+    for (OrderItem orderItem : orderItems) {
+      orderItem.setOrders(orders);
     }
+    orderItemRepo.saveAll(orderItems);
 
-    public OrderResponse getOrderDetail(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 주문이 존재하지 않습니다."));
+    return new OrderCreateResponse(orders.getOrderId());
+  }
 
-        Pharmacy pharmacy = order.getPharmacy();
-        List<OrderItems> items = orderItemRepository.findByOrders(order);
+  /**
+   * 본사에서 발주 요청 목록을 조회합니다. 기간이나 상태를 지정하지 않으면 모든 발주 요청을 조회합니다.
+   */
+  @Transactional(readOnly = true)
+  public Page<OrderListResponse> getOrders(
+      OrderStatus status, Region region, LocalDateTime start, LocalDateTime end,
+      int page, int size
+  ) {
+    Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.DESC, "createdAt"));
+    return orderRepo.findByStatusAndRegionAndCreatedAtBetween(
+            status, region, start, end, pageable)
+        .map(orders -> OrderListResponse.builder()
+            .orderId(orders.getOrderId())
+            .pharmacyId(orders.getPharmacy().getPharmacyId())
+            .pharmacyName(orders.getPharmacy().getPharmacyName())
+            .status(orders.getStatus())
+            .summary(makeSummary(orders))
+            .totalPrice(orders.getTotalPrice())
+            .createdAt(orders.getCreatedAt())
+            .build());
+  }
 
-        List<OrderItemResponse> itemResponses = items.stream().map(item ->
-                OrderItemResponse.builder()
-                        .productId(item.getProduct().getProductId())
-                        .productName(item.getProduct().getProductName())
-                        .manufacturer(item.getProduct().getManufacturer())
-                        .mainCategory(item.getProduct().getMainCategory().name())
-                        .subCategory(item.getProduct().getSubCategory().name())
-                        .quantity(item.getQuantity())
-                        .unitPrice(item.getUnitPrice())
-                        .subtotalPrice(item.getSubtotalPrice())
-                        .build()
+  /**
+   * 가맹점에서 발주 요청 목록을 조회합니다. 상태를 지정하지 않으면 해당 가맹점의 모든 발주 요청을 조회합니다.
+   */
+  @Transactional(readOnly = true)
+  public Page<OrderListResponse> getOrdersByPharmacy(
+      Long pharmacyId, OrderStatus status, int page, int size
+  ) {
+    Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.DESC, "createdAt"));
+    return orderRepo.findByPharmacy_PharmacyIdAndStatus(pharmacyId, status, pageable)
+        .map(orders -> OrderListResponse.builder()
+            .orderId(orders.getOrderId())
+            .pharmacyId(pharmacyId)
+            .pharmacyName(orders.getPharmacy().getPharmacyName())
+            .status(orders.getStatus())
+            .summary(makeSummary(orders))
+            .totalPrice(orders.getTotalPrice())
+            .createdAt(orders.getCreatedAt())
+            .build());
+  }
+
+  /**
+   * 발주 요청 상세를 조회합니다.
+   */
+  @Transactional(readOnly = true)
+  public OrderDetailResponse getOrderById(Long orderId) {
+    Orders orders = orderRepo.findById(orderId)
+        .orElseThrow(() -> new RuntimeException("발주 요청 정보를 찾을 수 없습니다."));
+
+    List<OrderItem> items = orderItemRepo.findByOrders(orders);
+    List<OrderDetailResponse.Item> itemsList = items.stream()
+        .map(item -> OrderDetailResponse.Item.builder()
+            .productId(item.getProduct().getProductId())
+            .productName(item.getProduct().getProductName())
+            .mainCategory(item.getProduct().getMainCategory())
+            .subCategory(item.getProduct().getSubCategory())
+            .manufacturer(item.getProduct().getManufacturer())
+            .productImgUrl(item.getProduct().getProductImgUrl())
+            .quantity(item.getQuantity())
+            .unitPrice(item.getUnitPrice())
+            .subtotalPrice(item.getSubtotalPrice())
+            .build()
         ).toList();
 
-        return OrderResponse.builder()
-                .orderId(order.getOrderId())
-                .pharmacyId(pharmacy.getPharmacyId())
-                .pharmacyName(pharmacy.getPharmacyName())
-                .createdAt(order.getCreatedAt())
-                .totalPrice(order.getTotalPrice())
-                .status(order.getStatus().name())
-                .updatedAt(order.getUpdatedAt())
-                .items(itemResponses)
-                .build();
+    return OrderDetailResponse.builder()
+        .orderId(orders.getOrderId())
+        .pharmacyId(orders.getPharmacy().getPharmacyId())
+        .pharmacyName(orders.getPharmacy().getPharmacyName())
+        .status(orders.getStatus())
+        .summary(makeSummary(items))
+        .totalPrice(orders.getTotalPrice())
+        .createdAt(orders.getCreatedAt())
+        .updatedAt(orders.getUpdatedAt())
+        .items(itemsList)
+        .build();
+  }
+
+  private String makeSummary(Orders orders) {
+    List<OrderItem> items = orderItemRepo.findByOrders(orders);
+    String firstProductName = items.get(0).getProduct().getProductName();
+    int count = items.size();
+    return (count > 1) ? firstProductName + " 외 " + (count - 1) + "개" : firstProductName;
+  }
+
+  private String makeSummary(List<OrderItem> items) {
+    String firstProductName = items.get(0).getProduct().getProductName();
+    int count = items.size();
+    return (count > 1) ? firstProductName + " 외 " + (count - 1) + "개" : firstProductName;
+  }
+
+  /**
+   * 발주 요청의 상태를 업데이트합니다. 업데이트 상태가 CANCELED인 경우, 유저의 미정산 잔액을 감소시키고 제품의 재고를 복구합니다.
+   */
+  @Transactional
+  public void updateOrderStatus(Long orderId, OrderUpdateRequest req) {
+    Orders orders = orderRepo.findById(orderId)
+        .orElseThrow(() -> new RuntimeException("발주 요청 정보를 찾을 수 없습니다."));
+
+    if (orders.getStatus() == OrderStatus.CANCELED) {
+      throw new RuntimeException("이미 취소된 발주 요청입니다.");
+    } else if (orders.getStatus() == OrderStatus.COMPLETED) {
+      throw new RuntimeException("이미 완료된 발주 요청입니다.");
     }
 
-    @Transactional
-    public void approveOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 주문이 존재하지 않습니다."));
-        order.setStatus(OrderStatus.APPROVED);
-        order.setUpdatedAt(LocalDateTime.now());
+    if (req.getStatus() == OrderStatus.CANCELED) {
+      balanceTxService.createBalanceTx(
+          orders.getPharmacy().getPharmacyId(), BalanceTxType.ORDER_CANCEL, orders.getTotalPrice()
+      );
+
+      List<OrderItem> items = orderItemRepo.findByOrders(orders);
+      for (OrderItem oi : items) {
+        stockTxService.createStockTx(
+            oi.getProduct().getProductId(), StockTxType.ORDER_CANCEL, oi.getQuantity()
+        );
+      }
     }
 
+    orders.setStatus(req.getStatus());
+    orderRepo.save(orders);
+  }
 
-    @Transactional
-    public void rejectOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 주문이 존재하지 않습니다."));
+  /**
+   * 발주 요청을 삭제합니다.
+   */
+  @Transactional
+  public void deleteOrder(Long orderId) {
+    Orders orders = orderRepo.findById(orderId)
+        .orElseThrow(() -> new RuntimeException("발주 요청 정보를 찾을 수 없습니다."));
 
-        int total = (order.getTotalPrice() != null) ? order.getTotalPrice()
-                : orderItemRepository.findByOrders(order).stream()
-                .mapToInt(OrderItems::getSubtotalPrice).sum();
-        User owner = order.getPharmacy().getUser();
-        owner.setPoint(owner.getPoint() + total);
-        if (owner.getPoint() >= 0) owner.setCreditStatus(CreditStatus.FULL);
-
-        List<OrderItems> items = orderItemRepository.findByOrders(order);
-        for (OrderItems item : items) {
-            Long pid = item.getProduct().getProductId();
-            int qty  = item.getQuantity();
-
-            productRepository.restoreStock(pid, qty);
-            Product product = productRepository.findById(pid).orElseThrow();
-            int after = product.getStock() == null ? 0 : product.getStock();
-
-            inventoryHistoryRepository.save(InventoryHistory.builder()
-                    .product(product)
-                    .division(InventoryDivision.IN)
-                    .quantity(qty)
-                    .stock(after)
-                    .note(order.getPharmacy().getPharmacyName())
-                    .build());
-        }
-
-        order.setStatus(OrderStatus.REJECTED);
-        order.setUpdatedAt(LocalDateTime.now());
-        orderRepository.saveAndFlush(order);
-    }
-
-    @Transactional
-    public void updateOrderStatus(Long orderId, String status) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 주문이 존재하지 않습니다."));
-
-        try {
-            OrderStatus newStatus = OrderStatus.valueOf(status.toUpperCase());
-            order.setStatus(newStatus);
-            order.setUpdatedAt(LocalDateTime.now());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("올바르지 않은 상태값입니다: " + status);
-        }
-    }
-
-    @Transactional
-    public void deleteOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 주문이 존재하지 않습니다."));
-
-        List<OrderItems> items = orderItemRepository.findByOrders(order);
-        orderItemRepository.deleteAll(items);
-
-        orderRepository.delete(order);
-    }
+    orderItemRepo.deleteAllByOrders(orders);
+    orderRepo.delete(orders);
+  }
 }

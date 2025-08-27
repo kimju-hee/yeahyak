@@ -2,7 +2,7 @@ import { Button, Card, Flex, Form, Input, message, Select, Typography } from 'an
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../../../api';
 import TermsAndPrivacyCheckbox from '../../../components/TermsAndPolicyCheckbox';
-import { ADMIN_DEPARTMENT_OPTIONS } from '../../../constants';
+import { DEPARTMENT_OPTIONS } from '../../../constants';
 import type { AdminSignupRequest } from '../../../types/auth.type';
 import {
   passwordConfirmRule,
@@ -26,11 +26,13 @@ export default function HqSignupPage() {
       const res = await authAPI.adminSignup(payload);
 
       if (res.success) {
-        messageApi.success('회원가입이 완료되었습니다.');
-        navigate('/login', { replace: true });
+        navigate('/login', {
+          replace: true,
+          state: { message: '관리자 회원가입이 완료되었습니다.' },
+        });
       }
     } catch (e: any) {
-      console.error('본사 회원가입 실패:', e);
+      console.error('관리자 회원가입 실패:', e);
       messageApi.error(e.response?.data?.message || '회원가입 중 오류가 발생했습니다.');
     }
   };
@@ -102,10 +104,7 @@ export default function HqSignupPage() {
                 rules={[{ required: true, message: '소속 부서를 선택해주세요.' }]}
                 validateTrigger="onBlur"
               >
-                <Select
-                  placeholder="소속 부서를 선택하세요"
-                  options={[...ADMIN_DEPARTMENT_OPTIONS]}
-                />
+                <Select placeholder="소속 부서를 선택하세요" options={[...DEPARTMENT_OPTIONS]} />
               </Form.Item>
 
               <TermsAndPrivacyCheckbox />

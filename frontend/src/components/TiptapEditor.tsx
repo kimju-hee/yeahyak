@@ -1,9 +1,7 @@
-import { Image } from '@tiptap/extension-image';
 import { TextAlign } from '@tiptap/extension-text-align';
 import { EditorContent, EditorContext, useEditor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
 import { useEffect } from 'react';
-import { ImageUploadNode } from '../tiptap/components/tiptap-node/image-upload-node';
 import { Spacer } from '../tiptap/components/tiptap-ui-primitive/spacer';
 import {
   Toolbar,
@@ -11,13 +9,11 @@ import {
   ToolbarSeparator,
 } from '../tiptap/components/tiptap-ui-primitive/toolbar';
 import { HeadingDropdownMenu } from '../tiptap/components/tiptap-ui/heading-dropdown-menu';
-import { ImageUploadButton } from '../tiptap/components/tiptap-ui/image-upload-button';
 import { LinkPopover } from '../tiptap/components/tiptap-ui/link-popover';
 import { ListDropdownMenu } from '../tiptap/components/tiptap-ui/list-dropdown-menu';
 import { MarkButton } from '../tiptap/components/tiptap-ui/mark-button';
 import { TextAlignButton } from '../tiptap/components/tiptap-ui/text-align-button';
 import { UndoRedoButton } from '../tiptap/components/tiptap-ui/undo-redo-button';
-import { handleImageUpload, MAX_FILE_SIZE } from '../tiptap/lib/tiptap-utils';
 import './TiptapEditor.scss';
 
 const TiptapToolbarContent = () => {
@@ -58,9 +54,9 @@ const TiptapToolbarContent = () => {
 
       <ToolbarSeparator />
 
-      <ToolbarGroup>
+      {/* <ToolbarGroup>
         <ImageUploadButton text="사진 추가" />
-      </ToolbarGroup>
+      </ToolbarGroup> */}
 
       <Spacer />
     </>
@@ -96,14 +92,14 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
         },
       }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Image,
-      ImageUploadNode.configure({
-        accept: 'image/*',
-        maxSize: MAX_FILE_SIZE,
-        limit: 3,
-        upload: handleImageUpload,
-        onError: (error) => console.error('Upload failed:', error),
-      }),
+      // Image,
+      // ImageUploadNode.configure({
+      //   accept: 'image/*',
+      //   maxSize: MAX_FILE_SIZE,
+      //   limit: 3,
+      //   upload: handleImageUpload,
+      //   onError: (error) => console.error('Upload failed:', error),
+      // }),
     ],
     content: value || '',
     onUpdate: ({ editor }) => {
