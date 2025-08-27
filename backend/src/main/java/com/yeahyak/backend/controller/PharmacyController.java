@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 약국 관련 API를 처리하는 컨트롤러입니다.
  */
 @RestController
-@RequestMapping(value = "/api/pharmacies", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/api/pharmacies")
 @RequiredArgsConstructor
 @Validated
 public class PharmacyController {
@@ -41,7 +41,6 @@ public class PharmacyController {
   /**
    * 약국 목록을 조회합니다. (미정산여부/지역/키워드 + 페이지네이션)
    */
-  @PreAuthorize("hasRole('ADMIN')")
   @GetMapping
   public ResponseEntity<ApiResponse<List<PharmacyListResponse>>> getPharmacies(
       @RequestParam(required = false) Boolean unsettled,
@@ -58,7 +57,6 @@ public class PharmacyController {
   /**
    * 특정 약국의 거래 내역을 조회합니다. (거래유형/기간 + 페이지네이션)
    */
-  @PreAuthorize("isAuthenticated()")
   @GetMapping("/{pharmacyId}/balance-txs")
   public ResponseEntity<ApiResponse<List<BalanceTxListResponse>>> getBalanceTxsByPharmacy(
       @PathVariable Long pharmacyId,
@@ -76,8 +74,7 @@ public class PharmacyController {
   /**
    * 특정 약국의 정산을 생성합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
-  @PostMapping(value = "/{pharmacyId}/settlement")
+  @PostMapping("/{pharmacyId}/settlement")
   public ResponseEntity<ApiResponse<SettlementResponse>> createSettlement(
       @PathVariable Long pharmacyId
   ) {

@@ -24,9 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
  * 약국 등록 요청 관련 API를 처리하는 컨트롤러입니다.
  */
 @RestController
-@RequestMapping(value = "/api/pharmacy-requests", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/api/pharmacy-requests")
 @RequiredArgsConstructor
-@Validated
 public class PharmacyRequestController {
 
   private final PharmacyRequestService pharmacyRequestService;
@@ -34,7 +33,6 @@ public class PharmacyRequestController {
   /**
    * 약국 등록 요청 목록을 조회합니다. (상태/지역/키워드 + 페이지네이션)
    */
-  @PreAuthorize("hasRole('ADMIN')")
   @GetMapping
   public ResponseEntity<ApiResponse<List<PharmacyRequestListResponse>>> getPharmacyRequests(
       @RequestParam(required = false) PharmacyRequestStatus status,
@@ -51,7 +49,6 @@ public class PharmacyRequestController {
   /**
    * 약국 등록 요청 상세를 조회합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
   @GetMapping("/{pharmacyRequestId}")
   public ResponseEntity<ApiResponse<PharmacyRequestDetailResponse>> getPharmacyRequestById(
       @PathVariable Long pharmacyRequestId
@@ -64,7 +61,6 @@ public class PharmacyRequestController {
   /**
    * 약국 등록 요청을 승인합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
   @PostMapping("/{pharmacyRequestId}/approve")
   public ResponseEntity<Void> approvePharmacyRequest(
       @PathVariable Long pharmacyRequestId
@@ -76,7 +72,6 @@ public class PharmacyRequestController {
   /**
    * 약국 등록 요청을 거절합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
   @PostMapping("/{pharmacyRequestId}/reject")
   public ResponseEntity<Void> rejectPharmacyRequest(
       @PathVariable Long pharmacyRequestId

@@ -21,9 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
  * 챗봇 관련 API를 처리하는 컨트롤러입니다.
  */
 @RestController
-@RequestMapping(value = "/api/chatbot", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/api/chatbot")
 @RequiredArgsConstructor
-@Validated
 public class ChatbotController {
 
   private final ChatBotService chatbotService;
@@ -31,10 +30,9 @@ public class ChatbotController {
   /**
    * Q&A 챗봇에 질문을 하고 응답을 받습니다.
    */
-  @PreAuthorize("isAuthenticated()")
-  @PostMapping(path = "/qna", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping("/qna")
   public ResponseEntity<ApiResponse<ChatbotResponse>> askQna(
-      @RequestBody @Valid ChatbotRequest req
+      @RequestBody ChatbotRequest req
   ) {
     req.setType(ChatbotType.QNA);
     ChatbotResponse res = chatbotService.ask(req);
@@ -45,10 +43,9 @@ public class ChatbotController {
   /**
    * FAQ 챗봇에 질문을 하고 응답을 받습니다.
    */
-  @PreAuthorize("isAuthenticated()")
-  @PostMapping(path = "/faq", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping("/faq")
   public ResponseEntity<ApiResponse<ChatbotResponse>> askFaq(
-      @RequestBody @Valid ChatbotRequest req
+      @RequestBody ChatbotRequest req
   ) {
     req.setType(ChatbotType.FAQ);
     ChatbotResponse res = chatbotService.ask(req);

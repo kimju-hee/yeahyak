@@ -19,14 +19,12 @@ import org.springframework.web.multipart.MultipartFile;
  * 발주 예측 API를 처리하는 컨트롤러입니다.
  */
 @RestController
-@RequestMapping(value = "/api/forecast", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/api/forecast")
 @RequiredArgsConstructor
-@Validated
 public class ForecastController {
 
   private final ForecastService forecastService;
 
-  @PreAuthorize("hasRole('PHARMACY')")
   @PostMapping(path = "/order", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ApiResponse<List<ForecastProduct>>> forecastOrder(
       @RequestParam("file") MultipartFile file

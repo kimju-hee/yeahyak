@@ -34,9 +34,8 @@ import org.springframework.web.multipart.MultipartFile;
  * 공지사항 관련 API를 처리하는 컨트롤러입니다.
  */
 @RestController
-@RequestMapping(value = "/api/notices", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/api/notices")
 @RequiredArgsConstructor
-@Validated
 public class NoticeController {
 
   private final NoticeService noticeService;
@@ -44,10 +43,9 @@ public class NoticeController {
   /**
    * 공지사항을 생성합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ApiResponse<NoticeCreateResponse>> createNotice(
-      @RequestPart("notice") @Valid NoticeCreateRequest request,
+      @RequestPart("notice") NoticeCreateRequest request,
       @RequestPart(value = "file", required = false) MultipartFile file
   ) {
     NoticeCreateResponse res = noticeService.createNotice(request, file);
@@ -60,7 +58,6 @@ public class NoticeController {
   /**
    * 공지사항 목록을 조회합니다. (타입/키워드/검색범위 + 페이지네이션)
    */
-  @PreAuthorize("isAuthenticated()")
   @GetMapping
   public ResponseEntity<ApiResponse<List<NoticeListResponse>>> list(
       @RequestParam NoticeType type,
@@ -86,7 +83,6 @@ public class NoticeController {
   /**
    * 최신 공지사항 5개를 조회합니다.
    */
-  @PreAuthorize("isAuthenticated()")
   @GetMapping("/latest")
   public ResponseEntity<ApiResponse<List<NoticeListResponse>>> getLatest() {
     List<NoticeListResponse> list = noticeService.getLatestNotices();
@@ -96,7 +92,6 @@ public class NoticeController {
   /**
    * 공지사항 상세를 조회합니다.
    */
-  @PreAuthorize("isAuthenticated()")
   @GetMapping("/{noticeId}")
   public ResponseEntity<ApiResponse<NoticeDetailResponse>> getDetail(
       @PathVariable Long noticeId
@@ -108,11 +103,10 @@ public class NoticeController {
   /**
    * 공지사항을 수정합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
-  @PatchMapping(value = "/{noticeId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PatchMapping("/{noticeId}")
   public ResponseEntity<Void> updateNotice(
       @PathVariable Long noticeId,
-      @RequestBody @Valid NoticeUpdateRequest request
+      @RequestBody NoticeUpdateRequest request
   ) {
     noticeService.updateNotice(noticeId, request);
     return ResponseEntity.noContent().build(); // 204 No Content
@@ -121,7 +115,6 @@ public class NoticeController {
   /**
    * 공지사항 첨부파일을 수정합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
   @PutMapping(path = "/{noticeId}/attachment", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Void> updateAttachment(
       @PathVariable Long noticeId,
@@ -134,7 +127,6 @@ public class NoticeController {
   /**
    * 공지사항 첨부파일을 삭제합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
   @DeleteMapping("/{noticeId}/attachment")
   public ResponseEntity<Void> deleteAttachment(
       @PathVariable Long noticeId
@@ -146,7 +138,6 @@ public class NoticeController {
   /**
    * 공지사항을 삭제합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
   @DeleteMapping("/{noticeId}")
   public ResponseEntity<Void> deleteNotice(
       @PathVariable Long noticeId

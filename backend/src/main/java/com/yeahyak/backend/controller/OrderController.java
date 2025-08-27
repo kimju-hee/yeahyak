@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 발주 관련 API를 처리하는 컨트롤러입니다.
  */
 @RestController
-@RequestMapping(value = "/api/orders", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/api/orders")
 @RequiredArgsConstructor
 @Validated
 public class OrderController {
@@ -44,10 +44,9 @@ public class OrderController {
   /**
    * (가맹점) 발주를 생성합니다.
    */
-  @PreAuthorize("hasRole('PHARMACY')")
-  @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping
   public ResponseEntity<ApiResponse<OrderCreateResponse>> createOrder(
-      @RequestBody @Valid OrderCreateRequest request
+      @RequestBody OrderCreateRequest request
   ) {
     OrderCreateResponse res = orderService.createOrder(request);
     URI location = URI.create("/api/orders/" + res.getOrderId());
@@ -59,7 +58,6 @@ public class OrderController {
   /**
    * (본사) 발주 목록을 조회합니다. (상태/지역/기간 + 페이지네이션)
    */
-  @PreAuthorize("hasRole('ADMIN')")
   @GetMapping("/hq")
   public ResponseEntity<ApiResponse<List<OrderListResponse>>> getOrdersForHq(
       @RequestParam(required = false) OrderStatus status,
@@ -76,7 +74,6 @@ public class OrderController {
   /**
    * (가맹점) 발주 목록을 조회합니다. (상태 + 페이지네이션)
    */
-  @PreAuthorize("hasRole('PHARMACY')")
   @GetMapping("/branch")
   public ResponseEntity<ApiResponse<List<OrderListResponse>>> getOrdersForBranch(
       @RequestParam Long pharmacyId,
@@ -92,7 +89,6 @@ public class OrderController {
   /**
    * (본사, 가맹점) 발주 상세를 조회합니다.
    */
-  @PreAuthorize("isAuthenticated()")
   @GetMapping("/{orderId}")
   public ResponseEntity<ApiResponse<OrderDetailResponse>> getOrderDetail(
       @PathVariable Long orderId
@@ -104,11 +100,10 @@ public class OrderController {
   /**
    * (본사) 발주 상태를 변경합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
-  @PatchMapping(value = "/{orderId}/status", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PatchMapping("/{orderId}/status")
   public ResponseEntity<Void> updateOrderStatus(
       @PathVariable Long orderId,
-      @RequestBody @Valid OrderUpdateRequest request
+      @RequestBody OrderUpdateRequest request
   ) {
     orderService.updateOrderStatus(orderId, request);
     return ResponseEntity.noContent().build(); // 204 No Content
@@ -117,7 +112,6 @@ public class OrderController {
   /**
    * 발주를 삭제합니다.
    */
-  @PreAuthorize("isAuthenticated()")
   @DeleteMapping("/{orderId}")
   public ResponseEntity<Void> deleteOrder(
       @PathVariable Long orderId

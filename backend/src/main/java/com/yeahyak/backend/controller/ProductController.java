@@ -36,9 +36,8 @@ import org.springframework.web.bind.annotation.RestController;
  * 제품 관련 API를 처리하는 컨트롤러입니다.
  */
 @RestController
-@RequestMapping(value = "/api/products", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/api/products")
 @RequiredArgsConstructor
-@Validated
 public class ProductController {
 
   private final ProductService productService;
@@ -46,10 +45,9 @@ public class ProductController {
   /**
    * 제품을 생성합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
-  @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping
   public ResponseEntity<ApiResponse<ProductCreateResponse>> createProduct(
-      @RequestBody @Valid ProductCreateRequest request
+      @RequestBody ProductCreateRequest request
   ) {
     ProductCreateResponse res = productService.createProduct(request);
     URI location = URI.create("/api/products/" + res.getProductId());
@@ -59,7 +57,6 @@ public class ProductController {
   /**
    * 제품 목록을 조회합니다. (카테고리/키워드/재고임계값 + 페이지네이션)
    */
-  @PreAuthorize("isAuthenticated()")
   @GetMapping
   public ResponseEntity<ApiResponse<List<ProductListResponse>>> getProducts(
       @RequestParam(required = false) MainCategory mainCategory,
@@ -78,7 +75,6 @@ public class ProductController {
   /**
    * 제품 상세를 조회합니다.
    */
-  @PreAuthorize("isAuthenticated()")
   @GetMapping("/{productId}")
   public ResponseEntity<ApiResponse<ProductDetailResponse>> getProductById(
       @PathVariable Long productId
@@ -90,11 +86,10 @@ public class ProductController {
   /**
    * 제품을 수정합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
-  @PatchMapping(path = "/{productId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PatchMapping("/{productId}")
   public ResponseEntity<Void> updateProduct(
       @PathVariable Long productId,
-      @RequestBody @Valid ProductUpdateRequest request
+      @RequestBody ProductUpdateRequest request
   ) {
     productService.updateProduct(productId, request);
     return ResponseEntity.noContent().build(); // 204 No Content
@@ -103,7 +98,6 @@ public class ProductController {
   /**
    * 제품을 삭제합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
   @DeleteMapping("/{productId}")
   public ResponseEntity<Void> deleteProduct(
       @PathVariable Long productId
@@ -115,7 +109,6 @@ public class ProductController {
   /**
    * 카테고리 맵을 조회합니다.
    */
-  @PreAuthorize("isAuthenticated()")
   @GetMapping("/categories")
   public ResponseEntity<ApiResponse<Map<MainCategory, List<SubCategory>>>> getCategoryMap() {
     Map<MainCategory, List<SubCategory>> map =

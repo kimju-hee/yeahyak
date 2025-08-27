@@ -43,9 +43,8 @@ import org.springframework.web.bind.annotation.RestController;
  * 인증 및 인가 관련 API를 처리하는 컨트롤러입니다.
  */
 @RestController
-@RequestMapping(value = "/api/auth", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
-@Validated
 public class AuthController {
 
   private final AuthService authService;
@@ -65,9 +64,9 @@ public class AuthController {
   /**
    * (관리자) 회원가입.
    */
-  @PostMapping(path = "/admin/signup", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping("/admin/signup")
   public ResponseEntity<ApiResponse<AdminSignupResponse>> adminSignup(
-      @RequestBody @Valid AdminSignupRequest request
+      @RequestBody AdminSignupRequest request
   ) {
     AdminSignupResponse res = authService.adminSignup(request);
     // 생성된 관리자 리소스 위치
@@ -78,9 +77,9 @@ public class AuthController {
   /**
    * (약국) 회원가입.
    */
-  @PostMapping(path = "/pharmacy/signup", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping("/pharmacy/signup")
   public ResponseEntity<ApiResponse<PharmacySignupResponse>> pharmacySignup(
-      @RequestBody @Valid PharmacySignupRequest request
+      @RequestBody PharmacySignupRequest request
   ) {
     PharmacySignupResponse res = authService.pharmacySignup(request);
     // 함께 생성된 약국 등록 요청 리소스 위치
@@ -91,9 +90,9 @@ public class AuthController {
   /**
    * (관리자) 로그인.
    */
-  @PostMapping(path = "/admin/login", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping("/admin/login")
   public ResponseEntity<ApiResponse<AdminLoginResponse>> adminLogin(
-      @RequestBody @Valid LoginRequest request,
+      @RequestBody LoginRequest request,
       HttpServletResponse response
   ) {
     AdminLoginResponse res = authService.adminLogin(request);
@@ -110,9 +109,9 @@ public class AuthController {
   /**
    * (약국) 로그인.
    */
-  @PostMapping(path = "/pharmacy/login", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping("/pharmacy/login")
   public ResponseEntity<ApiResponse<PharmacyLoginResponse>> pharmacyLogin(
-      @RequestBody @Valid LoginRequest request,
+      @RequestBody LoginRequest request,
       HttpServletResponse response
   ) {
     PharmacyLoginResponse res = authService.pharmacylogin(request);
@@ -158,10 +157,9 @@ public class AuthController {
   /**
    * 비밀번호를 변경합니다.
    */
-  @PreAuthorize("isAuthenticated()")
-  @PostMapping(path = "/password", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping("/password")
   public ResponseEntity<Void> changePassword(
-      @RequestBody @Valid PasswordChangeRequest request
+      @RequestBody PasswordChangeRequest request
   ) {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     if (auth == null || !auth.isAuthenticated()) {
@@ -176,11 +174,10 @@ public class AuthController {
   /**
    * 관리자 프로필을 수정합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
-  @PatchMapping(path = "/admin/{adminId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PatchMapping("/admin/{adminId}")
   public ResponseEntity<ApiResponse<AdminProfile>> updateAdmin(
-      @PathVariable @Positive Long adminId,
-      @RequestBody @Valid AdminUpdateRequest request
+      @PathVariable Long adminId,
+      @RequestBody AdminUpdateRequest request
   ) {
     AdminProfile profile = authService.updateAdmin(adminId, request);
     return ResponseEntity.ok(ApiResponse.ok(profile)); // FE 동기화 편의상 200 OK + 데이터 반환
@@ -189,11 +186,10 @@ public class AuthController {
   /**
    * 약국 프로필을 수정합니다.
    */
-  @PreAuthorize("hasRole('PHARMACY')")
-  @PatchMapping(path = "/pharmacy/{pharmacyId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PatchMapping("/pharmacy/{pharmacyId}")
   public ResponseEntity<ApiResponse<PharmacyProfile>> updatePharmacy(
-      @PathVariable @Positive Long pharmacyId,
-      @RequestBody @Valid PharmacyUpdateRequest request
+      @PathVariable Long pharmacyId,
+      @RequestBody PharmacyUpdateRequest request
   ) {
     PharmacyProfile profile = authService.updatePharmacy(pharmacyId, request);
     return ResponseEntity.ok(ApiResponse.ok(profile)); // FE 동기화 편의상 200 OK + 데이터 반환

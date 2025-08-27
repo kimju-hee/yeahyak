@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 반품 관련 API를 처리하는 컨트롤러입니다.
  */
 @RestController
-@RequestMapping(value = "/api/returns", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/api/returns")
 @RequiredArgsConstructor
 @Validated
 public class ReturnController {
@@ -44,10 +44,9 @@ public class ReturnController {
   /**
    * (가맹점) 반품을 생성합니다.
    */
-  @PreAuthorize("hasRole('PHARMACY')")
-  @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping
   public ResponseEntity<ApiResponse<ReturnCreateResponse>> createReturn(
-      @RequestBody @Valid ReturnCreateRequest request
+      @RequestBody ReturnCreateRequest request
   ) {
     ReturnCreateResponse res = returnService.createReturn(request);
     URI location = URI.create("/api/returns/" + res.getReturnId());
@@ -59,7 +58,6 @@ public class ReturnController {
   /**
    * (본사) 반품 목록을 조회합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
   @GetMapping("/hq")
   public ResponseEntity<ApiResponse<List<ReturnListResponse>>> getReturnsForHq(
       @RequestParam(required = false) ReturnStatus status,
@@ -77,7 +75,6 @@ public class ReturnController {
   /**
    * (가맹점) 반품 목록을 조회합니다.
    */
-  @PreAuthorize("hasRole('PHARMACY')")
   @GetMapping("/branch")
   public ResponseEntity<ApiResponse<List<ReturnListResponse>>> getReturnsForBranch(
       @RequestParam Long pharmacyId,
@@ -94,7 +91,6 @@ public class ReturnController {
    * (본사, 가맹점) 반품 상세를 조회합니다.
    */
   
-  @GetMapping("/{returnId}")
   public ResponseEntity<ApiResponse<ReturnDetailResponse>> getReturnDetail(
       @PathVariable Long returnId
   ) {
@@ -105,11 +101,10 @@ public class ReturnController {
   /**
    * (본사) 반품 상태를 변경합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
-  @PatchMapping(value = "/{returnId}/status", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PatchMapping("/{returnId}/status")
   public ResponseEntity<Void> updateReturnStatus(
       @PathVariable Long returnId,
-      @RequestBody @Valid ReturnUpdateRequest request
+      @RequestBody ReturnUpdateRequest request
   ) {
     returnService.updateReturnStatus(returnId, request);
     return ResponseEntity.noContent().build(); // 204 No Content
@@ -118,7 +113,6 @@ public class ReturnController {
   /**
    * 반품을 삭제합니다.
    */
-  @PreAuthorize("isAuthenticated()")
   @DeleteMapping("/{returnId}")
   public ResponseEntity<Void> deleteReturn(
       @PathVariable Long returnId

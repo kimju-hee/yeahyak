@@ -30,9 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
  * 재고 거래(입고/출고) 관련 API를 처리하는 컨트롤러입니다.
  */
 @RestController
-@RequestMapping(value = "/api/stock-txs", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/api/stock-txs")
 @RequiredArgsConstructor
-@Validated
 public class StockTxController {
 
   private final StockTxService stockTxService;
@@ -42,10 +41,9 @@ public class StockTxController {
   /**
    * 제품 입고를 처리합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
-  @PostMapping(path = "/in", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping("/in")
   public ResponseEntity<ApiResponse<StockInResponse>> stockIn(
-      @RequestBody @Valid StockInRequest request
+      @RequestBody StockInRequest request
   ) {
     Product before = productRepo.findById(request.getProductId())
         .orElseThrow(() -> new RuntimeException("제품 정보를 찾을 수 없습니다."));
@@ -73,7 +71,6 @@ public class StockTxController {
   /**
    * 특정 제품의 재고 거래 내역을 조회합니다.
    */
-  @PreAuthorize("hasRole('ADMIN')")
   @GetMapping
   public ResponseEntity<ApiResponse<List<StockTxDetailResponse>>> listByProduct(
       @RequestParam Long productId,
