@@ -18,14 +18,23 @@ export default function LoginForm({ role, form, handleSubmit }: LoginFormProps) 
           rules={[{ required: true, message: '이메일을 입력해주세요.' }]}
           validateTrigger="onSubmit"
         >
-          <Input prefix={<UserOutlined />} placeholder="이메일" size="large" />
+          <Input
+            prefix={<UserOutlined style={{ margin: '0 8px' }} />}
+            placeholder="이메일"
+            size="large"
+          />
         </Form.Item>
         <Form.Item
           name="password"
           rules={[{ required: true, message: '비밀번호를 입력해주세요.' }]}
           validateTrigger="onSubmit"
         >
-          <Input prefix={<LockOutlined />} type="password" placeholder="비밀번호" size="large" />
+          <Input
+            prefix={<LockOutlined style={{ margin: '0 8px' }} />}
+            type="password"
+            placeholder="비밀번호"
+            size="large"
+          />
         </Form.Item>
 
         <Button

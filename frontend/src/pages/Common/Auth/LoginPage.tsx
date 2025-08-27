@@ -1,6 +1,6 @@
 import { Card, Form, message } from 'antd';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { authAPI } from '../../../api';
 import { landing01, landing02, landing03, landing04 } from '../../../assets';
 import LoginForm from '../../../components/LoginForm';
@@ -17,7 +17,9 @@ export default function LoginPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, user, setAuth } = useAuthStore();
+  const messageShownRef = useRef(false);
 
   const [activeTab, setActiveTab] = useState<UserRole>(USER_ROLE.PHARMACY);
   const [currentImgIdx, setCurrentImgIdx] = useState(0);
@@ -37,6 +39,15 @@ export default function LoginPage() {
 
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
+
+  // 회원가입 완료 메시지 처리
+  useEffect(() => {
+    if (location.state?.message && !messageShownRef.current) {
+      messageShownRef.current = true;
+      messageApi.success(location.state.message);
+      navigate('/login', { replace: true });
+    }
+  }, [location.state?.message, messageApi, navigate]);
 
   useEffect(() => {
     if (isAuthenticated) {

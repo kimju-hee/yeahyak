@@ -29,8 +29,10 @@ export default function BranchSignupPage() {
       const res = await authAPI.pharmacySignup(payload);
 
       if (res.success) {
-        messageApi.success('회원가입이 완료되었습니다.');
-        navigate('/login', { replace: true });
+        navigate('/login', {
+          replace: true,
+          state: { message: '회원가입이 완료되었습니다! 관리자 승인 후 서비스 이용이 가능합니다.' },
+        });
       }
     } catch (e: any) {
       console.error('약국 회원가입 실패:', e);
@@ -130,7 +132,7 @@ export default function BranchSignupPage() {
                 postcodeName="postcode"
                 addressName="address"
                 detailAddressName="detailAddress"
-                region="region"
+                regionName="region"
                 label="주소"
               />
               <Form.Item

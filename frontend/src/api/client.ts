@@ -26,7 +26,22 @@ const refreshInstance = axios.create({
 
 const attachAuth = (client: AxiosInstance) => {
   client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-    if (config.url && config.url !== '/auth/refresh') {
+    // 인증이 필요하지 않은 엔드포인트들 (정확히 매치)
+    const authExemptPaths = [
+      '/auth/refresh',
+      '/auth/admin/login',
+      '/auth/pharmacy/login',
+      '/auth/admin/signup',
+      '/auth/pharmacy/signup',
+    ];
+
+    const shouldSkipAuth = authExemptPaths.some(
+      (path) => config.url === path || config.url?.endsWith(path),
+    );
+
+    console.log('🔍 Request URL:', config.url, 'Skip Auth:', shouldSkipAuth);
+
+    if (!shouldSkipAuth) {
       const token = localStorage.getItem('accessToken');
       if (token) {
         const h = config.headers as any;
@@ -36,6 +51,7 @@ const attachAuth = (client: AxiosInstance) => {
           config.headers = (config.headers || {}) as any;
           (config.headers as any)['Authorization'] = `Bearer ${token}`;
         }
+        console.log('🔐 Added Authorization header for:', config.url);
       }
     }
     return config;

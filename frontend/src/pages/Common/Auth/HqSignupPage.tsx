@@ -26,8 +26,10 @@ export default function HqSignupPage() {
       const res = await authAPI.adminSignup(payload);
 
       if (res.success) {
-        messageApi.success('회원가입이 완료되었습니다.');
-        navigate('/login', { replace: true });
+        navigate('/login', {
+          replace: true,
+          state: { message: '관리자 회원가입이 완료되었습니다.' },
+        });
       }
     } catch (e: any) {
       console.error('관리자 회원가입 실패:', e);
