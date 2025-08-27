@@ -1,3 +1,12 @@
+/* 챗봇 말풍선 마크다운 내부 여백 제거 */
+.chat-bubble-markdown p,
+.chat-bubble-markdown ul,
+.chat-bubble-markdown ol,
+.chat-bubble-markdown li {
+  margin-bottom: 0 !important;
+  margin-top: 0 !important;
+}
+
 /*
   :root {} (전역 변수 및 기본 폰트 설정)
   Ant Design의 컴포넌트에는 자체 폰트 및 색상 설정이 적용되지만,
@@ -101,5 +110,5 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
-  }*/ 
+  }*/
 }
