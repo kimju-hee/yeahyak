@@ -1,7 +1,8 @@
-from flask import Flask, request, Response
-from openai import OpenAI, APIError
-import os
 import json
+import os
+
+from flask import Flask, Response, request
+from openai import APIError, OpenAI
 
 app = Flask(__name__)
 
@@ -62,6 +63,7 @@ SYSTEM_PROMPT = """
 위 기준을 철저히 준수해 작성하되, 반드시 HTML '본문만'을 반환하세요.
 """
 
+
 # ✅ GPT 요약 처리 함수 분리
 def summarize_text(content: str) -> str:
     try:
@@ -69,16 +71,17 @@ def summarize_text(content: str) -> str:
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": content}
+                {"role": "user", "content": content},
             ],
             temperature=0.3,
-            max_tokens=10000
+            max_tokens=10000,
         )
         return response.choices[0].message.content.strip()
     except APIError as api_err:
         raise RuntimeError(f"OpenAI API 호출 오류: {str(api_err)}")
     except Exception as e:
         raise RuntimeError(f"요약 처리 중 예외 발생: {str(e)}")
+
 
 @app.route("/summarize-law", methods=["POST"])
 def summarize_law():
@@ -87,26 +90,42 @@ def summarize_law():
 
     if not file_path or not os.path.exists(file_path):
         error = {"error": "유효한 'path'가 필요합니다."}
-        return Response(json.dumps(error, ensure_ascii=False), content_type="application/json; charset=utf-8", status=400)
+        return Response(
+            json.dumps(error, ensure_ascii=False),
+            content_type="application/json; charset=utf-8",
+            status=400,
+        )
 
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
     except Exception as e:
         error = {"error": f"파일 열기 오류: {str(e)}"}
-        return Response(json.dumps(error, ensure_ascii=False), content_type="application/json; charset=utf-8", status=500)
+        return Response(
+            json.dumps(error, ensure_ascii=False),
+            content_type="application/json; charset=utf-8",
+            status=500,
+        )
 
     try:
         summary = summarize_text(content)
     except RuntimeError as e:
         error = {"error": str(e)}
-        return Response(json.dumps(error, ensure_ascii=False), content_type="application/json; charset=utf-8", status=500)
+        return Response(
+            json.dumps(error, ensure_ascii=False),
+            content_type="application/json; charset=utf-8",
+            status=500,
+        )
 
     # ✅ 모든 경우 charset=utf-8 적용
     if request.headers.get("Accept") == "text/plain":
         return Response(summary, content_type="text/plain; charset=utf-8")
     else:
-        return Response(json.dumps({"summary": summary}, ensure_ascii=False), content_type="application/json; charset=utf-8")
+        return Response(
+            json.dumps({"summary": summary}, ensure_ascii=False),
+            content_type="application/json; charset=utf-8",
+        )
+
 
 if __name__ == "__main__":
     print("✅ 법률 요약 서버 실행 중... http://localhost:5000")

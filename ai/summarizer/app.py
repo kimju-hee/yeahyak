@@ -1,14 +1,16 @@
-import os
-import fitz  # PyMuPDF
 import json
-from flask import Flask, request, Response
-from openai import OpenAI
+import os
+
+import fitz  # PyMuPDF
 from dotenv import load_dotenv
+from flask import Flask, Response, request
+from openai import OpenAI
 
 # 환경변수 로드
 load_dotenv()
 
 app = Flask(__name__)
+
 
 # OpenAI 클라이언트 생성
 def get_openai_client():
@@ -17,7 +19,9 @@ def get_openai_client():
         raise ValueError("OPENAI_API_KEY 환경변수가 설정되지 않았습니다.")
     return OpenAI(api_key=api_key)
 
+
 client = get_openai_client()
+
 
 # PDF에서 텍스트 추출
 def extract_text_from_pdf(file_storage):
@@ -27,12 +31,20 @@ def extract_text_from_pdf(file_storage):
             text += page.get_text()
     return text
 
+
 # 약품 요약 처리
 def summarize_with_gpt(text):
     prompt = f"""
     다음은 약품 설명서입니다. 아래 항목에 따라 500자를 넘지않게 간결하게 요약해주세요:
+    [HTML 출력 규칙]
+    - 마크다운/코드펜스 금지: 백틱(```) 및 ```html 금지
+    - DOCTYPE, <html>, <head>, <body> 없이 '본문'만 출력
+    - 허용 태그만 사용: <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <br>
+    - style/script/onclick 등 속성 사용 금지
     [작성 형식]
-    - 500자를 넘지 않게 간결하게
+    - 500자를 넘지 않게 간결하게 작성한다.
+    - HTML 태그를 사용하여 구조화한다.
+    - 반드시 HTML 본문만을 출력한다.
     - 아래 섹션을 반드시 포함:
     <h2>약품 요약</h2>
     <h3>성분</h3><p>...</p>
@@ -48,12 +60,16 @@ def summarize_with_gpt(text):
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": "약사에게 의약 정보를 명확하게 정리하는 전문가"},
-            {"role": "user", "content": prompt}
+            {
+                "role": "system",
+                "content": "약사에게 의약 정보를 명확하게 정리하는 전문가",
+            },
+            {"role": "user", "content": prompt},
         ],
-        temperature=0.3
+        temperature=0.3,
     )
     return response.choices[0].message.content.strip()
+
 
 @app.route("/summarize-pdf", methods=["POST"])
 def summarize_pdf():
@@ -62,7 +78,7 @@ def summarize_pdf():
         return Response(
             json.dumps({"error": "PDF 파일을 업로드 해주세요."}, ensure_ascii=False),
             status=400,
-            content_type="application/json; charset=utf-8"
+            content_type="application/json; charset=utf-8",
         )
 
     try:
@@ -71,14 +87,15 @@ def summarize_pdf():
         return Response(
             json.dumps({"summary": summary}, ensure_ascii=False),
             status=200,
-            content_type="application/json; charset=utf-8"
+            content_type="application/json; charset=utf-8",
         )
     except Exception as e:
         return Response(
             json.dumps({"error": str(e)}, ensure_ascii=False),
             status=500,
-            content_type="application/json; charset=utf-8"
+            content_type="application/json; charset=utf-8",
         )
+
 
 if __name__ == "__main__":
     print("💊 약품 요약 서버 실행 중... http://localhost:5000/summarize-pdf")

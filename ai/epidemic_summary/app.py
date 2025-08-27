@@ -1,9 +1,10 @@
-import os
-import fitz  # PyMuPDF
-from flask import Flask, request, jsonify, Response
 import json
-from openai import OpenAI
+import os
+
+import fitz  # PyMuPDF
 from dotenv import load_dotenv
+from flask import Flask, Response, jsonify, request
+from openai import OpenAI
 
 # 환경변수 로드
 load_dotenv()
@@ -13,19 +14,16 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # 프롬프트 정의
 SUMMARY_PROMPT = """다음은 감염병 주간 통계 보고서입니다.
-주요 질병명, 발생 지역, 발생 수치, 유입 경로(국내/해외)를 포함하여 보고서 내용을 400자 내외로 공지문 형태로 요약해 주세요.
-HTML만 출력하세요(마크다운 금지). 허용 태그: <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <br>.
-- 제목은 <h2>
-- 섹션 제목은 <h3>
-- 강조는 <strong>
-- 목록은 <ul>, <li>
-- 불필요한 스타일/스크립트 금지
-보고서 내용을 400자 내외로 공지문 형태로 요약해 HTML로만 작성하세요.
+주요 질병명, 발생 지역, 발생 수치, 유입 경로(국내/해외)를 포함하여 보고서 내용을 600자 내외로 요약해 주세요.
 """
 
 NOTICE_PROMPT = """다음은 감염병 보고서 요약입니다.
 아래 요약을 바탕으로 전국 지점 공지문을 HTML로 다시 작성하세요(마크다운 금지).
-허용 태그: <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <br>.
+[HTML 출력 규칙]
+- 마크다운/코드펜스 금지: 백틱(```) 및 ```html 금지
+- DOCTYPE, <html>, <head>, <body> 없이 '본문'만 출력
+- 허용 태그만 사용: <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <br>
+- style/script/onclick 등 속성 사용 금지
 
 문서 골격 예시:
 <h2>감염병 주간 공지</h2>
@@ -39,26 +37,35 @@ NOTICE_PROMPT = """다음은 감염병 보고서 요약입니다.
 요약:
 """
 
+
 # GPT 요청 함수
 def generate_summary(text):
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": "당신은 감염병 보고서를 공지문으로 요약하는 전문 AI입니다."},
-            {"role": "user", "content": f"{SUMMARY_PROMPT}\n\n{text}"}
-        ]
+            {
+                "role": "system",
+                "content": "당신은 감염병 보고서를 공지문으로 요약하는 전문 AI입니다.",
+            },
+            {"role": "user", "content": f"{SUMMARY_PROMPT}\n\n{text}"},
+        ],
     )
     return response.choices[0].message.content
+
 
 def generate_notice(summary):
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": "당신은 약국 본사에서 사용하는 감염병 공지문을 생성하는 AI입니다."},
-            {"role": "user", "content": f"{NOTICE_PROMPT}{summary}"}
-        ]
+            {
+                "role": "system",
+                "content": "당신은 약국 본사에서 사용하는 감염병 공지문을 생성하는 AI입니다.",
+            },
+            {"role": "user", "content": f"{NOTICE_PROMPT}{summary}"},
+        ],
     )
     return response.choices[0].message.content
+
 
 # PDF 텍스트 추출
 def extract_text_from_pdf(file_storage):
@@ -68,6 +75,7 @@ def extract_text_from_pdf(file_storage):
             text += page.get_text()
     return text
 
+
 # 엔드포인트 정의
 @app.route("/summarize-epidemic", methods=["POST"])
 def summarize_epidemic():
@@ -76,7 +84,7 @@ def summarize_epidemic():
         return Response(
             json.dumps({"error": "PDF 파일을 업로드 해주세요"}, ensure_ascii=False),
             content_type="application/json; charset=utf-8",
-            status=400
+            status=400,
         )
     try:
         text = extract_text_from_pdf(file)
@@ -85,13 +93,13 @@ def summarize_epidemic():
         return Response(
             json.dumps({"summary": summary, "notice": notice}, ensure_ascii=False),
             content_type="application/json; charset=utf-8",
-            status=200
+            status=200,
         )
     except Exception as e:
         return Response(
             json.dumps({"error": str(e)}, ensure_ascii=False),
             content_type="application/json; charset=utf-8",
-            status=500
+            status=500,
         )
 
 
