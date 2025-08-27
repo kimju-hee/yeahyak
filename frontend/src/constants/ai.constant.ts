@@ -1,6 +1,6 @@
 export const AI_ENDPOINT = {
-  FAQ: '/chat/faq',
-  QNA: '/chat/qna',
+  FAQ: '/chatbot/faq',
+  QNA: '/chatbot/qna',
   LAW: '/summarize/law',
   EPIDEMIC: '/summarize/epidemic',
   NEW_PRODUCT: '/summarize/new-product',

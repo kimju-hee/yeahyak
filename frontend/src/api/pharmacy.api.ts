@@ -1,5 +1,6 @@
 import { PHARMACY_ENDPOINT } from '../constants';
 import type {
+  BalanceTxListParams,
   BalanceTxListResponse,
   PharmacyListParams,
   PharmacyListResponse,
@@ -22,8 +23,10 @@ export const settlement = async (pharmacyId: number): Promise<SettlementResponse
 };
 
 // 약국 거래 내역 조회
-export const getBalanceTxs = async (pharmacyId: number): Promise<BalanceTxListResponse> => {
-  const response = await instance.get(PHARMACY_ENDPOINT.BALANCE_TXS(pharmacyId));
+export const getBalanceTxs = async (
+  params: BalanceTxListParams,
+): Promise<BalanceTxListResponse> => {
+  const response = await instance.get(PHARMACY_ENDPOINT.BALANCE_TXS(params.pharmacyId), { params });
   console.log('💳 약국 거래 내역 조회 응답:', response);
   return response.data;
 };

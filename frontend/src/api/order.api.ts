@@ -1,41 +1,20 @@
 import { ORDER_ENDPOINT } from '../constants';
 import type {
-  OrderCreateReq,
+  OrderCreateRequest,
   OrderCreateResponse,
   OrderDetailResponse,
-  OrderForecastReq,
+  OrderForecastRequest,
   OrderListBranchParams,
   OrderListHqParams,
   OrderListResponse,
-  OrderUpdateReq,
+  OrderUpdateRequest,
 } from '../types';
 import { instance } from './client';
 
 // 발주 생성
-export const createOrder = async (data: OrderCreateReq): Promise<OrderCreateResponse> => {
+export const createOrder = async (data: OrderCreateRequest): Promise<OrderCreateResponse> => {
   const response = await instance.post(ORDER_ENDPOINT.CREATE, data);
   console.log('🛒 발주 생성 응답:', response);
-  return response.data;
-};
-
-// 발주 상태 업데이트
-export const updateOrder = async (orderId: number, data: OrderUpdateReq) => {
-  const response = await instance.patch(ORDER_ENDPOINT.UPDATE(orderId), data);
-  console.log('🛒 발주 상태 업데이트 응답:', response);
-  return response.data;
-};
-
-// 발주 상세 조회
-export const getOrder = async (orderId: number): Promise<OrderDetailResponse> => {
-  const response = await instance.get(ORDER_ENDPOINT.DETAIL(orderId));
-  console.log('🛒 발주 상세 조회 응답:', response);
-  return response.data;
-};
-
-// 발주 삭제
-export const deleteOrder = async (orderId: number) => {
-  const response = await instance.delete(ORDER_ENDPOINT.DELETE(orderId));
-  console.log('🛒 발주 삭제 응답:', response);
   return response.data;
 };
 
@@ -55,8 +34,27 @@ export const getOrdersBranch = async (
   return response.data;
 };
 
+// 발주 상세 조회
+export const getOrder = async (orderId: number): Promise<OrderDetailResponse> => {
+  const response = await instance.get(ORDER_ENDPOINT.DETAIL(orderId));
+  console.log('🛒 발주 상세 조회 응답:', response);
+  return response.data;
+};
+
+// 발주 상태 업데이트
+export const updateOrder = async (orderId: number, data: OrderUpdateRequest): Promise<void> => {
+  const response = await instance.patch(ORDER_ENDPOINT.UPDATE(orderId), data);
+  console.log('🛒 발주 상태 업데이트 응답:', response);
+};
+
+// 발주 삭제
+export const deleteOrder = async (orderId: number): Promise<void> => {
+  const response = await instance.delete(ORDER_ENDPOINT.DELETE(orderId));
+  console.log('🛒 발주 삭제 응답:', response);
+};
+
 // 발주 예측
-export const forecastOrder = async (data: OrderForecastReq) => {
+export const forecastOrder = async (data: OrderForecastRequest) => {
   const formData = new FormData();
   formData.append('file', data.file);
   const response = await instance.post(ORDER_ENDPOINT.FORECAST, formData, {

@@ -1,11 +1,11 @@
 import type { ApiResponse, PaginatedResponse } from './api.type';
 
-export interface StockInReq {
+export interface StockInRequest {
   productId: number;
   amount: number;
 }
 
-export interface StockInRes {
+export interface StockIn {
   stockTxId: number;
   productId: number;
   amount: number;
@@ -15,12 +15,12 @@ export interface StockInRes {
 }
 
 export interface StockTxDetailParams {
-  stockTxId: number;
+  productId: number;
   page?: number;
   size?: number;
 }
 
-export interface StockTxDetailRes {
+export interface StockTxDetail {
   stockTxId: number;
   productId: number;
   type: StockTxType;
@@ -38,5 +38,5 @@ export const STOCK_TX_TYPE = {
 export type StockTxType = keyof typeof STOCK_TX_TYPE;
 export type StockTxTypeTextMap = { [key in StockTxType]: string };
 
-export type StockInResponse = ApiResponse<StockInRes>;
-export type StockTxDetailResponse = PaginatedResponse<StockTxDetailRes>;
+export type StockInResponse = ApiResponse<StockIn>;
+export type StockTxDetailResponse = PaginatedResponse<StockTxDetail>;

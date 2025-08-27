@@ -25,15 +25,13 @@ export const getPharmacyRequest = async (
 };
 
 // 약국 등록 요청 승인
-export const approvePharmacyRequest = async (pharmacyRequestId: number) => {
+export const approve = async (pharmacyRequestId: number): Promise<void> => {
   const response = await instance.post(PHARMACY_REQUEST_ENDPOINT.APPROVE(pharmacyRequestId));
-  console.log('📋 약국 등록 요청 승인 응답:', response);
-  return response.data;
+  console.log('✅ 약국 등록 요청 승인 응답:', response);
 };
 
 // 약국 등록 요청 거절
-export const rejectPharmacyRequest = async (pharmacyRequestId: number) => {
+export const reject = async (pharmacyRequestId: number): Promise<void> => {
   const response = await instance.post(PHARMACY_REQUEST_ENDPOINT.REJECT(pharmacyRequestId));
-  console.log('📋 약국 등록 요청 거절 응답:', response);
-  return response.data;
+  console.log('❌ 약국 등록 요청 거절 응답:', response);
 };

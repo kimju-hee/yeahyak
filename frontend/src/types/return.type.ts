@@ -1,5 +1,4 @@
-import type { Region } from '.';
-import type { ApiResponse, PaginatedResponse } from './api.type';
+import type { ApiResponse, MainCategory, PaginatedResponse, Region, SubCategory } from '.';
 
 export const RETURN_STATUS = {
   REQUESTED: 'REQUESTED',
@@ -22,29 +21,29 @@ export interface ReturnCartItem {
   subtotalPrice: number;
 }
 
-export interface ReturnCreateReq {
+export interface ReturnCreateRequest {
   pharmacyId: number;
   orderId: number;
   reason: string;
-  items: ReturnCreateReqItem[];
+  items: ReturnCreateRequestItem[];
 }
 
-export interface ReturnCreateReqItem {
+export interface ReturnCreateRequestItem {
   productId: number;
   quantity: number;
   unitPrice: number;
   subtotalPrice: number;
 }
 
-export interface ReturnCreateRes {
+export interface ReturnCreate {
   returnId: number;
 }
 
-export interface ReturnUpdateReq {
+export interface ReturnUpdateRequest {
   status: ReturnStatus;
 }
 
-export interface ReturnDetailRes {
+export interface ReturnDetail {
   returnId: number;
   pharmacyId: number;
   pharmacyName: string;
@@ -54,14 +53,14 @@ export interface ReturnDetailRes {
   totalPrice: number;
   createdAt: string;
   updatedAt?: string;
-  items: ReturnDetailResItem[];
+  items: ReturnDetailItem[];
 }
 
-export interface ReturnDetailResItem {
+export interface ReturnDetailItem {
   productId: number;
   productName: string;
-  mainCategory: string;
-  subCategory: string;
+  mainCategory: MainCategory;
+  subCategory: SubCategory;
   manufacturer: string;
   productImgUrl: string;
   quantity: number;
@@ -69,7 +68,7 @@ export interface ReturnDetailResItem {
   subtotalPrice: number;
 }
 
-export interface ReturnListRes {
+export interface ReturnList {
   returnId: number;
   pharmacyId: number;
   pharmacyName: string;
@@ -78,13 +77,6 @@ export interface ReturnListRes {
   reason: string;
   totalPrice: number;
   createdAt: string;
-}
-
-export interface ReturnListBranchParams {
-  pharmacyId: number;
-  status?: ReturnStatus;
-  page?: number;
-  size?: number;
 }
 
 export interface ReturnListHqParams {
@@ -96,6 +88,13 @@ export interface ReturnListHqParams {
   size?: number;
 }
 
-export type ReturnCreateResponse = ApiResponse<ReturnCreateRes>;
-export type ReturnListResponse = PaginatedResponse<ReturnListRes>;
-export type ReturnDetailResponse = ApiResponse<ReturnDetailRes>;
+export interface ReturnListBranchParams {
+  pharmacyId: number;
+  status?: ReturnStatus;
+  page?: number;
+  size?: number;
+}
+
+export type ReturnCreateResponse = ApiResponse<ReturnCreate>;
+export type ReturnListResponse = PaginatedResponse<ReturnList>;
+export type ReturnDetailResponse = ApiResponse<ReturnDetail>;

@@ -1,8 +1,8 @@
 import {
   PRODUCT_CATEGORIES,
-  type ProductMainCategory,
-  type ProductMainCategoryTextMap,
-  type ProductSubCategoryTextMap,
+  type MainCategory,
+  type MainCategoryTextMap,
+  type SubCategoryTextMap,
 } from '../types';
 
 export const PRODUCT_ENDPOINT = {
@@ -13,27 +13,27 @@ export const PRODUCT_ENDPOINT = {
   DELETE: (productId: number) => `/products/${productId}`,
 } as const;
 
-export const PRODUCT_MAIN_CATEGORY_OPTIONS = [
-  { value: '전문의약품' as ProductMainCategory, label: '전문의약품' },
-  { value: '일반의약품' as ProductMainCategory, label: '일반의약품' },
-  { value: '의약외품' as ProductMainCategory, label: '의약외품' },
+export const MAIN_CATEGORY_OPTIONS = [
+  { value: '전문의약품' as MainCategory, label: '전문의약품' },
+  { value: '일반의약품' as MainCategory, label: '일반의약품' },
+  { value: '의약외품' as MainCategory, label: '의약외품' },
 ] as const;
 
-export const PRODUCT_MAIN_CATEGORY_TEXT: ProductMainCategoryTextMap = {
+export const MAIN_CATEGORY_TEXT: MainCategoryTextMap = {
   전문의약품: '전문의약품',
   일반의약품: '일반의약품',
   의약외품: '의약외품',
 } as const;
 
 // 메인 카테고리에 따른 서브 카테고리 옵션을 반환하는 함수
-export const getProductSubCategoryOptions = (mainCategory: ProductMainCategory) => {
+export const getProductSubCategoryOptions = (mainCategory: MainCategory) => {
   return PRODUCT_CATEGORIES[mainCategory].map((subCategory) => ({
     value: subCategory,
-    label: PRODUCT_SUB_CATEGORY_TEXT[subCategory],
+    label: SUB_CATEGORY_TEXT[subCategory],
   }));
 };
 
-export const PRODUCT_SUB_CATEGORY_TEXT: ProductSubCategoryTextMap = {
+export const SUB_CATEGORY_TEXT: SubCategoryTextMap = {
   // 전문의약품
   항생제: '항생제',
   고혈압_치료제: '고혈압 치료제',

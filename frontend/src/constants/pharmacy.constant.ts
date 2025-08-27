@@ -35,8 +35,8 @@ export const BALANCE_TX_TYPE_TEXT: BalanceTxTypeTextMap = {
 
 export const REGION_OPTIONS = [
   { value: '서울' as Region, label: '서울' },
-  { value: '인천' as Region, label: '인천' },
   { value: '경기' as Region, label: '경기' },
+  { value: '인천' as Region, label: '인천' },
   { value: '강원특별자치도' as Region, label: '강원특별자치도' },
   { value: '충북' as Region, label: '충북' },
   { value: '세종특별자치시' as Region, label: '세종특별자치시' },
@@ -55,8 +55,8 @@ export const REGION_OPTIONS = [
 
 export const REGION_TEXT: RegionTextMap = {
   서울: '서울',
-  인천: '인천',
   경기: '경기',
+  인천: '인천',
   강원특별자치도: '강원특별자치도',
   충북: '충북',
   세종특별자치시: '세종특별자치시',

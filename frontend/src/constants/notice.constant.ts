@@ -7,8 +7,8 @@ export const NOTICE_ENDPOINT = {
   DETAIL: (noticeId: number) => `/notices/${noticeId}`,
   UPDATE: (noticeId: number) => `/notices/${noticeId}`,
   DELETE: (noticeId: number) => `/notices/${noticeId}`,
-  FILE_UPDATE: (noticeId: number) => `/notices/${noticeId}/attachment`,
-  FILE_DELETE: (noticeId: number) => `/notices/${noticeId}/attachment`,
+  UPDATE_FILE: (noticeId: number) => `/notices/${noticeId}/attachment`,
+  DELETE_FILE: (noticeId: number) => `/notices/${noticeId}/attachment`,
 } as const;
 
 export const NOTICE_TYPE_OPTIONS = [

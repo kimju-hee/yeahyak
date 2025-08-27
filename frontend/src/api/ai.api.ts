@@ -1,16 +1,16 @@
 import { AI_ENDPOINT } from '../constants';
-import type { ChatbotReq, ChatbotResponse } from '../types';
+import type { ChatbotRequest, ChatbotResponse } from '../types';
 import { aiInstance, instance } from './client';
 
 // FAQ 챗봇
-export const chatFAQ = async (data: ChatbotReq): Promise<ChatbotResponse> => {
+export const chatFAQ = async (data: ChatbotRequest): Promise<ChatbotResponse> => {
   const response = await instance.post(AI_ENDPOINT.FAQ, data);
   console.log('🤖 FAQ 챗봇 응답:', response);
   return response.data;
 };
 
 // QNA 챗봇
-export const chatQNA = async (data: ChatbotReq): Promise<ChatbotResponse> => {
+export const chatQNA = async (data: ChatbotRequest): Promise<ChatbotResponse> => {
   const response = await instance.post(AI_ENDPOINT.QNA, data);
   console.log('🤖 QNA 챗봇 응답:', response);
   return response.data;

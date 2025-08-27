@@ -22,19 +22,19 @@ export const PRODUCT_CATEGORIES = {
   ],
 } as const;
 
-export type ProductMainCategory = keyof typeof PRODUCT_CATEGORIES;
-export type ProductMainCategoryTextMap = { [key in ProductMainCategory]: string };
+export type MainCategory = keyof typeof PRODUCT_CATEGORIES;
+export type MainCategoryTextMap = { [key in MainCategory]: string };
 
-export type ProductSubCategory = (typeof PRODUCT_CATEGORIES)[ProductMainCategory][number];
-export type ProductSubCategoryTextMap = { [key in ProductSubCategory]: string };
+export type SubCategory = (typeof PRODUCT_CATEGORIES)[MainCategory][number];
+export type SubCategoryTextMap = { [key in SubCategory]: string };
 
-export type ProductSubCategoryWithAll = '전체' | ProductSubCategory;
+export type SubCategoryWithAll = '전체' | SubCategory;
 
-export interface ProductCreateReq {
+export interface ProductCreateRequest {
   productName: string;
   insuranceCode: string;
-  mainCategory: ProductMainCategory;
-  subCategory: ProductSubCategory;
+  mainCategory: MainCategory;
+  subCategory: SubCategory;
   manufacturer: string;
   unit: string;
   unitPrice: number;
@@ -43,17 +43,17 @@ export interface ProductCreateReq {
   stockQty: number;
 }
 
-export interface ProductCreateRes {
+export interface ProductCreate {
   productId: number;
   stockTxId: number;
 }
 
-export interface ProductDetailRes {
+export interface ProductDetail {
   productId: number;
   productName: string;
   insuranceCode: string;
-  mainCategory: ProductMainCategory;
-  subCategory: ProductSubCategory;
+  mainCategory: MainCategory;
+  subCategory: SubCategory;
   manufacturer: string;
   unit: string;
   unitPrice: number;
@@ -66,12 +66,12 @@ export interface ProductDetailRes {
 export interface ProductListParams {
   page?: number;
   size?: number;
-  mainCategory?: ProductMainCategory;
-  subCategory?: ProductSubCategory;
+  mainCategory?: MainCategory;
+  subCategory?: SubCategory;
   keyword?: string;
 }
 
-export interface ProductListRes {
+export interface ProductList {
   productId: number;
   productName: string;
   manufacturer: string;
@@ -82,11 +82,11 @@ export interface ProductListRes {
   latestStockInAt: string;
 }
 
-export interface ProductUpdateReq {
+export interface ProductUpdateRequest {
   productName: string;
   insuranceCode: string;
-  mainCategory: ProductMainCategory;
-  subCategory: ProductSubCategory;
+  mainCategory: MainCategory;
+  subCategory: SubCategory;
   manufacturer: string;
   unit: string;
   unitPrice: number;
@@ -94,6 +94,6 @@ export interface ProductUpdateReq {
   productImgUrl?: string;
 }
 
-export type ProductCreateResponse = ApiResponse<ProductCreateRes>;
-export type ProductListResponse = PaginatedResponse<ProductListRes>;
-export type ProductDetailResponse = PaginatedResponse<ProductDetailRes>;
+export type ProductCreateResponse = ApiResponse<ProductCreate>;
+export type ProductListResponse = PaginatedResponse<ProductList>;
+export type ProductDetailResponse = PaginatedResponse<ProductDetail>;

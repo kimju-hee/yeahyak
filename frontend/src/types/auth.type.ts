@@ -16,17 +16,17 @@ export type UserRole = keyof typeof USER_ROLE;
 export interface Admin {
   adminId: number;
   adminName: string;
-  department: AdminDepartment;
+  department: Department;
 }
 
-export const ADMIN_DEPARTMENT = {
+export const DEPARTMENT = {
   MANAGEMENT: 'MANAGEMENT',
   SALES: 'SALES',
   INVENTORY: 'INVENTORY',
   FINANCE: 'FINANCE',
 } as const;
-export type AdminDepartment = keyof typeof ADMIN_DEPARTMENT;
-export type AdminDepartmentTextMap = { [key in AdminDepartment]: string };
+export type Department = keyof typeof DEPARTMENT;
+export type DepartmentTextMap = { [key in Department]: string };
 
 export interface Pharmacy {
   pharmacyId: number;
@@ -42,14 +42,14 @@ export interface Pharmacy {
 }
 
 // 회원가입 요청 및 응답
-export interface AdminSignupReq {
+export interface AdminSignupRequest {
   email: string;
   password: string;
   adminName: string;
-  department: AdminDepartment;
+  department: Department;
 }
 
-export interface PharmacySignupReq {
+export interface PharmacySignupRequest {
   email: string;
   password: string;
   pharmacyName: string;
@@ -62,51 +62,58 @@ export interface PharmacySignupReq {
   contact: string;
 }
 
-export interface AdminSignupRes {
+export interface AdminSignup {
   userId: number;
   adminId: number;
 }
 
-export interface PharmacySignupRes {
+export interface PharmacySignup {
   userId: number;
   pharmacyRequestId: number;
 }
 
-export type SignupResponse = ApiResponse<AdminSignupRes | PharmacySignupRes>;
+export type SignupResponse = ApiResponse<AdminSignup | PharmacySignup>;
 
 // 로그인 요청 및 응답
-export interface LoginReq {
+export interface LoginRequest {
   email: string;
   password: string;
 }
 
-export interface AdminLoginRes {
+export interface AdminLogin {
   accessToken: string;
   user: User;
   profile: Admin;
 }
 
-export interface PharmacyLoginRes {
+export interface PharmacyLogin {
   accessToken: string;
   user: User;
   profile: Pharmacy;
 }
 
-export type LoginResponse = ApiResponse<PharmacyLoginRes | AdminLoginRes>;
+export type LoginResponse = ApiResponse<PharmacyLogin | AdminLogin>;
+
+// 토큰 갱신 응답
+export interface RefreshToken {
+  accessToken: string;
+}
+
+export type RefreshTokenResponse = ApiResponse<RefreshToken>;
 
 // 비밀번호 변경 요청 및 응답
-export interface PasswordChangeReq {
+export interface PasswordChangeRequest {
   currentPassword: string;
   newPassword: string;
 }
 
 // 프로필 수정 요청 및 응답
-export interface AdminUpdateReq {
+export interface AdminUpdateRequest {
   adminName: string;
-  department: AdminDepartment;
+  department: Department;
 }
 
-export interface PharmacyUpdateReq {
+export interface PharmacyUpdateRequest {
   pharmacyName: string;
   representativeName: string;
   postcode: string;
@@ -115,3 +122,6 @@ export interface PharmacyUpdateReq {
   region: Region;
   contact: string;
 }
+
+export type AdminUpdateResponse = ApiResponse<Admin>;
+export type PharmacyUpdateResponse = ApiResponse<Pharmacy>;

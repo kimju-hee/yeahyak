@@ -9,7 +9,7 @@ export interface PharmacyRequestListParams {
   size?: number;
 }
 
-export interface PharmacyRequestListRes {
+export interface PharmacyRequestList {
   pharmacyRequestId: number;
   userId: number;
   email: string;
@@ -30,7 +30,7 @@ export type PharmacyRequestStatus = keyof typeof PHARMACY_REQUEST_STATUS;
 export type PharmacyRequestStatusColorMap = { [key in PharmacyRequestStatus]: string };
 export type PharmacyRequestStatusTextMap = { [key in PharmacyRequestStatus]: string };
 
-export interface PharmacyRequestDetailRes {
+export interface PharmacyRequestDetail {
   pharmacyRequestId: number;
   userId: number;
   email: string;
@@ -44,8 +44,8 @@ export interface PharmacyRequestDetailRes {
   contact: string;
   status: PharmacyRequestStatus;
   requestedAt: string;
-  processedAt: string;
+  processedAt?: string;
 }
 
-export type PharmacyRequestListResponse = PaginatedResponse<PharmacyRequestListRes>;
-export type PharmacyRequestDetailResponse = ApiResponse<PharmacyRequestDetailRes>;
+export type PharmacyRequestListResponse = PaginatedResponse<PharmacyRequestList>;
+export type PharmacyRequestDetailResponse = ApiResponse<PharmacyRequestDetail>;

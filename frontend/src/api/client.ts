@@ -55,6 +55,7 @@ const attach401Refresh = (client: AxiosInstance) => {
       (originalRequest as any)._retry = true;
 
       try {
+        // 백엔드는 refresh token을 쿠키에서 자동으로 읽으므로 별도 전송 불필요
         const { data } = await refreshInstance.post('/auth/refresh');
         const newToken = data?.data?.accessToken;
         if (!newToken) {

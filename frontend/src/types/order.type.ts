@@ -1,5 +1,4 @@
-import type { Region } from '.';
-import type { ApiResponse, PaginatedResponse } from './api.type';
+import type { ApiResponse, MainCategory, PaginatedResponse, Region, SubCategory } from '.';
 
 export const ORDER_STATUS = {
   REQUESTED: 'REQUESTED',
@@ -23,27 +22,27 @@ export interface OrderCartItem {
   subtotalPrice: number;
 }
 
-export interface OrderCreateReq {
+export interface OrderCreateRequest {
   pharmacyId: number;
-  items: OrderCreateItemReq[];
+  items: OrderCreateRequestItem[];
 }
 
-export interface OrderCreateItemReq {
+export interface OrderCreateRequestItem {
   productId: number;
   quantity: number;
   unitPrice: number;
   subtotalPrice: number;
 }
 
-export interface OrderCreateRes {
+export interface OrderCreate {
   orderId: number;
 }
 
-export interface OrderUpdateReq {
+export interface OrderUpdateRequest {
   status: OrderStatus;
 }
 
-export interface OrderDetailRes {
+export interface OrderDetail {
   orderId: number;
   pharmacyId: number;
   pharmacyName: string;
@@ -52,14 +51,14 @@ export interface OrderDetailRes {
   totalPrice: number;
   createdAt: string;
   updatedAt?: string;
-  items: OrderDetailResItem[];
+  items: OrderDetailItem[];
 }
 
-export interface OrderDetailResItem {
+export interface OrderDetailItem {
   productId: number;
   productName: string;
-  mainCategory: string;
-  subCategory: string;
+  mainCategory: MainCategory;
+  subCategory: SubCategory;
   manufacturer: string;
   productImgUrl: string;
   quantity: number;
@@ -67,7 +66,7 @@ export interface OrderDetailResItem {
   subtotalPrice: number;
 }
 
-export interface OrderListRes {
+export interface OrderList {
   orderId: number;
   pharmacyId: number;
   pharmacyName: string;
@@ -75,13 +74,6 @@ export interface OrderListRes {
   summary: string;
   totalPrice: number;
   createdAt: string;
-}
-
-export interface OrderListBranchParams {
-  pharmacyId: number;
-  status?: OrderStatus;
-  page?: number;
-  size?: number;
 }
 
 export interface OrderListHqParams {
@@ -93,10 +85,17 @@ export interface OrderListHqParams {
   size?: number;
 }
 
-export interface OrderForecastReq {
+export interface OrderListBranchParams {
+  pharmacyId: number;
+  status?: OrderStatus;
+  page?: number;
+  size?: number;
+}
+
+export interface OrderForecastRequest {
   file: File;
 }
 
-export type OrderCreateResponse = ApiResponse<OrderCreateRes>;
-export type OrderListResponse = PaginatedResponse<OrderDetailRes>;
-export type OrderDetailResponse = ApiResponse<OrderDetailRes>;
+export type OrderCreateResponse = ApiResponse<OrderCreate>;
+export type OrderListResponse = PaginatedResponse<OrderList>;
+export type OrderDetailResponse = ApiResponse<OrderDetail>;

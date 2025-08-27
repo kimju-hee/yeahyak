@@ -9,22 +9,22 @@ export const NOTICE_TYPE = {
 export type NoticeType = keyof typeof NOTICE_TYPE;
 export type NoticeTypeTextMap = { [key in NoticeType]: string };
 
-export interface NoticeCreateReq {
-  notice: NoticeJson;
-  file?: File;
-}
-
-export interface NoticeJson {
+export interface NoticeCreateRequest {
   type: NoticeType;
   title: string;
   content: string;
 }
 
-export interface NoticeCreateRes {
+export interface NoticeCreateRequestWithFile {
+  notice: NoticeCreateRequest;
+  file?: File;
+}
+
+export interface NoticeCreate {
   noticeId: number;
 }
 
-export interface NoticeDetailRes {
+export interface NoticeDetail {
   noticeId: number;
   type: NoticeType;
   title: string;
@@ -42,22 +42,23 @@ export interface NoticeListParams {
   size?: number;
 }
 
-export interface NoticeListRes {
+export interface NoticeList {
   noticeId: number;
   type: NoticeType;
   title: string;
   createdAt: string;
 }
 
-export interface NoticeUpdateReq {
+export interface NoticeUpdateRequest {
   title: string;
   content: string;
 }
 
-export interface NoticeFileUpdateReq {
+export interface NoticeFileUpdateRequest {
   file: File;
 }
 
-export type NoticeCreateResponse = ApiResponse<NoticeCreateRes>;
-export type NoticeListResponse = PaginatedResponse<NoticeListRes>;
-export type NoticeDetailResponse = ApiResponse<NoticeDetailRes>;
+export type NoticeCreateResponse = ApiResponse<NoticeCreate>;
+export type NoticeListResponse = PaginatedResponse<NoticeList>;
+export type NoticeLatestListResponse = ApiResponse<NoticeList[]>;
+export type NoticeDetailResponse = ApiResponse<NoticeDetail>;

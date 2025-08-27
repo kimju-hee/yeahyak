@@ -8,7 +8,7 @@ export interface PharmacyListParams {
   size?: number;
 }
 
-export interface PharmacyListRes {
+export interface PharmacyList {
   pharmacyId: number;
   pharmacyName: string;
   bizRegNo: string;
@@ -24,8 +24,8 @@ export interface PharmacyListRes {
 
 export const REGION = {
   서울: '서울',
-  인천: '인천',
   경기: '경기',
+  인천: '인천',
   강원특별자치도: '강원특별자치도',
   충북: '충북',
   세종특별자치시: '세종특별자치시',
@@ -44,7 +44,7 @@ export const REGION = {
 export type Region = keyof typeof REGION;
 export type RegionTextMap = { [key in Region]: string };
 
-export interface SettlementRes {
+export interface Settlement {
   balanceTxId: number;
   pharmacyId: number;
   amount: number;
@@ -62,7 +62,7 @@ export interface BalanceTxListParams {
   size?: number;
 }
 
-export interface BalanceTxListRes {
+export interface BalanceTxList {
   balanceTxId: number;
   pharmacyId: number;
   type: BalanceTxType;
@@ -81,6 +81,6 @@ export type BalanceTxType = keyof typeof BALANCE_TX_TYPE;
 export type BalanceTxTypeTextMap = { [key in BalanceTxType]: string };
 export type BalanceTxTypeColorMap = { [key in BalanceTxType]: string };
 
-export type PharmacyListResponse = PaginatedResponse<PharmacyListRes>;
-export type SettlementResponse = ApiResponse<SettlementRes>;
-export type BalanceTxListResponse = PaginatedResponse<BalanceTxListRes>;
+export type PharmacyListResponse = PaginatedResponse<PharmacyList>;
+export type SettlementResponse = ApiResponse<Settlement>;
+export type BalanceTxListResponse = PaginatedResponse<BalanceTxList>;

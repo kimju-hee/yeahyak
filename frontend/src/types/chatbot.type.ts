@@ -1,13 +1,13 @@
 import type { ApiResponse } from './api.type';
 
-export interface ChatbotReq {
+export interface ChatbotRequest {
   userId: number;
   type: ChatType;
   question: string;
   history: ChatMessage[];
 }
 
-export interface ChatbotRes {
+export interface Chatbot {
   chatbotId: number;
   userId: number;
   type: ChatType;
@@ -36,4 +36,4 @@ export interface ChatMessage {
   loading?: boolean;
 }
 
-export type ChatbotResponse = ApiResponse<ChatbotRes>;
+export type ChatbotResponse = ApiResponse<Chatbot>;

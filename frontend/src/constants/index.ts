@@ -6,6 +6,5 @@ export * from './pharmacy.constant';
 export * from './pharmacyRequest.constant';
 export * from './product.constant';
 export * from './public.constant';
-export * from './region.constant';
 export * from './return.constant';
 export * from './stock.constant';

@@ -1,6 +1,6 @@
 import { STOCK_ENDPOINT } from '../constants';
 import type {
-  StockInReq,
+  StockInRequest,
   StockInResponse,
   StockTxDetailParams,
   StockTxDetailResponse,
@@ -8,17 +8,17 @@ import type {
 import { instance } from './client';
 
 // 재고 입고 처리
-export const stockIn = async (data: StockInReq): Promise<StockInResponse> => {
+export const stockIn = async (data: StockInRequest): Promise<StockInResponse> => {
   const response = await instance.post(STOCK_ENDPOINT.IN, data);
   console.log('🚚 재고 입고 처리 응답:', response);
   return response.data;
 };
 
-// 재고 상세 조회
-export const getStockDetail = async (
-  params?: StockTxDetailParams,
+// 제품별 재고 거래 내역 조회
+export const getStockTxList = async (
+  params: StockTxDetailParams,
 ): Promise<StockTxDetailResponse> => {
   const response = await instance.get(STOCK_ENDPOINT.DETAIL, { params });
-  console.log('🚚 재고 상세 조회 응답:', response);
+  console.log('🚚 재고 거래 내역 조회 응답:', response);
   return response.data;
 };
