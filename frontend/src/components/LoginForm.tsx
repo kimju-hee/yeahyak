@@ -1,7 +1,7 @@
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { Button, Divider, Flex, Form, Input } from 'antd';
 import { Link } from 'react-router-dom';
-import type { UserRole } from '../types';
+import type { UserRole } from '../types/profile.type';
 
 interface LoginFormProps {
   role: UserRole;
@@ -12,73 +12,52 @@ interface LoginFormProps {
 export default function LoginForm({ role, form, handleSubmit }: LoginFormProps) {
   return (
     <Form name={`login-${role.toLowerCase()}`} form={form} onFinish={handleSubmit}>
-      <Flex vertical justify="center" gap={4}>
+      <Flex vertical justify="center">
         <Form.Item
           name="email"
           rules={[{ required: true, message: '이메일을 입력해주세요.' }]}
           validateTrigger="onSubmit"
         >
-          <Input
-            prefix={<UserOutlined style={{ margin: '0 8px' }} />}
-            placeholder="이메일"
-            size="large"
-          />
+          <Input prefix={<UserOutlined />} placeholder="이메일" />
         </Form.Item>
         <Form.Item
           name="password"
           rules={[{ required: true, message: '비밀번호를 입력해주세요.' }]}
           validateTrigger="onSubmit"
         >
-          <Input
-            prefix={<LockOutlined style={{ margin: '0 8px' }} />}
-            type="password"
-            placeholder="비밀번호"
-            size="large"
-          />
+          <Input prefix={<LockOutlined />} type="password" placeholder="비밀번호" />
         </Form.Item>
 
-        <Button
-          type="primary"
-          htmlType="submit"
-          block
-          style={{ marginBottom: '16px' }}
-          size="large"
-        >
+        <Button type="primary" htmlType="submit" block style={{ marginBottom: '8px' }}>
           로그인
         </Button>
 
         <Flex justify="center" align="center" gap="small">
-          {role === 'PHARMACY' ? (
+          {role === 'BRANCH' ? (
             <>
-              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap', fontSize: '16px' }}>
+              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 아이디 찾기
               </Link>
               <Divider type="vertical" />
-              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap', fontSize: '16px' }}>
+              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 비밀번호 찾기
               </Link>
               <Divider type="vertical" />
-              <Link
-                to="/signup-branch"
-                style={{ color: 'black', whiteSpace: 'nowrap', fontSize: '16px' }}
-              >
+              <Link to="/signup-branch" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 회원가입
               </Link>
             </>
           ) : (
             <>
-              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap', fontSize: '16px' }}>
+              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 아이디 찾기
               </Link>
               <Divider type="vertical" />
-              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap', fontSize: '16px' }}>
+              <Link to="" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 비밀번호 찾기
               </Link>
               <Divider type="vertical" />
-              <Link
-                to="/signup-hq"
-                style={{ color: 'black', whiteSpace: 'nowrap', fontSize: '16px' }}
-              >
+              <Link to="/signup-hq" style={{ color: 'black', whiteSpace: 'nowrap' }}>
                 회원가입
               </Link>
             </>

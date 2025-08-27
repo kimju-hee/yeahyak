@@ -35,15 +35,14 @@ import {
 import { useAuthStore } from '../../stores/authStore';
 import { useOrderCartStore } from '../../stores/orderCartStore';
 import type {
+  Order,
   OrderCartItem,
   OrderCreateRequest,
-  OrderDetail,
   OrderDetailResponse,
   OrderForecastRequest,
-  OrderList,
   OrderStatus,
   Pharmacy,
-  ProductList,
+  Product,
   User,
 } from '../../types';
 import { PLACEHOLDER } from '../../utils';
@@ -64,13 +63,12 @@ export default function OrderRequestPage() {
   const user = useAuthStore((state) => state.user) as User;
   const profile = useAuthStore((state) => state.profile) as Pharmacy;
   const updateUser = useAuthStore((state) => state.updateUser);
-  const updateProfile = useAuthStore((state) => state.updateProfile);
-  const balance = profile.outstandingBalance;
+  const point = user.point;
   const pharmacyId = profile.pharmacyId;
   const { items, addItem, removeItem, updateQuantity, clearCart, getTotalPrice } =
     useOrderCartStore();
 
-  const [orders, setOrders] = useState<OrderList[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [currentStatusFilter, setCurrentStatusFilter] = useState<OrderStatus | undefined>(
     undefined,
   );
@@ -82,7 +80,7 @@ export default function OrderRequestPage() {
   const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
 
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
-  const [products, setProducts] = useState<ProductList[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState({
     keyword: undefined as string | undefined,
     appliedKeyword: undefined as string | undefined,
@@ -99,7 +97,7 @@ export default function OrderRequestPage() {
   const fetchOrders = async (statusFilter: OrderStatus | undefined) => {
     setOrdersLoading(true);
     try {
-      const res = await orderAPI.getOrdersBranch({
+      const res = await orderAPI.getBranchOrders({
         pharmacyId: pharmacyId,
         page: ordersCurrentPage - 1,
         size: PAGE_SIZE,
@@ -107,9 +105,9 @@ export default function OrderRequestPage() {
       });
 
       if (res.success) {
-        const { data, page } = res;
+        const { data, totalElements } = res;
         setOrders(data);
-        setOrdersTotal(page.totalElements);
+        setOrdersTotal(totalElements);
       } else {
         setOrders([]);
         setOrdersTotal(0);
@@ -150,9 +148,9 @@ export default function OrderRequestPage() {
       });
 
       if (res.success) {
-        const { data, page } = res;
+        const { data, totalElements } = res;
         setProducts(data);
-        setProductsTotal(page.totalElements);
+        setProductsTotal(totalElements);
       } else {
         setProducts([]);
         setProductsTotal(0);
@@ -213,7 +211,7 @@ export default function OrderRequestPage() {
   };
 
   const handleSubmit = async () => {
-    if (balance + totalPrice > CREDIT_CONSTANTS.CREDIT_LIMIT) {
+    if (point - totalPrice < CREDIT_CONSTANTS.MIN_POINT) {
       messageApi.error('신용 한도를 초과합니다.');
       return;
     }
@@ -234,7 +232,7 @@ export default function OrderRequestPage() {
       if (res.success) {
         messageApi.success('발주 요청이 완료되었습니다.');
         fetchOrders(currentStatusFilter);
-        updateProfile({ outstandingBalance: balance + res.data.totalPrice }); // FIXME: 우짜지/..
+        updateUser({ point: point - res.data.totalPrice });
         clearCart();
       }
     } catch (e: any) {
@@ -256,7 +254,7 @@ export default function OrderRequestPage() {
     if (newPage !== ordersCurrentPage) setOrdersCurrentPage(newPage);
   };
 
-  const handleExpand = (expanded: boolean, record: OrderDetail) => {
+  const handleExpand = (expanded: boolean, record: Order) => {
     const orderId = record.orderId;
     if (expanded) fetchOrderDetail(orderId);
     setExpandedRowKeys(
@@ -312,7 +310,7 @@ export default function OrderRequestPage() {
   ];
 
   // 제품목록 테이블
-  const productsColumns: TableProps<ProductList>['columns'] = [
+  const productsColumns: TableProps<Product>['columns'] = [
     {
       title: '제품이미지',
       dataIndex: 'productImgUrl',
@@ -350,7 +348,7 @@ export default function OrderRequestPage() {
   ];
 
   // 발주내역 테이블
-  const ordersColumns: TableProps<OrderList>['columns'] = [
+  const ordersColumns: TableProps<Order>['columns'] = [
     { title: '주문번호', dataIndex: 'orderId', key: 'orderId' },
     {
       title: '일시',
@@ -360,8 +358,14 @@ export default function OrderRequestPage() {
     },
     {
       title: '요약',
-      dataIndex: 'summary',
-      key: 'summary',
+      key: 'orderSummary',
+      render: (_, record) => {
+        if (record.items.length > 1) {
+          return `${record.items[0].productName} 외 ${record.items.length - 1}건`;
+        } else {
+          return `${record.items[0].productName}`;
+        }
+      },
     },
     {
       title: '합계',
@@ -383,7 +387,7 @@ export default function OrderRequestPage() {
   ];
 
   // 발주내역 테이블 상세
-  const expandedRowRender = (record: OrderDetail) => {
+  const expandedRowRender = (record: Order) => {
     const detailData = expandedRowData[record.orderId];
     const isLoading = expandedRowLoading[record.orderId];
     if (isLoading) return <Spin />;
@@ -470,7 +474,7 @@ export default function OrderRequestPage() {
           title={
             items.length === 0
               ? '장바구니에 담긴 제품이 없습니다.'
-              : balance + totalPrice > CREDIT_CONSTANTS.CREDIT_LIMIT
+              : point - totalPrice < CREDIT_CONSTANTS.MIN_POINT
                 ? '신용 한도를 초과합니다.'
                 : ''
           }
@@ -478,7 +482,7 @@ export default function OrderRequestPage() {
           <Button
             type="primary"
             danger
-            disabled={items.length === 0 || balance + totalPrice > CREDIT_CONSTANTS.CREDIT_LIMIT}
+            disabled={items.length === 0 || point - totalPrice < CREDIT_CONSTANTS.MIN_POINT}
             onClick={handleSubmit}
             loading={submitLoading}
           >
@@ -569,7 +573,7 @@ export default function OrderRequestPage() {
 
       <Row gutter={16} justify="center" style={{ marginBottom: '24px' }}>
         <Col span={8} style={{ textAlign: 'center' }}>
-          <Statistic title="현재 잔액" value={balance} suffix="원" />
+          <Statistic title="현재 잔액" value={point} suffix="원" />
         </Col>
         <Col span={8} style={{ textAlign: 'center' }}>
           <Statistic title="합계 금액" value={totalPrice.toLocaleString()} suffix="원" />
@@ -577,9 +581,9 @@ export default function OrderRequestPage() {
         <Col span={8} style={{ textAlign: 'center' }}>
           <Statistic
             title="주문 후 예상 잔액"
-            value={balance + totalPrice}
+            value={point - totalPrice}
             valueStyle={{
-              color: balance + totalPrice > CREDIT_CONSTANTS.CREDIT_LIMIT ? '#f5222d' : '#52c41a',
+              color: point - totalPrice < CREDIT_CONSTANTS.MIN_POINT ? '#f5222d' : '#52c41a',
             }}
             suffix="원"
           />

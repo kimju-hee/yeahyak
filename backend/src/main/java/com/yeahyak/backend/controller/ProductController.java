@@ -1,130 +1,142 @@
 package com.yeahyak.backend.controller;
 
-import com.yeahyak.backend.dto.ApiResponse;
-import com.yeahyak.backend.dto.ProductCreateRequest;
-import com.yeahyak.backend.dto.ProductCreateResponse;
-import com.yeahyak.backend.dto.ProductDetailResponse;
-import com.yeahyak.backend.dto.ProductListResponse;
-import com.yeahyak.backend.dto.ProductUpdateRequest;
+import com.yeahyak.backend.dto.JinhoResponse;
+import com.yeahyak.backend.dto.ProductRequestDTO;
+import com.yeahyak.backend.dto.ProductResponseDTO;
+import com.yeahyak.backend.entity.Product;
 import com.yeahyak.backend.entity.enums.MainCategory;
 import com.yeahyak.backend.entity.enums.SubCategory;
 import com.yeahyak.backend.service.ProductService;
-import jakarta.validation.Valid;
-import java.net.URI;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.Arrays;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 제품 관련 API를 처리하는 컨트롤러입니다.
- */
 @RestController
-@RequestMapping(value = "/api/products", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/api/products")
 @RequiredArgsConstructor
-@Validated
 public class ProductController {
 
-  private final ProductService productService;
+    private final ProductService productService;
 
-  /**
-   * 제품을 생성합니다.
-   */
-  @PreAuthorize("hasRole('ADMIN')")
-  @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<ApiResponse<ProductCreateResponse>> createProduct(
-      @RequestBody @Valid ProductCreateRequest request
-  ) {
-    ProductCreateResponse res = productService.createProduct(request);
-    URI location = URI.create("/api/products/" + res.getProductId());
-    return ResponseEntity.created(location).body(ApiResponse.ok(res)); // 201 Created
-  }
+    // 1. 상품 등록
+    @PostMapping
+    public JinhoResponse<Long> registerProduct(@RequestBody ProductRequestDTO dto) {
+        Long productId = productService.registerProduct(dto);
+        return JinhoResponse.<Long>builder()
+                .success(true)
+                .data(List.of(productId))
+                .totalPages(1)
+                .totalElements(1)
+                .currentPage(0)
+                .build();
+    }
 
-  /**
-   * 제품 목록을 조회합니다. (카테고리/키워드/재고임계값 + 페이지네이션)
-   */
-  @PreAuthorize("isAuthenticated()")
-  @GetMapping
-  public ResponseEntity<ApiResponse<List<ProductListResponse>>> getProducts(
-      @RequestParam(required = false) MainCategory mainCategory,
-      @RequestParam(required = false) SubCategory subCategory,
-      @RequestParam(required = false) String keyword,
-      @RequestParam(defaultValue = "100") int stockQtyThreshold,
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "10") int size
-  ) {
-    Page<ProductListResponse> result =
-        productService.getProducts(mainCategory, subCategory, keyword, stockQtyThreshold, page,
-            size);
-    return ResponseEntity.ok(ApiResponse.withPagination(result)); // 200 OK
-  }
+    // 2. 전체 상품 조회 (비추천 - 페이징 없음)
+    @GetMapping
+    public JinhoResponse<ProductResponseDTO> getAllProducts() {
+        List<Product> products = productService.getAllProducts();
 
-  /**
-   * 제품 상세를 조회합니다.
-   */
-  @PreAuthorize("isAuthenticated()")
-  @GetMapping("/{productId}")
-  public ResponseEntity<ApiResponse<ProductDetailResponse>> getProductById(
-      @PathVariable Long productId
-  ) {
-    ProductDetailResponse detail = productService.getProductById(productId);
-    return ResponseEntity.ok(ApiResponse.ok(detail)); // 200 OK
-  }
+        List<ProductResponseDTO> dtoList = products.stream()
+                .map(product -> ProductResponseDTO.builder()
+                        .productId(product.getProductId())
+                        .productName(product.getProductName())
+                        .productCode(product.getProductCode())
+                        .mainCategory(product.getMainCategory())
+                        .subCategory(product.getSubCategory())
+                        .manufacturer(product.getManufacturer())
+                        .details(product.getDetails())
+                        .productImgUrl(product.getProductImgUrl())
+                        .unit(product.getUnit())
+                        .unitPrice(product.getUnitPrice())
+                        .createdAt(product.getCreatedAt())
+                        .build())
+                .toList();
 
-  /**
-   * 제품을 수정합니다.
-   */
-  @PreAuthorize("hasRole('ADMIN')")
-  @PatchMapping(path = "/{productId}", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<Void> updateProduct(
-      @PathVariable Long productId,
-      @RequestBody @Valid ProductUpdateRequest request
-  ) {
-    productService.updateProduct(productId, request);
-    return ResponseEntity.noContent().build(); // 204 No Content
-  }
+        return JinhoResponse.<ProductResponseDTO>builder()
+                .success(true)
+                .data(dtoList)
+                .totalPages(1)
+                .totalElements(dtoList.size())
+                .currentPage(0)
+                .build();
+    }
 
-  /**
-   * 제품을 삭제합니다.
-   */
-  @PreAuthorize("hasRole('ADMIN')")
-  @DeleteMapping("/{productId}")
-  public ResponseEntity<Void> deleteProduct(
-      @PathVariable Long productId
-  ) {
-    productService.deleteProduct(productId);
-    return ResponseEntity.noContent().build(); // 204 No Content
-  }
+    // 3. 필터 + 키워드 + 페이지네이션 + 최신순 정렬
+    @GetMapping("/filter")
+    public JinhoResponse<ProductResponseDTO> getFilteredProducts(
+            @RequestParam(required = false) MainCategory mainCategory,
+            @RequestParam(required = false) SubCategory subCategory,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<ProductResponseDTO> result = productService.getFilteredProducts(mainCategory, subCategory, keyword, page, size);
 
-  /**
-   * 카테고리 맵을 조회합니다.
-   */
-  @PreAuthorize("isAuthenticated()")
-  @GetMapping("/categories")
-  public ResponseEntity<ApiResponse<Map<MainCategory, List<SubCategory>>>> getCategoryMap() {
-    Map<MainCategory, List<SubCategory>> map =
-        Arrays.stream(SubCategory.values())
-            .collect(Collectors
-                .groupingBy(SubCategory::getMainCategory,
-                    () -> new EnumMap<>(MainCategory.class),
-                    Collectors.toList()
-                ));
-    return ResponseEntity.ok(ApiResponse.ok(map)); // 200 OK
-  }
+        return JinhoResponse.<ProductResponseDTO>builder()
+                .success(true)
+                .data(result.getContent())
+                .totalPages(result.getTotalPages())
+                .totalElements(result.getTotalElements())
+                .currentPage(result.getNumber())
+                .build();
+    }
+
+    // 4. 단일 상품 조회
+    @GetMapping("/{id}")
+    public JinhoResponse<Product> getProductById(@PathVariable Long id) {
+        Product product = productService.getProductById(id);
+        return JinhoResponse.<Product>builder()
+                .success(true)
+                .data(List.of(product))
+                .totalPages(1)
+                .totalElements(1)
+                .currentPage(0)
+                .build();
+    }
+
+    // 5. 상품 삭제
+    @DeleteMapping("/{id}")
+    public JinhoResponse<String> deleteProduct(@PathVariable Long id) {
+        productService.deleteProduct(id);
+        return JinhoResponse.<String>builder()
+                .success(true)
+                .data(List.of("삭제되었습니다."))
+                .totalPages(1)
+                .totalElements(1)
+                .currentPage(0)
+                .build();
+    }
+
+    // 6. 상품 수정
+    @PutMapping("/{id}")
+    public JinhoResponse<Product> updateProduct(@PathVariable Long id, @RequestBody ProductRequestDTO dto) {
+        Product updated = productService.updateProduct(id, dto);
+        return JinhoResponse.<Product>builder()
+                .success(true)
+                .data(List.of(updated))
+                .totalPages(1)
+                .totalElements(1)
+                .currentPage(0)
+                .build();
+    }
+
+    // 7. 카테고리 리스트 조회
+    @GetMapping("/categories")
+    public JinhoResponse<Map<MainCategory, List<SubCategory>>> getCategoryMap() {
+        Map<MainCategory, List<SubCategory>> map = Arrays.stream(SubCategory.values())
+                .collect(Collectors.groupingBy(SubCategory::getMainCategory));
+
+        return JinhoResponse.<Map<MainCategory, List<SubCategory>>>builder()
+                .success(true)
+                .data(List.of(map))  // 단일 Map을 List로 래핑
+                .totalPages(1)
+                .totalElements(1)
+                .currentPage(0)
+                .build();
+    }
 }

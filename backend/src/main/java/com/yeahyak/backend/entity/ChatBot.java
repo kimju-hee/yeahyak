@@ -1,58 +1,35 @@
 package com.yeahyak.backend.entity;
 
-import com.yeahyak.backend.entity.enums.ChatBotType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import com.yeahyak.backend.dto.ChatType;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.time.LocalDateTime;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @Table(name = "chatbot")
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class ChatBot {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "chatbot_id")
-  private Long chatbotId;
+    private Long userId;
+    private String question;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "user_id", nullable = false)
-  private User user;
+    @Lob
+    @Column(name = "response", columnDefinition = "TEXT", nullable = true)
+    private String response;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private ChatBotType type;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ChatType chatType;
 
-  @Lob
-  @Column(nullable = false, columnDefinition = "TEXT")
-  private String question;
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 
-  @Lob
-  @Column(nullable = false, columnDefinition = "TEXT")
-  private String answer;
-
-  @Column(name = "asked_at", nullable = false)
-  private LocalDateTime askedAt;
-
-  @Column(name = "answered_at")
-  private LocalDateTime answeredAt;
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 }

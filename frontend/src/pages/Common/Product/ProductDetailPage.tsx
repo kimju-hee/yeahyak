@@ -18,7 +18,7 @@ import { productAPI } from '../../../api';
 import { ProductDetailSkeleton } from '../../../components/skeletons';
 import { useAuthStore } from '../../../stores/authStore';
 import { useOrderCartStore } from '../../../stores/orderCartStore';
-import { USER_ROLE, type OrderCartItem, type ProductDetail, type User } from '../../../types';
+import { USER_ROLE, type OrderCartItem, type Product, type User } from '../../../types';
 import { getProductImgSrc, PLACEHOLDER } from '../../../utils';
 
 export default function ProductDetailPage() {
@@ -29,10 +29,10 @@ export default function ProductDetailPage() {
 
   const user = useAuthStore((state) => state.user) as User;
   const addItem = useOrderCartStore((state) => state.addItem);
-  const basePath = user.role === USER_ROLE.PHARMACY ? '/branch' : '/hq';
+  const basePath = user.role === USER_ROLE.BRANCH ? '/branch' : '/hq';
   const returnTo = location.state?.returnTo;
 
-  const [product, setProduct] = useState<ProductDetail>();
+  const [product, setProduct] = useState<Product>();
   const [loading, setLoading] = useState(false);
 
   const fetchProduct = async () => {
@@ -62,17 +62,20 @@ export default function ProductDetailPage() {
   const handleDelete = async () => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
       try {
-        await productAPI.deleteProduct(Number(id));
-        messageApi.success('제품이 삭제되었습니다.');
-        if (returnTo) {
-          const params = new URLSearchParams();
-          params.set('main', returnTo.main);
-          params.set('sub', returnTo.sub);
-          if (returnTo.page > 1) params.set('page', returnTo.page.toString());
-          if (returnTo.keyword) params.set('keyword', returnTo.keyword);
-          navigate(`${basePath}/products?${params.toString()}`);
-        } else {
-          navigate(`${basePath}/products`);
+        const res = await productAPI.deleteProduct(Number(id));
+
+        if (res.success) {
+          messageApi.success('제품이 삭제되었습니다.');
+          if (returnTo) {
+            const params = new URLSearchParams();
+            params.set('main', returnTo.main);
+            params.set('sub', returnTo.sub);
+            if (returnTo.page > 1) params.set('page', returnTo.page.toString());
+            if (returnTo.keyword) params.set('keyword', returnTo.keyword);
+            navigate(`${basePath}/products?${params.toString()}`);
+          } else {
+            navigate(`${basePath}/products`);
+          }
         }
       } catch (e: any) {
         console.error('제품 삭제 실패:', e);
@@ -83,7 +86,7 @@ export default function ProductDetailPage() {
 
   const descriptionsItems: DescriptionsProps['items'] = [
     { key: 'manufacturer', label: '제조사', children: product.manufacturer },
-    { key: 'productCode', label: '보험코드', children: product.insuranceCode },
+    { key: 'productCode', label: '보험코드', children: product.productCode },
     { key: 'subCategory', label: '소분류', children: product.subCategory },
     { key: 'unit', label: '단위', children: product.unit },
     {
@@ -145,7 +148,7 @@ export default function ProductDetailPage() {
                   </Button>
                 </Space>
               ) : (
-                <Tooltip title={`재고 수량: ${product.stockQty}개`}>
+                <Tooltip title={`재고 수량: ${product.stock}개`}>
                   <Button
                     type="primary"
                     onClick={() => {

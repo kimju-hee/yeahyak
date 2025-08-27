@@ -1,210 +1,210 @@
 package com.yeahyak.backend.controller;
 
-import com.yeahyak.backend.dto.AdminLoginResponse;
-import com.yeahyak.backend.dto.AdminProfile;
-import com.yeahyak.backend.dto.AdminSignupRequest;
-import com.yeahyak.backend.dto.AdminSignupResponse;
-import com.yeahyak.backend.dto.AdminUpdateRequest;
-import com.yeahyak.backend.dto.ApiResponse;
-import com.yeahyak.backend.dto.LoginRequest;
-import com.yeahyak.backend.dto.PasswordChangeRequest;
-import com.yeahyak.backend.dto.PharmacyLoginResponse;
-import com.yeahyak.backend.dto.PharmacyProfile;
-import com.yeahyak.backend.dto.PharmacySignupRequest;
-import com.yeahyak.backend.dto.PharmacySignupResponse;
-import com.yeahyak.backend.dto.PharmacyUpdateRequest;
+import com.yeahyak.backend.dto.*;
 import com.yeahyak.backend.entity.User;
 import com.yeahyak.backend.repository.UserRepository;
-import com.yeahyak.backend.security.JwtProvider;
+import com.yeahyak.backend.security.JwtUtil;
 import com.yeahyak.backend.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Positive;
-import java.net.URI;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
 
-/**
- * 인증 및 인가 관련 API를 처리하는 컨트롤러입니다.
- */
+import java.util.Map;
+
 @RestController
-@RequestMapping(value = "/api/auth", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
-@Validated
 public class AuthController {
 
-  private final AuthService authService;
-  private final JwtProvider jwtProvider;
-  private final UserRepository userRepo;
+    private final AuthService authService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
-  private ResponseCookie buildRefreshCookie(String refreshToken, long maxAge) {
-    return ResponseCookie.from("refreshToken", refreshToken)
-        .httpOnly(true)
-        .secure(false) // 로컬 개발 시 false, 배포 시 true로 변경
-        .sameSite("Lax") // 로컬 개발 시 Lax, 배포 시 None으로 변경
-        .path("/")
-        .maxAge(maxAge) // 7일
-        .build();
-  }
-
-  /**
-   * (관리자) 회원가입.
-   */
-  @PostMapping(path = "/admin/signup", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<ApiResponse<AdminSignupResponse>> adminSignup(
-      @RequestBody @Valid AdminSignupRequest request
-  ) {
-    AdminSignupResponse res = authService.adminSignup(request);
-    // 생성된 관리자 리소스 위치
-    URI location = URI.create("/api/admins/" + res.getAdminId());
-    return ResponseEntity.created(location).body(ApiResponse.ok(res)); // 201 Created
-  }
-
-  /**
-   * (약국) 회원가입.
-   */
-  @PostMapping(path = "/pharmacy/signup", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<ApiResponse<PharmacySignupResponse>> pharmacySignup(
-      @RequestBody @Valid PharmacySignupRequest request
-  ) {
-    PharmacySignupResponse res = authService.pharmacySignup(request);
-    // 함께 생성된 약국 등록 요청 리소스 위치
-    URI location = URI.create("/api/pharmacy-requests/" + res.getPharmacyRequestId());
-    return ResponseEntity.created(location).body(ApiResponse.ok(res)); // 201 Created
-  }
-
-  /**
-   * (관리자) 로그인.
-   */
-  @PostMapping(path = "/admin/login", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<ApiResponse<AdminLoginResponse>> adminLogin(
-      @RequestBody @Valid LoginRequest request,
-      HttpServletResponse response
-  ) {
-    AdminLoginResponse res = authService.adminLogin(request);
-    User user = userRepo.findByEmail(res.getUser().getEmail())
-        .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
-
-    String refreshToken = jwtProvider.createRefreshToken(user);
-    ResponseCookie refreshCookie = buildRefreshCookie(refreshToken, 7 * 24 * 60 * 60);
-    response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
-
-    return ResponseEntity.ok(ApiResponse.ok(res)); // 200 OK
-  }
-
-  /**
-   * (약국) 로그인.
-   */
-  @PostMapping(path = "/pharmacy/login", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<ApiResponse<PharmacyLoginResponse>> pharmacyLogin(
-      @RequestBody @Valid LoginRequest request,
-      HttpServletResponse response
-  ) {
-    PharmacyLoginResponse res = authService.pharmacylogin(request);
-    User user = userRepo.findByEmail(res.getUser().getEmail())
-        .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
-
-    String refreshToken = jwtProvider.createRefreshToken(user);
-    ResponseCookie refreshCookie = buildRefreshCookie(refreshToken, 7 * 24 * 60 * 60);
-    response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
-
-    return ResponseEntity.ok(ApiResponse.ok(res)); // 200 OK
-  }
-
-  /**
-   * 토큰을 재발급합니다.
-   */
-  @PostMapping("/refresh")
-  public ResponseEntity<ApiResponse<Map<String, String>>> refreshToken(
-      @CookieValue(value = "refreshToken", required = false) String refreshToken,
-      HttpServletResponse response
-  ) {
-    if (refreshToken == null || !jwtProvider.validateToken(refreshToken)) {
-      return ResponseEntity.status(401)
-          .body(ApiResponse.<Map<String, String>>builder()
-              .success(false)
-              .data(Map.of("message", "Refresh Token이 유효하지 않습니다."))
-              .build());
+    @PostMapping("/signup")
+    public ResponseEntity<ApiResponse<String>> signup(@Valid @RequestBody SignupRequest request) {
+        authService.register(request);
+        return ResponseEntity.ok(new ApiResponse<>(true, ""));
     }
 
-    String email = jwtProvider.getClaims(refreshToken).getSubject();
-    User user = userRepo.findByEmail(email)
-        .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-
-    String newAccessToken = jwtProvider.createAccessToken(user);
-
-    String newRefreshToken = jwtProvider.createRefreshToken(user);
-    ResponseCookie newRefreshCookie = buildRefreshCookie(newRefreshToken, 7 * 24 * 60 * 60);
-    response.addHeader(HttpHeaders.SET_COOKIE, newRefreshCookie.toString());
-
-    return ResponseEntity.ok(ApiResponse.ok(Map.of("accessToken", newAccessToken))); // 200 OK
-  }
-
-  /**
-   * 비밀번호를 변경합니다.
-   */
-  @PreAuthorize("isAuthenticated()")
-  @PostMapping(path = "/password", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<Void> changePassword(
-      @RequestBody @Valid PasswordChangeRequest request
-  ) {
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-    if (auth == null || !auth.isAuthenticated()) {
-      return ResponseEntity.status(401).build(); // 401 Unauthorized
+    @PostMapping("/admin/signup")
+    public ResponseEntity<ApiResponse<String>> adminSignup(@Valid @RequestBody AdminSignupRequest request) {
+        authService.registerAdmin(request);
+        return ResponseEntity.ok(new ApiResponse<>(true, ""));
     }
-    User user = (User) auth.getPrincipal();
-    Long userId = user.getUserId();
-    authService.changePassword(userId, request);
-    return ResponseEntity.noContent().build(); // 204 No Content
-  }
 
-  /**
-   * 관리자 프로필을 수정합니다.
-   */
-  @PreAuthorize("hasRole('ADMIN')")
-  @PatchMapping(path = "/admin/{adminId}", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<ApiResponse<AdminProfile>> updateAdmin(
-      @PathVariable @Positive Long adminId,
-      @RequestBody @Valid AdminUpdateRequest request
-  ) {
-    AdminProfile profile = authService.updateAdmin(adminId, request);
-    return ResponseEntity.ok(ApiResponse.ok(profile)); // FE 동기화 편의상 200 OK + 데이터 반환
-  }
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(HttpServletRequest request) {
+        String refreshToken = null;
 
-  /**
-   * 약국 프로필을 수정합니다.
-   */
-  @PreAuthorize("hasRole('PHARMACY')")
-  @PatchMapping(path = "/pharmacy/{pharmacyId}", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<ApiResponse<PharmacyProfile>> updatePharmacy(
-      @PathVariable @Positive Long pharmacyId,
-      @RequestBody @Valid PharmacyUpdateRequest request
-  ) {
-    PharmacyProfile profile = authService.updatePharmacy(pharmacyId, request);
-    return ResponseEntity.ok(ApiResponse.ok(profile)); // FE 동기화 편의상 200 OK + 데이터 반환
-  }
+        if (request.getCookies() != null) {
+            for (var cookie : request.getCookies()) {
+                if ("refreshToken".equals(cookie.getName())) {
+                    refreshToken = cookie.getValue();
+                    break;
+                }
+            }
+        }
 
-  /**
-   * 로그아웃.
-   */
-  @PostMapping("/logout")
-  public ResponseEntity<Void> logout(HttpServletResponse response) {
-    response.addHeader(HttpHeaders.SET_COOKIE, buildRefreshCookie("", 0).toString());
-    return ResponseEntity.noContent().build(); // 204 No Content
-  }
+        if (refreshToken == null || !jwtUtil.validateToken(refreshToken)) {
+            return ResponseEntity.status(401).body("Refresh Token이 유효하지 않습니다.");
+        }
+
+        String email = jwtUtil.getClaims(refreshToken).getSubject();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        String newAccessToken = jwtUtil.createAccessToken(user);
+
+        return ResponseEntity.ok().body(Map.of("accessToken", newAccessToken));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+        LoginResponse loginResponse = authService.login(request);
+        User user = userRepository.findByEmail(loginResponse.getUser().getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        String accessToken = jwtUtil.createAccessToken(user);
+        String refreshToken = jwtUtil.createRefreshToken(user);
+
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", Map.of(
+                        "accessToken", accessToken,
+                        "user", Map.of(
+                                "userId", user.getUserId(),
+                                "email", user.getEmail(),
+                                "role", user.getUserRole().name(),
+                                "point", user.getPoint(),
+                                "creditStatus", user.getCreditStatus().name()
+                        ),
+                        "profile", loginResponse.getProfile()
+                )
+        ));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<String>> logout(HttpSession session) {
+        session.invalidate();
+        return ResponseEntity.ok(new ApiResponse<>(true, ""));
+    }
+
+    @PutMapping("/password")
+    public ResponseEntity<ApiResponse<String>> changePassword(
+            @RequestBody @Valid ChangePasswordRequest request
+    ) {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        String email;
+        if (principal instanceof User user) {
+            email = user.getEmail();
+        } else if (principal instanceof org.springframework.security.core.userdetails.User userDetails) {
+            email = userDetails.getUsername();
+        } else if (principal instanceof String str) {
+            email = str;
+        } else {
+            throw new RuntimeException("인증된 사용자 정보를 찾을 수 없습니다.");
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        authService.changePassword(user.getUserId(), request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "비밀번호가 변경되었습니다."));
+    }
+
+    @PutMapping("/update/{pharmacyId}")
+    public ResponseEntity<?> updatePharmacy(
+            @PathVariable Long pharmacyId,
+            @Valid @RequestBody UpdatePharmacyRequest request) {
+
+        PharmacyProfile updatedProfile = authService.updatePharmacy(pharmacyId, request);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", Map.of(
+                        "pharmacyId", updatedProfile.getPharmacyId(),
+                        "userId", updatedProfile.getUserId(),
+                        "pharmacyName", updatedProfile.getPharmacyName(),
+                        "bizRegNo", updatedProfile.getBizRegNo(),
+                        "representativeName", updatedProfile.getRepresentativeName(),
+                        "postcode", updatedProfile.getPostcode(),
+                        "address", updatedProfile.getAddress(),
+                        "detailAddress", updatedProfile.getDetailAddress(),
+                        "contact", updatedProfile.getContact(),
+                        "status", updatedProfile.getStatus()
+                )
+        ));
+    }
+
+    @PostMapping("/admin/login")
+    public ResponseEntity<?> adminLogin(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+        AdminLoginResponse loginResponse = authService.adminLogin(request);
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        String accessToken = jwtUtil.createAccessToken(user);
+        String refreshToken = jwtUtil.createRefreshToken(user);
+
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", Map.of(
+                        "accessToken", accessToken,
+                        "user", Map.of(
+                                "userId", user.getUserId(),
+                                "email", user.getEmail(),
+                                "role", user.getUserRole().name(),
+                                "point", user.getPoint(),
+                                "creditStatus", user.getCreditStatus().name() // 본사도 포함
+                        ),
+                        "profile", loginResponse.getProfile()
+                )
+        ));
+    }
+
+    @PutMapping("/update/admin/{adminId}")
+    public ResponseEntity<?> updateAdmin(
+            @PathVariable Long adminId,
+            @Valid @RequestBody UpdateAdminRequest request) {
+
+        AdminProfile updatedProfile = authService.updateAdmin(adminId, request);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", Map.of(
+                        "adminId", updatedProfile.getAdminId(),
+                        "userId", updatedProfile.getUserId(),
+                        "adminName", updatedProfile.getAdminName(),
+                        "department", updatedProfile.getDepartment()
+                )
+        ));
+    }
+
 }

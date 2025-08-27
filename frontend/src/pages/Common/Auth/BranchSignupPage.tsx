@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../../../api';
 import AddressInput from '../../../components/AddressInput';
 import TermsAndPrivacyCheckbox from '../../../components/TermsAndPolicyCheckbox';
-import type { PharmacySignupRequest } from '../../../types';
+import type { BranchSignupRequest } from '../../../types';
 import {
   formatBizRegNo,
   formatContact,
@@ -19,23 +19,21 @@ export default function BranchSignupPage() {
   const navigate = useNavigate();
 
   const handleSubmit = async (
-    values: PharmacySignupRequest & {
+    values: BranchSignupRequest & {
       confirmPassword: string;
       agreement: boolean;
     },
   ) => {
     try {
       const { confirmPassword, agreement, ...payload } = values;
-      const res = await authAPI.pharmacySignup(payload);
+      const res = await authAPI.branchSignup(payload);
 
       if (res.success) {
-        navigate('/login', {
-          replace: true,
-          state: { message: '회원가입이 완료되었습니다! 관리자 승인 후 서비스 이용이 가능합니다.' },
-        });
+        messageApi.success('회원가입이 완료되었습니다.');
+        navigate('/login', { replace: true });
       }
     } catch (e: any) {
-      console.error('약국 회원가입 실패:', e);
+      console.error('가맹점 회원가입 실패:', e);
       messageApi.error(e.response?.data?.message || '회원가입 중 오류가 발생했습니다.');
     }
   };
@@ -44,11 +42,11 @@ export default function BranchSignupPage() {
     <>
       {contextHolder}
       <Flex vertical justify="center" align="center">
-        <Typography.Title level={1} style={{ marginBottom: '48px' }}>
+        <Typography.Title level={1} style={{ marginBottom: '24px' }}>
           예약 회원가입
         </Typography.Title>
 
-        <Card style={{ padding: '48px 48px' }}>
+        <Card style={{ padding: '24px' }}>
           <Form
             form={form}
             name="signup-branch"
@@ -132,7 +130,6 @@ export default function BranchSignupPage() {
                 postcodeName="postcode"
                 addressName="address"
                 detailAddressName="detailAddress"
-                regionName="region"
                 label="주소"
               />
               <Form.Item
@@ -154,7 +151,6 @@ export default function BranchSignupPage() {
                   onKeyDown={handleNumberOnlyKeyDown}
                 />
               </Form.Item>
-
               <TermsAndPrivacyCheckbox />
 
               <Button type="primary" htmlType="submit" block>

@@ -1,19 +1,13 @@
 package com.yeahyak.backend.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
-@NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class AdminLoginResponse {
-
-  private String accessToken;
-  private UserInfo user;
-  private AdminProfile profile;
+    private UserInfo user;
+    private AdminProfile profile;
 }

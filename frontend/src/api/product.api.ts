@@ -2,10 +2,12 @@ import { PRODUCT_ENDPOINT } from '../constants';
 import type {
   ProductCreateRequest,
   ProductCreateResponse,
+  ProductDeleteResponse,
   ProductDetailResponse,
   ProductListParams,
   ProductListResponse,
   ProductUpdateRequest,
+  ProductUpdateResponse,
 } from '../types';
 import { instance } from './client';
 
@@ -34,13 +36,15 @@ export const getProduct = async (productId: number): Promise<ProductDetailRespon
 export const updateProduct = async (
   productId: number,
   data: ProductUpdateRequest,
-): Promise<void> => {
-  const response = await instance.patch(PRODUCT_ENDPOINT.UPDATE(productId), data);
+): Promise<ProductUpdateResponse> => {
+  const response = await instance.put(PRODUCT_ENDPOINT.UPDATE(productId), data);
   console.log('📦 상품 수정 응답:', response.data);
+  return response.data;
 };
 
 // 상품 삭제
-export const deleteProduct = async (productId: number): Promise<void> => {
+export const deleteProduct = async (productId: number): Promise<ProductDeleteResponse> => {
   const response = await instance.delete(PRODUCT_ENDPOINT.DELETE(productId));
   console.log('📦 상품 삭제 응답:', response.data);
+  return response.data;
 };

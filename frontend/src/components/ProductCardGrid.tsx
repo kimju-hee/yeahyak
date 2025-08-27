@@ -50,7 +50,7 @@ const ProductCard = memo(function ProductCard({
 export default function ProductCardGrid({ products }: ProductCardGridProps) {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user) as User;
-  const basePath = user.role === USER_ROLE.PHARMACY ? '/branch' : '/hq';
+  const basePath = user.role === USER_ROLE.BRANCH ? '/branch' : '/hq';
   const handleNavigate = useCallback(
     (productId: number) => navigate(`${basePath}/products/${productId}`),
     [navigate, basePath],

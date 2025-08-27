@@ -1,12 +1,14 @@
 package com.yeahyak.backend.repository;
 
 import com.yeahyak.backend.entity.User;
-import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
+
+import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
-
-  boolean existsByEmail(String email);
-
-  Optional<User> findByEmail(String email);
+    boolean existsByEmail(String email);
+    Optional<User> findByEmail(String email);
+    List<User> findByPointLessThan(int point);
+    List<User> findByCreditStatus(com.yeahyak.backend.entity.enums.CreditStatus status);
 }

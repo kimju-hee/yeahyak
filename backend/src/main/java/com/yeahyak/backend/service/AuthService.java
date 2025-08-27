@@ -1,30 +1,9 @@
 package com.yeahyak.backend.service;
 
-import com.yeahyak.backend.dto.AdminLoginResponse;
-import com.yeahyak.backend.dto.AdminProfile;
-import com.yeahyak.backend.dto.AdminSignupRequest;
-import com.yeahyak.backend.dto.AdminSignupResponse;
-import com.yeahyak.backend.dto.AdminUpdateRequest;
-import com.yeahyak.backend.dto.LoginRequest;
-import com.yeahyak.backend.dto.PasswordChangeRequest;
-import com.yeahyak.backend.dto.PharmacyLoginResponse;
-import com.yeahyak.backend.dto.PharmacyProfile;
-import com.yeahyak.backend.dto.PharmacySignupRequest;
-import com.yeahyak.backend.dto.PharmacySignupResponse;
-import com.yeahyak.backend.dto.PharmacyUpdateRequest;
-import com.yeahyak.backend.dto.UserInfo;
-import com.yeahyak.backend.entity.Admin;
-import com.yeahyak.backend.entity.Pharmacy;
-import com.yeahyak.backend.entity.PharmacyRequest;
-import com.yeahyak.backend.entity.User;
-import com.yeahyak.backend.entity.enums.PharmacyRequestStatus;
-import com.yeahyak.backend.entity.enums.UserRole;
-import com.yeahyak.backend.repository.AdminRepository;
-import com.yeahyak.backend.repository.PharmacyRepository;
-import com.yeahyak.backend.repository.PharmacyRequestRepository;
-import com.yeahyak.backend.repository.UserRepository;
-import com.yeahyak.backend.security.JwtProvider;
-import lombok.RequiredArgsConstructor;
+import java.time.LocalDateTime;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -32,278 +11,320 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 인증 및 사용자 관리와 관련된 비즈니스 로직을 처리하는 서비스 클래스입니다.
- */
-@Service
+import com.yeahyak.backend.dto.AdminLoginResponse;
+import com.yeahyak.backend.dto.AdminProfile;
+import com.yeahyak.backend.dto.AdminSignupRequest;
+import com.yeahyak.backend.dto.ChangePasswordRequest;
+import com.yeahyak.backend.dto.LoginRequest;
+import com.yeahyak.backend.dto.LoginResponse;
+import com.yeahyak.backend.dto.PharmacyApprovalResponse;
+import com.yeahyak.backend.dto.PharmacyDto;
+import com.yeahyak.backend.dto.PharmacyProfile;
+import com.yeahyak.backend.dto.PharmacyRequestDto;
+import com.yeahyak.backend.dto.SignupRequest;
+import com.yeahyak.backend.dto.UpdateAdminRequest;
+import com.yeahyak.backend.dto.UpdatePharmacyRequest;
+import com.yeahyak.backend.dto.UserInfo;
+import com.yeahyak.backend.entity.Admin;
+import com.yeahyak.backend.entity.Pharmacy;
+import com.yeahyak.backend.entity.PharmacyRegistrationRequest;
+import com.yeahyak.backend.entity.User;
+import com.yeahyak.backend.entity.enums.CreditStatus;
+import com.yeahyak.backend.entity.enums.Department;
+import com.yeahyak.backend.entity.enums.Status;
+import com.yeahyak.backend.entity.enums.UserRole;
+import com.yeahyak.backend.repository.AdminRepository;
+import com.yeahyak.backend.repository.PharmacyRegistrationRequestRepository;
+import com.yeahyak.backend.repository.PharmacyRepository;
+import com.yeahyak.backend.repository.UserRepository;
+
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+
 @RequiredArgsConstructor
+@Service
 public class AuthService {
 
-  private final UserRepository userRepo;
-  private final AdminRepository adminRepo;
-  private final PharmacyRepository pharmacyRepo;
-  private final PharmacyRequestRepository pharmacyRequestRepo;
-  private final PasswordEncoder passwordEncoder;
-  private final AuthenticationManager authenticationManager;
-  private final JwtProvider jwtProvider;
+    private final UserRepository userRepository;
+    private final PharmacyRepository pharmacyRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final AdminRepository adminRepository;
+    private final PharmacyRegistrationRequestRepository registrationRequestRepository;
 
-  /**
-   * 관리자로 회원가입합니다.
-   */
-  @Transactional
-  public AdminSignupResponse adminSignup(AdminSignupRequest req) {
-    if (userRepo.existsByEmail(req.getEmail())) {
-      throw new RuntimeException("이미 등록된 이메일입니다.");
+
+    @Transactional
+    public void register(SignupRequest request) {
+        validateDuplication(request);
+
+        User user = User.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .userRole(UserRole.BRANCH)
+                .point(0)
+                .creditStatus(CreditStatus.FULL)
+                .build();
+        userRepository.save(user);
+
+        Pharmacy pharmacy = Pharmacy.builder()
+                .pharmacyName(request.getPharmacyName())
+                .bizRegNo(request.getBizRegNo())
+                .representativeName(request.getRepresentativeName())
+                .postcode(request.getPostcode())
+                .address(request.getAddress())
+                .detailAddress(request.getDetailAddress())
+                .phoneNumber(request.getContact())
+                .status(Status.PENDING)
+                .user(user)
+                .build();
+
+        PharmacyRegistrationRequest regRequest = PharmacyRegistrationRequest.builder()
+                .pharmacy(pharmacy)
+                .requestedAt(LocalDateTime.now())
+                .status(Status.PENDING)
+                .build();
+
+        pharmacyRepository.save(pharmacy);
+        registrationRequestRepository.save(regRequest);
     }
 
-    User user = User.builder()
-        .email(req.getEmail())
-        .password(passwordEncoder.encode(req.getPassword()))
-        .role(UserRole.ADMIN)
-        .build();
-    user = userRepo.save(user);
-
-    Admin admin = Admin.builder()
-        .user(user)
-        .adminName(req.getAdminName())
-        .department(req.getDepartment())
-        .build();
-    admin = adminRepo.save(admin);
-
-    return new AdminSignupResponse(user.getUserId(), admin.getAdminId());
-  }
-
-  /**
-   * 가맹점으로 회원가입합니다.
-   */
-  @Transactional
-  public PharmacySignupResponse pharmacySignup(PharmacySignupRequest req) {
-    if (userRepo.existsByEmail(req.getEmail())) {
-      throw new RuntimeException("이미 등록된 이메일입니다.");
-    }
-    if (pharmacyRepo.existsByBizRegNo(req.getBizRegNo())) {
-      throw new RuntimeException("이미 등록된 사업자등록번호입니다.");
-    }
-    if (pharmacyRequestRepo.existsByBizRegNo(req.getBizRegNo())) {
-      throw new RuntimeException("이미 등록 요청된 사업자등록번호입니다. 관리자에게 문의해주세요.");
+    private void validateDuplication(SignupRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("이미 등록된 이메일입니다.");
+        }
+        if (pharmacyRepository.existsByPharmacyName(request.getPharmacyName())) {
+            throw new IllegalArgumentException("이미 등록된 약국명입니다.");
+        }
+        if (pharmacyRepository.existsByBizRegNo(request.getBizRegNo())) {
+            throw new IllegalArgumentException("이미 등록된 사업자등록번호입니다.");
+        }
     }
 
-    User user = User.builder()
-        .email(req.getEmail())
-        .password(passwordEncoder.encode(req.getPassword()))
-        .role(UserRole.PHARMACY)
-        .build();
-    user = userRepo.save(user);
+    @Transactional
+    public LoginResponse login(LoginRequest request) {
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        } catch (AuthenticationException e) {
+            throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.");
+        }
 
-    PharmacyRequest pharmacyRequest = PharmacyRequest.builder()
-        .user(user)
-        .status(PharmacyRequestStatus.PENDING)
-        .pharmacyName(req.getPharmacyName())
-        .bizRegNo(req.getBizRegNo())
-        .representativeName(req.getRepresentativeName())
-        .postcode(req.getPostcode())
-        .address(req.getAddress())
-        .detailAddress(req.getDetailAddress())
-        .region(req.getRegion())
-        .contact(req.getContact())
-        .build();
-    pharmacyRequest = pharmacyRequestRepo.save(pharmacyRequest);
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-    return new PharmacySignupResponse(user.getUserId(), pharmacyRequest.getPharmacyRequestId());
-  }
+        Pharmacy pharmacy = pharmacyRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalArgumentException("약국 정보를 찾을 수 없습니다."));
 
-  /**
-   * 관리자로 로그인합니다.
-   */
-  public AdminLoginResponse adminLogin(LoginRequest req) {
-    Authentication auth;
-    try {
-      auth = authenticationManager.authenticate(
-          new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword())
-      );
-      SecurityContextHolder.getContext().setAuthentication(auth);
-    } catch (AuthenticationException e) {
-      throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.");
+        int safePoint = user.getPoint() != null ? user.getPoint() : 0;
+
+        UserInfo userInfo = new UserInfo(
+                user.getUserId(),
+                user.getEmail(),
+                safePoint,
+                user.getUserRole().name(),
+                user.getCreditStatus().name()
+        );
+
+        PharmacyProfile profile = new PharmacyProfile(
+                pharmacy.getPharmacyId(),
+                user.getUserId(),
+                pharmacy.getPharmacyName(),
+                pharmacy.getBizRegNo(),
+                pharmacy.getRepresentativeName(),
+                pharmacy.getPostcode(),
+                pharmacy.getAddress(),
+                pharmacy.getDetailAddress(),
+                pharmacy.getPhoneNumber(),
+                pharmacy.getStatus().name()
+        );
+
+        return new LoginResponse(userInfo, profile);
     }
 
-    User user = userRepo.findByEmail(req.getEmail())
-        .orElseThrow(() -> new RuntimeException("해당 이메일의 사용자를 찾을 수 없습니다."));
+    public AdminLoginResponse adminLogin(LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("해당 이메일의 사용자가 존재하지 않습니다."));
 
-    if (user.getRole() != UserRole.ADMIN) {
-      throw new RuntimeException("가맹점으로 로그인해주세요.");
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        }
+
+        if (user.getUserRole() != UserRole.ADMIN) {
+            throw new IllegalArgumentException("관리자 권한이 없습니다.");
+        }
+
+        Admin admin = adminRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalArgumentException("관리자 정보가 존재하지 않습니다."));
+
+        int safePoint = user.getPoint() != null ? user.getPoint() : 0;
+
+        UserInfo userInfo = new UserInfo(user.getUserId(), user.getEmail(), safePoint, user.getUserRole().name(), user.getCreditStatus().name());
+        AdminProfile profile = new AdminProfile(admin.getAdminId(), user.getUserId(), admin.getAdminName(), admin.getDepartment().name());
+
+        return new AdminLoginResponse(userInfo, profile);
     }
 
-    Admin admin = adminRepo.findByUser_UserId(user.getUserId())
-        .orElseThrow(() -> new RuntimeException("관리자 정보를 찾을 수 없습니다."));
+    public PharmacyProfile updatePharmacy(Long pharmacyId, UpdatePharmacyRequest request) {
+        Pharmacy pharmacy = pharmacyRepository.findById(pharmacyId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 약국이 존재하지 않습니다."));
 
-    String accessToken = jwtProvider.createAccessToken(user);
+        pharmacy.setPharmacyName(request.getPharmacyName());
+        pharmacy.setRepresentativeName(request.getRepresentativeName());
+        pharmacy.setAddress(request.getAddress());
+        pharmacy.setDetailAddress(request.getDetailAddress());
+        pharmacy.setPostcode(request.getPostcode());
+        pharmacy.setPhoneNumber(request.getContact());
 
-    UserInfo userInfo = new UserInfo(
-        user.getUserId(),
-        user.getEmail(),
-        user.getRole()
-    );
+        pharmacy.setStatus(Status.valueOf(request.getStatus()));
 
-    AdminProfile profile = new AdminProfile(
-        admin.getAdminId(),
-        admin.getAdminName(),
-        admin.getDepartment()
-    );
+        pharmacyRepository.save(pharmacy);
 
-    return new AdminLoginResponse(accessToken, userInfo, profile);
-  }
-
-  /**
-   * 가맹점으로 로그인합니다.
-   */
-  public PharmacyLoginResponse pharmacylogin(LoginRequest req) {
-    Authentication auth;
-    try {
-      auth = authenticationManager.authenticate(
-          new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword())
-      );
-      SecurityContextHolder.getContext().setAuthentication(auth);
-    } catch (AuthenticationException e) {
-      throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.");
+        return new PharmacyProfile(
+                pharmacy.getPharmacyId(),
+                pharmacy.getUser().getUserId(),
+                pharmacy.getPharmacyName(),
+                pharmacy.getBizRegNo(),
+                pharmacy.getRepresentativeName(),
+                pharmacy.getPostcode(),
+                pharmacy.getAddress(),
+                pharmacy.getDetailAddress(),
+                pharmacy.getPhoneNumber(),
+                pharmacy.getStatus().name()
+        );
     }
 
-    User user = userRepo.findByEmail(req.getEmail())
-        .orElseThrow(() -> new RuntimeException("해당 이메일의 사용자를 찾을 수 없습니다."));
 
-    if (user.getRole() != UserRole.PHARMACY) {
-      throw new RuntimeException("관리자로 로그인해주세요.");
+    @Transactional
+    public void registerAdmin(AdminSignupRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("이미 등록된 이메일입니다.");
+        }
+
+        User user = User.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .userRole(UserRole.ADMIN)
+                .point(0)
+                .creditStatus(CreditStatus.FULL)
+                .build();
+        userRepository.save(user);
+
+        Department department;
+        try {
+            department = Department.valueOf(request.getDepartment());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("유효하지 않은 부서입니다. (운영팀, 총무팀 중 선택)");
+        }
+
+        Admin admin = Admin.builder()
+                .adminName(request.getAdminName())
+                .department(department)
+                .user(user)
+                .build();
+        adminRepository.save(admin);
     }
 
-    boolean hasPharmacy = pharmacyRepo.existsByUser_UserId(user.getUserId());
-    if (!hasPharmacy) {
-      PharmacyRequest pharmacyRequest = pharmacyRequestRepo
-          .findByUser_UserId(user.getUserId())
-          .orElse(null);
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-      if (pharmacyRequest == null) {
-        throw new RuntimeException("약국 등록 요청이 존재하지 않습니다. 관리자에게 문의해주세요.");
-      }
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+        }
 
-      switch (pharmacyRequest.getStatus()) {
-        case PENDING -> throw new RuntimeException("약국 등록 요청이 승인 대기 중입니다.");
-        case REJECTED -> throw new RuntimeException("약국 등록 요청이 거부되었습니다.");
-        default -> throw new RuntimeException("약국 등록 요청 상태가 올바르지 않습니다. 관리자에게 문의해주세요.");
-      }
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 
-    Pharmacy pharmacy = pharmacyRepo.findByUser_UserId(user.getUserId())
-        .orElseThrow(() -> new RuntimeException("가맹점 정보를 찾을 수 없습니다."));
+    @Transactional
+    public AdminProfile updateAdmin(Long adminId, UpdateAdminRequest request) {
+        Admin admin = adminRepository.findById(adminId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 관리자가 존재하지 않습니다."));
 
-    String accessToken = jwtProvider.createAccessToken(user);
+        admin.setAdminName(request.getAdminName());
 
-    UserInfo userInfo = new UserInfo(
-        user.getUserId(),
-        user.getEmail(),
-        user.getRole()
-    );
+        Department department;
+        try {
+            department = Department.valueOf(request.getDepartment());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("유효하지 않은 부서입니다. (운영팀, 총무팀 중 선택)");
+        }
+        admin.setDepartment(department);
 
-    PharmacyProfile profile = new PharmacyProfile(
-        pharmacy.getPharmacyId(),
-        pharmacy.getPharmacyName(),
-        pharmacy.getBizRegNo(),
-        pharmacy.getRepresentativeName(),
-        pharmacy.getPostcode(),
-        pharmacy.getAddress(),
-        pharmacy.getDetailAddress(),
-        pharmacy.getRegion(),
-        pharmacy.getContact(),
-        pharmacy.getOutstandingBalance()
-    );
+        adminRepository.save(admin);
 
-    return new PharmacyLoginResponse(accessToken, userInfo, profile);
-  }
-
-  /**
-   * 비밀번호를 변경합니다.
-   */
-  @Transactional
-  public void changePassword(Long userId, PasswordChangeRequest req) {
-    User user = userRepo.findById(userId)
-        .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
-
-    if (!passwordEncoder.matches(req.getCurrentPassword(), user.getPassword())) {
-      throw new RuntimeException("현재 비밀번호가 일치하지 않습니다.");
-    }
-    if (passwordEncoder.matches(req.getNewPassword(), user.getPassword())) {
-      throw new RuntimeException("현재 비밀번호와 동일한 비밀번호로 변경할 수 없습니다.");
+        return new AdminProfile(
+                admin.getAdminId(),
+                admin.getUser().getUserId(),
+                admin.getAdminName(),
+                admin.getDepartment().name()
+        );
     }
 
-    user.setPassword(passwordEncoder.encode(req.getNewPassword()));
-    userRepo.save(user);
-  }
+    public Page<PharmacyApprovalResponse> getBranchRequests(Pageable pageable) {
+        Page<PharmacyRegistrationRequest> requests = registrationRequestRepository.findByUserRole(UserRole.BRANCH, pageable);
 
-  /**
-   * 관리자 프로필을 수정합니다.
-   */
-  @Transactional
-  public AdminProfile updateAdmin(Long adminId, AdminUpdateRequest req) {
-    Admin admin = adminRepo.findById(adminId)
-        .orElseThrow(() -> new RuntimeException("관리자 정보를 찾을 수 없습니다."));
+        return requests.map(req -> {
+            Pharmacy pharmacy = req.getPharmacy();
+            return new PharmacyApprovalResponse(
+                    new PharmacyRequestDto(
+                            req.getRegRequestId(),
+                            pharmacy.getPharmacyId(),
+                            req.getRequestedAt(),
+                            req.getStatus(),
+                            req.getReviewedAt()
+                    ),
+                    new PharmacyDto(
+                            pharmacy.getPharmacyId(),
+                            pharmacy.getUser().getUserId(),
+                            pharmacy.getPharmacyName(),
+                            pharmacy.getBizRegNo(),
+                            pharmacy.getRepresentativeName(),
+                            pharmacy.getPostcode(),
+                            pharmacy.getAddress(),
+                            pharmacy.getDetailAddress(),
+                            pharmacy.getPhoneNumber(),
+                            pharmacy.getStatus()
+                    )
+            );
+        });
+    }
 
-    if (req.getAdminName() != null) {
-      admin.setAdminName(req.getAdminName());
-    }
-    if (req.getDepartment() != null) {
-      admin.setDepartment(req.getDepartment());
-    }
-    adminRepo.save(admin);
+    @Transactional
+    public void approvePharmacy(Long id) {
+        Pharmacy pharmacy = pharmacyRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("해당 약국이 존재하지 않습니다."));
+        pharmacy.setStatus(Status.ACTIVE);
+        pharmacyRepository.save(pharmacy);
 
-    return new AdminProfile(
-        admin.getAdminId(),
-        admin.getAdminName(),
-        admin.getDepartment()
-    );
-  }
+        User user = pharmacy.getUser();
+        user.setUserRole(UserRole.BRANCH);
+        userRepository.save(user);
 
-  /**
-   * 가맹점 프로필을 수정합니다.
-   */
-  @Transactional
-  public PharmacyProfile updatePharmacy(Long pharmacyId, PharmacyUpdateRequest req) {
-    Pharmacy pharmacy = pharmacyRepo.findById(pharmacyId)
-        .orElseThrow(() -> new RuntimeException("가맹점 정보를 찾을 수 없습니다."));
+        PharmacyRegistrationRequest request = registrationRequestRepository.findByPharmacy(pharmacy)
+                .orElseThrow(() -> new IllegalArgumentException("등록 요청이 존재하지 않습니다."));
+        request.setStatus(Status.ACTIVE);
+        request.setReviewedAt(LocalDateTime.now());
+        registrationRequestRepository.save(request);
+    }
 
-    if (req.getPharmacyName() != null) {
-      pharmacy.setPharmacyName(req.getPharmacyName());
-    }
-    if (req.getRepresentativeName() != null) {
-      pharmacy.setRepresentativeName(req.getRepresentativeName());
-    }
-    if (req.getPostcode() != null) {
-      pharmacy.setPostcode(req.getPostcode());
-    }
-    if (req.getAddress() != null) {
-      pharmacy.setAddress(req.getAddress());
-    }
-    if (req.getDetailAddress() != null) {
-      pharmacy.setDetailAddress(req.getDetailAddress());
-    }
-    if (req.getRegion() != null) {
-      pharmacy.setRegion(req.getRegion());
-    }
-    if (req.getContact() != null) {
-      pharmacy.setContact(req.getContact());
-    }
-    pharmacyRepo.save(pharmacy);
+    @Transactional
+    public void rejectPharmacy(Long id) {
+        Pharmacy pharmacy = pharmacyRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("해당 약국이 존재하지 않습니다."));
+        pharmacy.setStatus(Status.REJECTED);
+        pharmacyRepository.save(pharmacy);
 
-    return new PharmacyProfile(
-        pharmacy.getPharmacyId(),
-        pharmacy.getPharmacyName(),
-        pharmacy.getBizRegNo(),
-        pharmacy.getRepresentativeName(),
-        pharmacy.getPostcode(),
-        pharmacy.getAddress(),
-        pharmacy.getDetailAddress(),
-        pharmacy.getRegion(),
-        pharmacy.getContact(),
-        pharmacy.getOutstandingBalance()
-    );
-  }
+        PharmacyRegistrationRequest request = registrationRequestRepository.findByPharmacy(pharmacy)
+                .orElseThrow(() -> new IllegalArgumentException("등록 요청이 존재하지 않습니다."));
+        request.setStatus(Status.REJECTED);
+        request.setReviewedAt(LocalDateTime.now());
+        registrationRequestRepository.save(request);
+    }
+
 }

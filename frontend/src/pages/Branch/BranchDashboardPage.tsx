@@ -2,10 +2,10 @@ import { Card, Col, List, message, Progress, Row, Space, Statistic, Table, Typog
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { noticeAPI, orderAPI } from '../../api';
-import { NOTICE_TYPE_TEXT } from '../../constants';
+import { announcementAPI, orderAPI } from '../../api';
+import { ANNOUNCEMENT_TYPE_TEXT } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
-import type { NoticeList, OrderList, Pharmacy, User } from '../../types';
+import { type Announcement, type Order, type Pharmacy, type User } from '../../types';
 import { calculateCreditInfo } from '../../utils';
 
 export default function BranchDashboardPage() {
@@ -16,21 +16,21 @@ export default function BranchDashboardPage() {
   const profile = useAuthStore((state) => state.profile) as Pharmacy;
   const pharmacyId = profile.pharmacyId;
 
-  const [latestNotices, setLatestNotices] = useState<NoticeList[]>([]);
-  const [recentOrder, setRecentOrder] = useState<OrderList[]>([]);
+  const [latestAnnouncements, setLatestAnnouncements] = useState<Announcement[]>([]);
+  const [recentOrder, setRecentOrder] = useState<Order[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const noticeResponse = await noticeAPI.getNotices();
+        const announcementResponse = await announcementAPI.getAnnouncements({ page: 0, size: 5 });
 
-        if (noticeResponse.success && noticeResponse.data.length > 0) {
-          setLatestNotices(noticeResponse.data);
+        if (announcementResponse.success && announcementResponse.data.length > 0) {
+          setLatestAnnouncements(announcementResponse.data);
         } else {
-          setLatestNotices([]);
+          setLatestAnnouncements([]);
         }
 
-        const orderResponse = await orderAPI.getOrdersBranch({ pharmacyId, page: 0, size: 1 });
+        const orderResponse = await orderAPI.getBranchOrders({ pharmacyId, page: 0, size: 1 });
 
         if (orderResponse.success && orderResponse.data.length > 0) {
           setRecentOrder(orderResponse.data);
@@ -42,7 +42,7 @@ export default function BranchDashboardPage() {
         messageApi.error(
           e.response?.data?.message || '대시보드 데이터 로딩 중 오류가 발생했습니다.',
         );
-        setLatestNotices([]);
+        setLatestAnnouncements([]);
         setRecentOrder([]);
       }
     };
@@ -74,19 +74,19 @@ export default function BranchDashboardPage() {
         <Col span={24}>
           <Card title="최근 공지사항" variant="borderless">
             <List
-              dataSource={latestNotices}
+              dataSource={latestAnnouncements}
               renderItem={(item) => (
-                <List.Item key={item.noticeId}>
+                <List.Item key={item.announcementId}>
                   <List.Item.Meta
                     title={
                       <Typography.Link
                         onClick={() => {
-                          navigate(`/branch/notices/${item.noticeId}`, {
+                          navigate(`/branch/announcements/${item.announcementId}`, {
                             state: { returnTo: { type: item.type, page: 1, keyword: '' } },
                           });
                         }}
                       >
-                        {`[${NOTICE_TYPE_TEXT[item.type]}] ${item.title}`}
+                        {`[${ANNOUNCEMENT_TYPE_TEXT[item.type]}] ${item.title}`}
                       </Typography.Link>
                     }
                   />
@@ -110,7 +110,7 @@ export default function BranchDashboardPage() {
               variant="borderless"
             >
               <Table
-                dataSource={recentOrder[0].items} // FIXME: 우짜징...
+                dataSource={recentOrder[0].items}
                 columns={recentOrderItemsColumns}
                 pagination={false}
                 rowKey="productName"
@@ -133,7 +133,7 @@ export default function BranchDashboardPage() {
           <Card title="크레딧 현황" variant="borderless">
             <Space direction="vertical" style={{ width: '100%' }}>
               {(() => {
-                const creditInfo = calculateCreditInfo(profile.outstandingBalance);
+                const creditInfo = calculateCreditInfo(user.point);
                 return (
                   <>
                     <Statistic

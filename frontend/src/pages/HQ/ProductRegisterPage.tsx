@@ -21,8 +21,8 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { aiAPI, productAPI } from '../../api';
-import { getProductSubCategoryOptions, MAIN_CATEGORY_OPTIONS } from '../../constants';
-import type { MainCategory, ProductCreateRequest } from '../../types';
+import { getProductSubCategoryOptions, PRODUCT_MAIN_CATEGORY_OPTIONS } from '../../constants';
+import type { ProductCreateRequest, ProductMainCategory } from '../../types';
 
 const getBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -102,7 +102,7 @@ export default function ProductRegisterPage() {
     try {
       const payload = {
         productName: values.productName,
-        productCode: values.insuranceCode,
+        productCode: values.productCode,
         mainCategory: values.mainCategory,
         subCategory: values.subCategory,
         manufacturer: values.manufacturer,
@@ -110,12 +110,12 @@ export default function ProductRegisterPage() {
         unitPrice: values.unitPrice,
         details: values.details || '',
         productImgUrl: values.productImgUrl || '',
-        stock: values.stockQty,
+        stock: values.stock,
       };
       const res = await productAPI.createProduct(payload);
 
       if (res.success) {
-        const id = res.data.productId;
+        const id = res.data[0];
         navigate(`/hq/products/${id}`);
       }
     } catch (e: any) {
@@ -243,7 +243,7 @@ export default function ProductRegisterPage() {
                 label="대분류"
                 rules={[{ required: true, message: '대분류를 입력하세요.' }]}
               >
-                <Select options={[...MAIN_CATEGORY_OPTIONS]} placeholder="선택" />
+                <Select options={[...PRODUCT_MAIN_CATEGORY_OPTIONS]} placeholder="선택" />
               </Form.Item>
               <Form.Item
                 name="subCategory"
@@ -253,7 +253,7 @@ export default function ProductRegisterPage() {
                 <Select
                   options={
                     watchedMainCategory
-                      ? getProductSubCategoryOptions(watchedMainCategory as MainCategory)
+                      ? getProductSubCategoryOptions(watchedMainCategory as ProductMainCategory)
                       : []
                   }
                   placeholder="선택"
