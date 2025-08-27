@@ -57,7 +57,7 @@ export default function AnnouncementEditPage() {
               name: announcement.attachmentUrl.split('/').pop() || '첨부파일',
               status: 'done',
               url: announcement.attachmentUrl,
-            },
+            } as UploadFile,
           ]);
         } else {
           setFileList([]);
@@ -239,7 +239,7 @@ export default function AnnouncementEditPage() {
             </Form.Item>
           </Flex>
 
-          <Flex gap={8} wrap align="start">
+          <Flex gap={8} wrap align="start" style={{ marginBottom: '16px' }}>
             <Form.Item name="attachmentUrl" noStyle>
               <Input type="hidden" />
             </Form.Item>
@@ -252,7 +252,9 @@ export default function AnnouncementEditPage() {
               onChange={handleChange}
               maxCount={1}
             >
-              <Button icon={<UploadOutlined />}>첨부파일</Button>
+              <Button type="default" icon={<UploadOutlined />}>
+                첨부파일
+              </Button>
             </Upload>
 
             <Upload showUploadList={true} fileList={fileList} onRemove={handleRemove} />
@@ -282,11 +284,7 @@ export default function AnnouncementEditPage() {
             </Tooltip>
           </Flex>
 
-          <Form.Item
-            name="content"
-            label="내용"
-            rules={[{ required: true, message: '내용을 입력해주세요.' }]}
-          >
+          <Form.Item name="content" rules={[{ required: true, message: '내용을 입력해주세요.' }]}>
             <TiptapEditor
               value={watchedContent}
               onChange={(value: string) => form.setFieldsValue({ content: value })}
