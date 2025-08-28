@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import lightgbm as lgb
 import numpy as np
@@ -8,8 +9,9 @@ from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.model_selection import TimeSeriesSplit
 
 # ====== 간단 설정 ======
-DATA_DIR = "./ai/order_forecast/"
-HISTORY_CSV_PATH = os.path.join(DATA_DIR, "pos_order_history.csv")
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR
+HISTORY_CSV_PATH = DATA_DIR / "pos_order_history.csv"
 DEFAULT_MIN_MONTHS = 6
 TARGET_COL = "ordered_quantity"
 ID_COLS = ["date", "store_id", "product_code"]
