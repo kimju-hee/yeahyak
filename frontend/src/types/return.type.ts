@@ -64,6 +64,7 @@ export interface ReturnDetailItem {
   manufacturer: string;
   productImgUrl: string;
   quantity: number;
+  unit: string;
   unitPrice: number;
   subtotalPrice: number;
 }

@@ -1,17 +1,6 @@
 import { UploadOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
-import {
-  Button,
-  Flex,
-  Form,
-  Input,
-  message,
-  Modal,
-  Select,
-  Tooltip,
-  Typography,
-  Upload,
-} from 'antd';
+import { Button, Flex, Form, Input, message, Select, Tooltip, Typography, Upload } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { aiAPI, noticeAPI } from '../../api';
@@ -23,7 +12,6 @@ import { validateAttachmentFile } from '../../utils';
 
 export default function NoticeEditPage() {
   const [messageApi, contextHolder] = message.useMessage();
-  const [modal, modalContextHolder] = Modal.useModal();
   const { id } = useParams();
   const [form] = Form.useForm();
   const navigate = useNavigate();
@@ -31,18 +19,17 @@ export default function NoticeEditPage() {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
-  const [isEdited, setIsEdited] = useState(false);
 
   const watchedType = Form.useWatch('type', form);
   const watchedContent = Form.useWatch('content', form);
 
-  const fetchAnnouncement = async () => {
+  const fetchNotice = async () => {
     setLoading(true);
     try {
       const res = await noticeAPI.getNotice(Number(id));
 
       if (res.success) {
-        const notice: NoticeDetail = res.data[0];
+        const notice: NoticeDetail = res.data;
         form.setFieldsValue({
           type: notice.type,
           title: notice.title,
@@ -72,7 +59,7 @@ export default function NoticeEditPage() {
   };
 
   useEffect(() => {
-    fetchAnnouncement();
+    fetchNotice();
   }, [id]);
 
   const handleBeforeUpload = (file: File) => {
@@ -94,7 +81,6 @@ export default function NoticeEditPage() {
     form.setFieldsValue({ attachmentUrl: '' });
   };
 
-  // TODO: AI가 문서를 요약하는 동안 로딩 상태 표시!
   const handleAiSummarize = async () => {
     if (fileList.length === 0 || !fileList[0].originFileObj) {
       messageApi.warning('첨부 파일이 없습니다.');
@@ -136,7 +122,6 @@ export default function NoticeEditPage() {
     } catch (e: any) {
       console.error('AI 문서 요약 실패:', e);
       messageApi.error(e.response?.data?.message || 'AI 문서 요약 중 오류가 발생했습니다.');
-      form.setFieldsValue({ content: '' });
     } finally {
       setAiLoading(false);
     }
@@ -144,64 +129,40 @@ export default function NoticeEditPage() {
 
   const handleSubmit = async (values: any) => {
     try {
-      const payload = {
-        announcement: {
-          type: values.type,
-          title: (values.title || '').trim(),
-          content: values.content,
-        },
-        file: fileList[0]?.originFileObj || undefined,
+      // 1. 기본 공지사항 정보 수정
+      const noticeData = {
+        title: (values.title || '').trim(),
+        content: values.content,
       };
-      await noticeAPI.updateNotice(Number(id), payload);
+
+      console.log('📢 공지사항 수정 요청:', noticeData);
+      await noticeAPI.updateNotice(Number(id), noticeData);
+
+      // 2. 첨부파일 처리
+      const hasNewFile = fileList.length > 0 && fileList[0].originFileObj;
+      const shouldDeleteFile = fileList.length === 0; // 파일 목록이 비어있으면 삭제
+
+      if (hasNewFile) {
+        // 새 파일 업로드
+        console.log('📎 새 첨부파일 업로드');
+        await noticeAPI.updateFile(Number(id), { file: fileList[0].originFileObj as File });
+      } else if (shouldDeleteFile && form.getFieldValue('attachmentUrl')) {
+        // 기존 파일이 있었는데 삭제된 경우
+        console.log('🗑️ 기존 첨부파일 삭제');
+        await noticeAPI.deleteFile(Number(id));
+      }
+      // 기존 파일이 있고 새 파일이 없으면 기존 파일 유지 (아무것도 하지 않음)
       messageApi.success('공지사항이 수정되었습니다.');
-      navigate(`/hq/announcements/${id}`);
+      navigate(`/hq/notices/${id}`);
     } catch (e: any) {
       console.error('공지사항 수정 실패:', e);
       messageApi.error(e.response?.data?.message || '공지사항 수정 중 오류가 발생했습니다.');
     }
   };
 
-  const handleFormValuesChange = () => setIsEdited(true);
-
-  // BUG: 뒤로가기 씹히는 문제
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isEdited) e.preventDefault();
-    };
-
-    const handlePopState = () => {
-      if (isEdited) {
-        window.history.pushState(null, '', window.location.href);
-
-        modal.confirm({
-          title: '페이지를 나가시겠습니까?',
-          content: '수정 중인 내용이 사라집니다.',
-          okText: '나가기',
-          cancelText: '취소',
-          onOk: () => {
-            setIsEdited(false);
-            navigate(`/hq/announcements/${id}`);
-          },
-          onCancel: () => {},
-        });
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('popstate', handlePopState);
-
-    window.history.pushState(null, '', window.location.href);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [isEdited, modal, navigate]);
-
   return (
     <>
       {contextHolder}
-      {modalContextHolder}
       <Typography.Title level={3} style={{ marginBottom: '24px' }}>
         공지사항 수정
       </Typography.Title>
@@ -213,7 +174,6 @@ export default function NoticeEditPage() {
           form={form}
           name="notice-edit"
           layout="vertical"
-          onValuesChange={handleFormValuesChange}
           onFinish={handleSubmit}
           autoComplete="off"
         >

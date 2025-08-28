@@ -27,10 +27,16 @@ export default function NoticeListPage() {
 
   const [notices, setNotices] = useState<NoticeList[]>([]);
   const [activeTab, setActiveTab] = useState<NoticeType>(
-    (searchParams.get('type') as NoticeType) || 'NOTICE',
+    (searchParams.get('type') as NoticeType) || 'GENERAL',
   );
   const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
   const [appliedKeyword, setAppliedKeyword] = useState(searchParams.get('keyword') || '');
+  const [scope, setScope] = useState<'TITLE' | 'CONTENT'>(
+    (searchParams.get('scope') as 'TITLE' | 'CONTENT') || 'TITLE',
+  );
+  const [appliedScope, setAppliedScope] = useState<'TITLE' | 'CONTENT'>(
+    (searchParams.get('scope') as 'TITLE' | 'CONTENT') || 'TITLE',
+  );
 
   const [currentPage, setCurrentPage] = useState<number>(Number(searchParams.get('page')) || 1);
   const [total, setTotal] = useState(0);
@@ -41,18 +47,16 @@ export default function NoticeListPage() {
     try {
       const res = await noticeAPI.getNotices({
         type: activeTab,
+        keyword: appliedKeyword || undefined,
+        scope: appliedScope,
         page: currentPage - 1,
         size: PAGE_SIZE,
-        keyword: appliedKeyword ? appliedKeyword : undefined,
       });
 
       if (res.success) {
         const { data, page } = res;
         setNotices(data);
         setTotal(page.totalElements);
-      } else {
-        setNotices([]);
-        setTotal(0);
       }
     } catch (e: any) {
       console.error('공지사항 목록 로딩 실패:', e);
@@ -66,38 +70,47 @@ export default function NoticeListPage() {
 
   useEffect(() => {
     fetchNotices();
-  }, [activeTab, currentPage, appliedKeyword]);
+  }, [activeTab, currentPage, appliedKeyword, appliedScope]);
 
   useEffect(() => {
     const params = new URLSearchParams();
     params.set('type', activeTab);
     if (currentPage > 1) params.set('page', currentPage.toString());
     if (appliedKeyword) params.set('keyword', appliedKeyword);
+    if (appliedScope) params.set('scope', appliedScope);
     setSearchParams(params);
-  }, [activeTab, currentPage, appliedKeyword]);
+  }, [activeTab, currentPage, appliedKeyword, appliedScope]);
 
   const handleTabChange = (key: string) => {
     setActiveTab(key as NoticeType);
     setKeyword('');
     setAppliedKeyword('');
+    setScope('TITLE');
+    setAppliedScope('TITLE');
     setCurrentPage(1);
   };
 
   const handleSearch = (value: string) => {
-    setKeyword(value.trim());
     setAppliedKeyword(value.trim());
+    setAppliedScope(scope);
+    setCurrentPage(1);
+  };
+
+  const handleScopeChange = (value: string) => {
+    setScope(value as 'TITLE' | 'CONTENT');
     setCurrentPage(1);
   };
 
   const tableColumns: TableProps<NoticeList>['columns'] = [
-    { title: '번호', dataIndex: 'noticeId', key: 'noticeId', width: '80px' },
-    { title: '제목', dataIndex: 'title', key: 'title', ellipsis: true },
+    { title: '번호', dataIndex: 'noticeId', key: 'noticeId', width: '80px', align: 'center' },
+    { title: '제목', dataIndex: 'title', key: 'title', ellipsis: true, align: 'left' },
     {
       title: '작성 일시',
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (date: string) => dayjs(date).format(DATE_FORMAT.DEFAULT),
       width: '240px',
+      align: 'left',
     },
   ];
 
@@ -112,7 +125,14 @@ export default function NoticeListPage() {
         onRow={(record) => ({
           onClick: () => {
             navigate(`${basePath}/notices/${record.noticeId}`, {
-              state: { returnTo: { type: activeTab, page: currentPage, keyword: appliedKeyword } },
+              state: {
+                returnTo: {
+                  type: activeTab,
+                  page: currentPage,
+                  keyword: appliedKeyword,
+                  scope: appliedScope,
+                },
+              },
             });
           },
           style: { cursor: 'pointer' },
@@ -145,12 +165,15 @@ export default function NoticeListPage() {
 
       <Tabs activeKey={activeTab} onChange={handleTabChange} items={tabsItems} centered />
 
-      <Flex wrap style={{ justifyContent: 'space-between' }}>
+      <Flex wrap style={{ justifyContent: 'space-between', marginTop: '16px' }}>
         <SearchBox
-          searchField="제목 및 내용"
-          searchOptions={[{ value: '제목 및 내용', label: '제목 및 내용' }]}
+          searchField={scope}
+          searchOptions={[
+            { value: 'TITLE', label: '제목' },
+            { value: 'CONTENT', label: '내용' },
+          ]}
           searchKeyword={keyword}
-          onSearchFieldChange={() => {}}
+          onSearchFieldChange={handleScopeChange}
           onSearchKeywordChange={setKeyword}
           onSearch={handleSearch}
         />

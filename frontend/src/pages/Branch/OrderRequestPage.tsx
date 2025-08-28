@@ -98,7 +98,7 @@ export default function OrderRequestPage() {
     try {
       const res = await orderAPI.getOrdersBranch({
         pharmacyId: pharmacyId,
-        status: statusFilter,
+        status: statusFilter || undefined,
         page: ordersCurrentPage - 1,
         size: PAGE_SIZE,
       });
@@ -111,9 +111,9 @@ export default function OrderRequestPage() {
     } catch (e: any) {
       console.error('주문 목록 로딩 실패:', e);
       messageApi.error(e.response?.data?.message || '주문 목록 로딩 중 오류가 발생했습니다.');
-    } finally {
       setOrders([]);
       setOrdersTotal(0);
+    } finally {
       setOrdersLoading(false);
     }
   };
@@ -140,7 +140,7 @@ export default function OrderRequestPage() {
       const res = await productAPI.getProducts({
         // mainCategory: mainCategory,
         // subCategory: subCategory,
-        keyword: search.appliedKeyword,
+        keyword: search.appliedKeyword || undefined,
         page: productsCurrentPage - 1,
         size: PAGE_SIZE,
       });
@@ -153,9 +153,9 @@ export default function OrderRequestPage() {
     } catch (e: any) {
       console.error('상품 목록 로딩 실패:', e);
       messageApi.error(e.response?.data?.message || '상품 목록 로딩 중 오류가 발생했습니다.');
-    } finally {
       setProducts([]);
       setProductsTotal(0);
+    } finally {
       setProductsLoading(false);
     }
   };

@@ -61,7 +61,7 @@ export default function BranchManagementPage() {
       const res = await pharmacyRequestAPI.getPharmacyRequests({
         //  status: status,
         //  region: region,
-        keyword: search.appliedKeyword,
+        keyword: search.appliedKeyword || undefined,
         page: currentPage - 1,
         size: PAGE_SIZE,
       });
@@ -76,9 +76,9 @@ export default function BranchManagementPage() {
       messageApi.error(
         e.response?.data?.message || '약국 등록 요청 목록 로딩 중 오류가 발생했습니다.',
       );
-    } finally {
       setRequests([]);
       setTotal(0);
+    } finally {
       setLoading(false);
     }
   };

@@ -9,6 +9,7 @@ import {
   Row,
   Select,
   Space,
+  Spin,
   Statistic,
   Table,
   Tag,
@@ -27,7 +28,13 @@ import {
   PAGE_SIZE,
   REGION_CASCADER_OPTIONS,
 } from '../../constants';
-import { ORDER_STATUS, type OrderDetail, type OrderList, type OrderStatus } from '../../types';
+import {
+  ORDER_STATUS,
+  type OrderDetail,
+  type OrderList,
+  type OrderStatus,
+  type Region,
+} from '../../types';
 
 const getStatusTag = (status: OrderStatus, isClickable: boolean) => {
   const color = ORDER_STATUS_COLORS[status];
@@ -48,15 +55,17 @@ export default function OrderManagementPage() {
   const [form] = Form.useForm();
 
   const [orders, setOrders] = useState<OrderList[]>([]);
+  const [expandedRowData, setExpandedRowData] = useState<Record<number, OrderDetail>>({});
+  const [expandedRowLoading, setExpandedRowLoading] = useState<Record<number, boolean>>({});
   const [filters, setFilters] = useState({
-    region: undefined as string | undefined,
     status: undefined as OrderStatus | undefined,
-    startDate: undefined as dayjs.Dayjs | undefined,
-    endDate: undefined as dayjs.Dayjs | undefined,
+    region: undefined as Region | undefined,
+    start: undefined as dayjs.Dayjs | undefined,
+    end: undefined as dayjs.Dayjs | undefined,
   });
   const [statistics, setStatistics] = useState({
     totalOrders: 0,
-    totalProcessing: 0,
+    totalPreparing: 0,
     totalShipping: 0,
     totalAmount: 0,
   });
@@ -67,14 +76,24 @@ export default function OrderManagementPage() {
 
   const fetchStatistics = async () => {
     try {
-      const res = await orderAPI.getOrdersHq();
+      // 현재 월의 시작과 끝 날짜 계산
+      const now = dayjs();
+      const startOfMonth = now.startOf('month');
+      const endOfMonth = now.endOf('month');
+
+      const res = await orderAPI.getOrdersHq({
+        start: startOfMonth.format('YYYY-MM-DD'),
+        end: endOfMonth.format('YYYY-MM-DD'),
+        page: 0,
+        size: 9999,
+      });
 
       if (res.success) {
         const totalOrders = res.data.length;
         const calculatedStatistics = res.data.reduce(
           (acc: any, order: OrderList) => {
             if (order.status === ORDER_STATUS.PREPARING) {
-              acc.totalProcessing += 1;
+              acc.totalPreparing += 1;
             } else if (order.status === ORDER_STATUS.SHIPPING) {
               acc.totalShipping += 1;
             }
@@ -83,14 +102,14 @@ export default function OrderManagementPage() {
             }
             return acc;
           },
-          { totalOrders: 0, totalProcessing: 0, totalShipping: 0, totalAmount: 0 },
+          { totalOrders: 0, totalPreparing: 0, totalShipping: 0, totalAmount: 0 },
         );
         setStatistics({ ...calculatedStatistics, totalOrders: totalOrders });
       }
     } catch (e: any) {
-      console.error('전체 발주 요청 목록 로딩 실패:', e);
+      console.error('월간 발주 요청 통계 로딩 실패:', e);
       messageApi.error(
-        e.response?.data?.message || '전체 발주 요청 목록 로딩 중 오류가 발생했습니다.',
+        e.response?.data?.message || '월간 발주 요청 통계 로딩 중 오류가 발생했습니다.',
       );
     }
   };
@@ -99,12 +118,12 @@ export default function OrderManagementPage() {
     setLoading(true);
     try {
       const res = await orderAPI.getOrdersHq({
+        status: filters.status,
+        region: filters.region,
+        start: filters.start?.format('YYYY-MM-DD'),
+        end: filters.end?.format('YYYY-MM-DD'),
         page: currentPage - 1,
         size: PAGE_SIZE,
-        // region: filters.region,
-        status: filters.status,
-        // startDate: filters.startDate,
-        // endDate: filters.endDate,
       });
 
       if (res.success) {
@@ -136,15 +155,15 @@ export default function OrderManagementPage() {
     setFilters({
       region: formValues.region,
       status: formValues.status,
-      startDate,
-      endDate,
+      start: startDate,
+      end: endDate,
     });
     setCurrentPage(1);
   };
 
   const handleReset = () => {
     form.resetFields();
-    setFilters({ region: undefined, status: undefined, startDate: undefined, endDate: undefined });
+    setFilters({ region: undefined, status: undefined, start: undefined, end: undefined });
     setCurrentPage(1);
   };
 
@@ -158,7 +177,7 @@ export default function OrderManagementPage() {
         case 'REJECT':
           res = await orderAPI.updateOrder(orderId, { status: ORDER_STATUS.CANCELED });
           break;
-        case 'PROCESS':
+        case 'PREPARE':
           res = await orderAPI.updateOrder(orderId, { status: ORDER_STATUS.PREPARING });
           break;
         case 'SHIP':
@@ -207,7 +226,7 @@ export default function OrderManagementPage() {
 
     switch (record.status) {
       case ORDER_STATUS.APPROVED:
-        nextAction = 'PROCESS';
+        nextAction = 'PREPARE';
         confirmDescription = '처리중으로 변경하시겠습니까?';
         break;
       case ORDER_STATUS.PREPARING:
@@ -242,71 +261,113 @@ export default function OrderManagementPage() {
   };
 
   const tableColumns: TableProps<OrderList>['columns'] = [
-    { title: '주문번호', dataIndex: 'orderId', key: 'orderId' },
-    { title: '지점명', dataIndex: 'pharmacyName', key: 'pharmacyName' },
+    { title: '주문 번호', dataIndex: 'orderId', key: 'orderId', align: 'center' },
+    { title: '약국명', dataIndex: 'pharmacyName', key: 'pharmacyName', align: 'center' },
     {
-      title: '주문요약',
+      title: '주문 요약',
       dataIndex: 'summary',
       key: 'summary',
+      align: 'center',
     },
     {
-      title: '주문금액',
+      title: '주문 금액',
       dataIndex: 'totalPrice',
       key: 'totalPrice',
       render: (value) => `${value.toLocaleString()}원`,
+      align: 'center',
     },
     {
-      title: '요청일시',
+      title: '요청 일시',
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (value) => dayjs(value).format(DATE_FORMAT.DEFAULT),
+      align: 'center',
     },
     {
       title: '상태',
       dataIndex: 'status',
       key: 'status',
       render: (_, record) => renderStatusTagWithActions(record),
+      align: 'center',
     },
   ];
 
-  const expandedRowRender = (record: OrderDetail) => {
+  const fetchOrderDetail = async (orderId: number) => {
+    setExpandedRowLoading((prev) => ({ ...prev, [orderId]: true }));
+    try {
+      const res = await orderAPI.getOrder(orderId);
+      if (res.success) {
+        setExpandedRowData((prev) => ({ ...prev, [orderId]: res.data }));
+      }
+    } catch (e: any) {
+      console.error('발주 상세 로딩 실패:', e);
+      messageApi.error(e.response?.data?.message || '발주 상세 로딩 중 오류가 발생했습니다.');
+    } finally {
+      setExpandedRowLoading((prev) => ({ ...prev, [orderId]: false }));
+    }
+  };
+
+  const handleExpand = (expanded: boolean, record: OrderList) => {
+    if (expanded && !expandedRowData[record.orderId]) {
+      fetchOrderDetail(record.orderId);
+    }
+  };
+
+  const expandedRowRender = (record: OrderList) => {
+    const detail = expandedRowData[record.orderId];
+    const isLoading = expandedRowLoading[record.orderId];
+
+    if (isLoading) {
+      return <Spin />;
+    }
+
+    if (!detail) {
+      return (
+        <Typography.Text style={{ padding: '16px', textAlign: 'center' }}>
+          상세 정보를 불러올 수 없습니다.
+        </Typography.Text>
+      );
+    }
+
     return (
-      <>
-        <Table
-          bordered={true}
-          dataSource={record.items}
-          columns={[
-            { title: '제품명', dataIndex: 'productName', key: 'productName' },
-            { title: '수량', dataIndex: 'quantity', key: 'quantity' },
-            {
-              title: '단가',
-              dataIndex: 'unitPrice',
-              key: 'unitPrice',
-              render: (value) => `${value.toLocaleString()}원`,
-            },
-            {
-              title: '소계',
-              dataIndex: 'subtotalPrice',
-              key: 'subtotalPrice',
-              render: (value) => `${value.toLocaleString()}원`,
-            },
-          ]}
-          pagination={false}
-          rowKey={(item) => item.productName}
-          size="small"
-          summary={() => (
-            <Table.Summary fixed>
-              <Table.Summary.Row>
-                <Table.Summary.Cell index={0} colSpan={2} />
-                <Table.Summary.Cell index={1}>합계</Table.Summary.Cell>
-                <Table.Summary.Cell index={2}>
-                  {record.totalPrice.toLocaleString()}원
-                </Table.Summary.Cell>
-              </Table.Summary.Row>
-            </Table.Summary>
-          )}
-        />
-      </>
+      <Table
+        bordered={true}
+        dataSource={detail.items}
+        columns={[
+          { title: '제품명', dataIndex: 'productName', key: 'productName' },
+          { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer' },
+          { title: '대분류', dataIndex: 'mainCategory', key: 'mainCategory' },
+          { title: '소분류', dataIndex: 'subCategory', key: 'subCategory' },
+          { title: '수량', dataIndex: 'quantity', key: 'quantity' },
+          { title: '단위', dataIndex: 'unit', key: 'unit' },
+          {
+            title: '단가',
+            dataIndex: 'unitPrice',
+            key: 'unitPrice',
+            render: (value) => `${value.toLocaleString()}원`,
+          },
+          {
+            title: '소계',
+            dataIndex: 'subtotalPrice',
+            key: 'subtotalPrice',
+            render: (value) => `${value.toLocaleString()}원`,
+          },
+        ]}
+        pagination={false}
+        rowKey={(item) => item.productId}
+        size="small"
+        summary={() => (
+          <Table.Summary fixed>
+            <Table.Summary.Row>
+              <Table.Summary.Cell index={0} colSpan={6} />
+              <Table.Summary.Cell index={1}>합계</Table.Summary.Cell>
+              <Table.Summary.Cell index={2}>
+                {detail.totalPrice.toLocaleString()}원
+              </Table.Summary.Cell>
+            </Table.Summary.Row>
+          </Table.Summary>
+        )}
+      />
     );
   };
 
@@ -325,7 +386,7 @@ export default function OrderManagementPage() {
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic title="처리중" value={statistics.totalProcessing} />
+            <Statistic title="처리중" value={statistics.totalPreparing} />
           </Card>
         </Col>
         <Col span={6}>
@@ -377,6 +438,7 @@ export default function OrderManagementPage() {
         }}
         expandable={{
           expandedRowRender,
+          onExpand: handleExpand,
           expandRowByClick: true,
           expandIcon: () => null,
         }}

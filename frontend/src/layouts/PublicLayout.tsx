@@ -11,9 +11,11 @@ export default function PublicLayout() {
       style={{
         minHeight: '100vh',
         minWidth: '1024px',
+        display: 'flex',
+        flexDirection: 'column',
         backgroundColor: isLoginPage ? 'transparent' : undefined,
         transition: 'background-color 0.3s ease',
-        overflow: isLoginPage ? 'auto' : 'hidden', // LoginPage에서는 스크롤 허용
+        overflow: isLoginPage ? 'auto' : 'hidden',
       }}
     >
       <Layout.Content

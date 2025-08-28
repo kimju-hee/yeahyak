@@ -5,7 +5,6 @@ import {
   Form,
   Input,
   message,
-  Modal,
   Select,
   Tooltip,
   Typography,
@@ -13,7 +12,7 @@ import {
   type UploadFile,
   type UploadProps,
 } from 'antd';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { aiAPI, noticeAPI } from '../../api';
 import TiptapEditor from '../../components/TiptapEditor';
@@ -23,31 +22,14 @@ import { validateAttachmentFile } from '../../utils';
 
 export default function NoticeRegisterPage() {
   const [messageApi, contextHolder] = message.useMessage();
-  const [modal, modalContextHolder] = Modal.useModal();
   const [form] = Form.useForm();
   const navigate = useNavigate();
 
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
-  const [isEdited, setIsEdited] = useState(false);
 
   const watchedType = Form.useWatch('type', form);
   const watchedContent = Form.useWatch('content', form);
-
-  // const toCleanHtml = (raw: string) => {
-  //   let t = (raw ?? '')
-  //     .replace(/\*\*(.*?)\*\*/g, '$1')
-  //     .replace(/^\s*Subject:\s*/i, '')
-  //     .replace(/\r\n/g, '\n')
-  //     .replace(/[ \t]+\n/g, '\n')
-  //     .replace(/\n{3,}/g, '\n\n');
-  //   return (
-  //     t
-  //       .split(/\n{2,}/)
-  //       .map((s) => `<p>${s.replace(/\n/g, '<br/>')}</p>`)
-  //       .join('') || '<p></p>'
-  //   );
-  // };
 
   const handleBeforeUpload = (file: File) => {
     const error = validateAttachmentFile(file, watchedType);
@@ -68,7 +50,6 @@ export default function NoticeRegisterPage() {
     form.setFieldsValue({ attachmentUrl: '' });
   };
 
-  // TODO: AI가 문서를 요약하는 동안 로딩 상태 표시!
   const handleAiSummarize = async () => {
     if (fileList.length === 0 || !fileList[0].originFileObj) {
       messageApi.warning('첨부파일이 없습니다.');
@@ -125,6 +106,8 @@ export default function NoticeRegisterPage() {
         },
         file: fileList[0]?.originFileObj || undefined,
       };
+
+      console.log('📢 공지사항 등록 요청:', payload);
       const res = await noticeAPI.createNotice(payload);
 
       if (res.success) {
@@ -140,56 +123,17 @@ export default function NoticeRegisterPage() {
     }
   };
 
-  const handleFormValuesChange = () => setIsEdited(true);
-
-  // BUG: 뒤로가기 씹히는 문제
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isEdited) e.preventDefault();
-    };
-
-    const handlePopState = () => {
-      if (isEdited) {
-        window.history.pushState(null, '', window.location.href);
-
-        modal.confirm({
-          title: '페이지를 나가시겠습니까?',
-          content: '작성 중인 내용이 사라집니다.',
-          okText: '나가기',
-          cancelText: '취소',
-          onOk: () => {
-            setIsEdited(false);
-            navigate('/hq/announcements');
-          },
-          onCancel: () => {},
-        });
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('popstate', handlePopState);
-
-    window.history.pushState(null, '', window.location.href);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [isEdited, modal, navigate]);
-
   return (
     <>
       {contextHolder}
-      {modalContextHolder}
       <Typography.Title level={3} style={{ marginBottom: '24px' }}>
         공지사항 작성
       </Typography.Title>
 
       <Form
         form={form}
-        name="announcement-register"
+        name="notice-register"
         layout="vertical"
-        onValuesChange={handleFormValuesChange}
         onFinish={handleSubmit}
         autoComplete="off"
       >

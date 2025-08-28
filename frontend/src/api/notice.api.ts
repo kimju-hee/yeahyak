@@ -18,7 +18,11 @@ export const createNotice = async (
   const formData = new FormData();
   formData.append('notice', JSON.stringify(data.notice));
   if (data.file) formData.append('file', data.file);
-  const response = await instance.post(NOTICE_ENDPOINT.CREATE, formData);
+  const response = await instance.post(NOTICE_ENDPOINT.CREATE, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
   console.log('📢 공지사항 생성 응답:', response);
   return response.data;
 };

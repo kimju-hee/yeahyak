@@ -58,6 +58,11 @@ export interface NoticeFileUpdateRequest {
   file: File;
 }
 
+export interface NoticeUpdateRequestWithFile {
+  notice: NoticeUpdateRequest;
+  file?: File;
+}
+
 export type NoticeCreateResponse = ApiResponse<NoticeCreate>;
 export type NoticeListResponse = PaginatedResponse<NoticeList>;
 export type NoticeLatestListResponse = ApiResponse<NoticeList[]>;

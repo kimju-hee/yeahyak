@@ -28,7 +28,7 @@ export default function NoticeDetailPage() {
   const basePath = user.role === USER_ROLE.ADMIN ? '/hq' : '/branch';
   const returnTo = location.state?.returnTo;
 
-  const [notice, setNotice] = useState<NoticeDetail>();
+  const [notice, setNotice] = useState<NoticeDetail | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
   const fetchNotice = async () => {
@@ -59,32 +59,88 @@ export default function NoticeDetailPage() {
 
   const getFilenameFromCD = (cd: string | null | undefined) => {
     if (!cd) return null;
-    const star = cd.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
-    if (star) return decodeURIComponent(star[1]);
-    const plain = cd.match(/filename\s*=\s*"?([^"]+)"?/i);
-    return plain ? plain[1] : null;
+
+    // RFC 5987 형식 (filename*=UTF-8''encoded-filename)
+    const encodedMatch = cd.match(/filename\*\s*=\s*UTF-8''([^;,]+)/i);
+    if (encodedMatch) {
+      try {
+        return decodeURIComponent(encodedMatch[1]);
+      } catch {
+        // 디코딩 실패시 fallback
+      }
+    }
+
+    // 일반 형식 (filename="filename" 또는 filename=filename)
+    const plainMatch = cd.match(/filename\s*=\s*"?([^";,]+)"?/i);
+    if (plainMatch) {
+      return plainMatch[1].trim();
+    }
+
+    return null;
+  };
+
+  const buildReturnUrl = () => {
+    if (!returnTo) return `${basePath}/notices`;
+
+    const params = new URLSearchParams();
+    params.set('type', returnTo.type);
+    if (returnTo.page > 1) params.set('page', returnTo.page.toString());
+    if (returnTo.keyword) params.set('keyword', returnTo.keyword);
+    if (returnTo.scope) params.set('scope', returnTo.scope);
+
+    return `${basePath}/notices?${params.toString()}`;
   };
 
   const handleDownload = async (url: string, fallbackName?: string) => {
     try {
       const absUrl = toAbsUrl(url);
-      const res = await fetch(absUrl, { credentials: 'include' });
-      if (!res.ok) throw new Error('파일 다운로드 실패');
+
+      // 다운로드 시작 메시지
+      messageApi.loading('파일을 다운로드하고 있습니다...', 0);
+
+      const res = await fetch(absUrl, {
+        credentials: 'include',
+        headers: {
+          Accept: '*/*',
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: 파일 다운로드 실패`);
+      }
+
       const blob = await res.blob();
+
+      // 빈 파일 체크
+      if (blob.size === 0) {
+        throw new Error('파일이 비어있습니다.');
+      }
+
       const cd = res.headers.get('content-disposition');
       const fromHeader = getFilenameFromCD(cd);
-      const fileName = fromHeader || fallbackName || url.split('/').pop() || 'download';
+      const fileName =
+        fromHeader || fallbackName || url.split('/').pop()?.split('?')[0] || 'download';
+
+      // Blob URL 생성 및 다운로드
       const href = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = href;
       link.download = fileName;
+      link.style.display = 'none';
+
       document.body.appendChild(link);
       link.click();
-      link.remove();
+
+      // 정리
+      document.body.removeChild(link);
       URL.revokeObjectURL(href);
+
+      messageApi.destroy(); // loading 메시지 제거
+      messageApi.success(`파일이 다운로드되었습니다: ${fileName}`);
     } catch (e: any) {
       console.error('파일 다운로드 실패:', e);
-      messageApi.error(e.response?.data?.message || '파일 다운로드 중 오류가 발생했습니다.');
+      messageApi.destroy(); // loading 메시지 제거
+      messageApi.error(e.message || '파일 다운로드 중 오류가 발생했습니다.');
     }
   };
 
@@ -93,15 +149,7 @@ export default function NoticeDetailPage() {
       try {
         await noticeAPI.deleteNotice(Number(id));
         messageApi.success('공지사항이 삭제되었습니다.');
-        if (returnTo) {
-          const params = new URLSearchParams();
-          params.set('type', returnTo.type);
-          if (returnTo.page > 1) params.set('page', returnTo.page.toString());
-          if (returnTo.keyword) params.set('keyword', returnTo.keyword);
-          navigate(`${basePath}/notices?${params.toString()}`);
-        } else {
-          navigate(`${basePath}/notices`);
-        }
+        navigate(buildReturnUrl());
       } catch (e: any) {
         console.error('공지사항 삭제 실패:', e);
         messageApi.error(e.response?.data?.message || '공지사항 삭제 중 오류가 발생했습니다.');
@@ -114,8 +162,8 @@ export default function NoticeDetailPage() {
     { key: 'type', label: '카테고리', children: NOTICE_TYPE_TEXT[notice.type] },
     {
       key: 'createdAt',
-      label: '작성일시',
-      children: dayjs(notice.createdAt).format(DATE_FORMAT.DEFAULT),
+      label: '작성 일시',
+      children: dayjs(notice.createdAt).format(DATE_FORMAT.KR_DEFAULT),
     },
   ];
 
@@ -146,9 +194,10 @@ export default function NoticeDetailPage() {
       <Descriptions
         bordered
         column={3}
+        items={descriptionsItems}
         size="middle"
         style={{ marginBottom: '24px' }}
-        items={descriptionsItems}
+        styles={{ label: { textAlign: 'center' } }}
       />
 
       <Card style={{ marginBottom: '24px', padding: '24px' }}>
@@ -158,20 +207,7 @@ export default function NoticeDetailPage() {
       </Card>
 
       <Flex wrap style={{ justifyContent: 'space-between' }}>
-        <Button
-          type="default"
-          onClick={() => {
-            if (returnTo) {
-              const params = new URLSearchParams();
-              params.set('type', returnTo.type);
-              if (returnTo.page > 1) params.set('page', returnTo.page.toString());
-              if (returnTo.keyword) params.set('keyword', returnTo.keyword);
-              navigate(`${basePath}/notices?${params.toString()}`);
-            } else {
-              navigate(`${basePath}/notices`);
-            }
-          }}
-        >
+        <Button type="default" onClick={() => navigate(buildReturnUrl())}>
           목록
         </Button>
 

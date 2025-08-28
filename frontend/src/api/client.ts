@@ -33,6 +33,10 @@ const attachAuth = (client: AxiosInstance) => {
       '/auth/pharmacy/login',
       '/auth/admin/signup',
       '/auth/pharmacy/signup',
+      // AI 요약 기능들은 인증 불필요
+      '/summarize/law',
+      '/summarize/epidemic',
+      '/summarize/new-product',
     ];
 
     const shouldSkipAuth = authExemptPaths.some(
@@ -99,6 +103,4 @@ const attach401Refresh = (client: AxiosInstance) => {
 };
 
 attachAuth(instance);
-attachAuth(aiInstance);
 attach401Refresh(instance);
-attach401Refresh(aiInstance);

@@ -44,7 +44,7 @@ const theme = {
 const siderMenuItems = [
   {
     key: 'notices',
-    label: <Link to="/hq/announcements">공지사항</Link>,
+    label: <Link to="/hq/notices">공지사항</Link>,
     icon: <NotificationFilled />,
   },
   {

@@ -61,18 +61,15 @@ export default function ProductListPage() {
       const res = await productAPI.getProducts({
         mainCategory: activeMainCategory,
         subCategory: activeSubCategory === '전체' ? undefined : activeSubCategory,
+        keyword: appliedKeyword || undefined,
         page: currentPage - 1,
         size: PAGE_SIZE,
-        keyword: appliedKeyword ? appliedKeyword : undefined,
       });
 
       if (res.success) {
         const { data, page } = res;
         setProducts(data);
         setTotal(page.totalElements);
-      } else {
-        setProducts([]);
-        setTotal(0);
       }
     } catch (e: any) {
       console.error('제품 목록 로딩 실패:', e);

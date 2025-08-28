@@ -62,6 +62,7 @@ export interface OrderDetailItem {
   manufacturer: string;
   productImgUrl: string;
   quantity: number;
+  unit: string;
   unitPrice: number;
   subtotalPrice: number;
 }

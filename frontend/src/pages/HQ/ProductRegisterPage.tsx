@@ -9,7 +9,6 @@ import {
   Input,
   InputNumber,
   message,
-  Modal,
   Select,
   Space,
   Tooltip,
@@ -18,7 +17,7 @@ import {
   type UploadFile,
   type UploadProps,
 } from 'antd';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { aiAPI, productAPI } from '../../api';
 import { getProductSubCategoryOptions, MAIN_CATEGORY_OPTIONS } from '../../constants';
@@ -34,7 +33,6 @@ const getBase64 = (file: File): Promise<string> =>
 
 export default function ProductRegisterPage() {
   const [messageApi, contextHolder] = message.useMessage();
-  const [modal, modalContextHolder] = Modal.useModal();
   const [form] = Form.useForm();
   const navigate = useNavigate();
 
@@ -44,7 +42,6 @@ export default function ProductRegisterPage() {
   const [imgFileList, setImgFileList] = useState<UploadFile[]>([]);
   const [pdfFileList, setPdfFileList] = useState<UploadFile[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
-  const [isEdited, setIsEdited] = useState(false);
 
   const watchedMainCategory = Form.useWatch('mainCategory', form);
 
@@ -73,10 +70,9 @@ export default function ProductRegisterPage() {
 
   const handlePdfRemove = () => setPdfFileList([]);
 
-  // TODO: AI가 문서를 요약하는 동안 로딩 상태 표시!
   const handleAiSummarize = async () => {
     if (pdfFileList.length === 0 || !pdfFileList[0].originFileObj) {
-      messageApi.warning('PDF 파일을 먼저 업로드해주세요.');
+      messageApi.warning('PDF 파일을 먼저 업로드 해주세요');
       return;
     }
 
@@ -100,9 +96,9 @@ export default function ProductRegisterPage() {
 
   const handleSubmit = async (values: ProductCreateRequest) => {
     try {
-      const payload = {
+      const payload: ProductCreateRequest = {
         productName: values.productName,
-        productCode: values.insuranceCode,
+        insuranceCode: values.insuranceCode,
         mainCategory: values.mainCategory,
         subCategory: values.subCategory,
         manufacturer: values.manufacturer,
@@ -110,7 +106,7 @@ export default function ProductRegisterPage() {
         unitPrice: values.unitPrice,
         details: values.details || '',
         productImgUrl: values.productImgUrl || '',
-        stock: values.stockQty,
+        stockQty: values.stockQty,
       };
       const res = await productAPI.createProduct(payload);
 
@@ -124,48 +120,9 @@ export default function ProductRegisterPage() {
     }
   };
 
-  const handleFormValuesChange = () => setIsEdited(true);
-
-  // BUG: 뒤로가기 씹히는 문제
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isEdited) e.preventDefault();
-    };
-
-    const handlePopState = () => {
-      if (isEdited) {
-        window.history.pushState(null, '', window.location.href);
-
-        modal.confirm({
-          title: '페이지를 나가시겠습니까?',
-          content: '작성 중인 내용이 사라집니다.',
-          okText: '나가기',
-          cancelText: '취소',
-          onOk: () => {
-            setIsEdited(false);
-            navigate('/hq/products');
-          },
-          onCancel: () => {},
-          centered: true,
-        });
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('popstate', handlePopState);
-
-    window.history.pushState(null, '', window.location.href);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [isEdited, modal, navigate]);
-
   return (
     <>
       {contextHolder}
-      {modalContextHolder}
       <Typography.Title level={3} style={{ marginBottom: '24px' }}>
         제품 등록
       </Typography.Title>
@@ -175,7 +132,6 @@ export default function ProductRegisterPage() {
           form={form}
           name="product-register"
           layout="vertical"
-          onValuesChange={handleFormValuesChange}
           onFinish={handleSubmit}
           autoComplete="off"
         >
@@ -224,12 +180,26 @@ export default function ProductRegisterPage() {
               >
                 <Input />
               </Form.Item>
+            </Flex>
+
+            <Flex vertical flex={1}>
               <Form.Item
-                name="productCode"
+                name="insuranceCode"
                 label="보험코드"
                 rules={[{ required: true, message: '보험코드를 입력하세요.' }]}
               >
                 <Input />
+              </Form.Item>
+              <Form.Item
+                name="unitPrice"
+                label="판매가"
+                rules={[{ required: true, message: '판매가를 입력하세요.' }]}
+              >
+                <InputNumber
+                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원'}
+                  parser={(value) => value?.replace(/[원,]/g, '') as unknown as number}
+                  style={{ width: '100%' }}
+                />
               </Form.Item>
             </Flex>
           </Flex>
@@ -271,18 +241,7 @@ export default function ProductRegisterPage() {
                 <Input />
               </Form.Item>
               <Form.Item
-                name="unitPrice"
-                label="판매가"
-                rules={[{ required: true, message: '판매가를 입력하세요.' }]}
-              >
-                <InputNumber
-                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원'}
-                  parser={(value) => value?.replace(/[원,]/g, '') as unknown as number}
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-              <Form.Item
-                name="stock"
+                name="stockQty"
                 label="재고"
                 rules={[{ required: true, message: '재고를 입력하세요.' }]}
               >
@@ -307,7 +266,7 @@ export default function ProductRegisterPage() {
               >
                 {pdfFileList.length >= 1 ? null : <Button icon={<UploadOutlined />}>업로드</Button>}
               </Upload>
-              <Tooltip title={pdfFileList.length === 0 ? 'PDF 파일을 업로드하세요.' : ''}>
+              <Tooltip title={pdfFileList.length === 0 ? 'PDF 파일을 업로드 해주세요' : ''}>
                 <Button
                   type="primary"
                   disabled={pdfFileList.length === 0}

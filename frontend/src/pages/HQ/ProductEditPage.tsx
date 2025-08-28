@@ -9,7 +9,6 @@ import {
   Input,
   InputNumber,
   message,
-  Modal,
   Select,
   Space,
   Tooltip,
@@ -24,7 +23,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { aiAPI, productAPI } from '../../api';
 import { ProductEditSkeleton } from '../../components/skeletons';
 import { DATE_FORMAT, getProductSubCategoryOptions, MAIN_CATEGORY_OPTIONS } from '../../constants';
-import type { MainCategory, ProductCreateRequest } from '../../types';
+import type { MainCategory, ProductCreateRequest, ProductUpdateRequest } from '../../types';
 
 const getBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -36,7 +35,6 @@ const getBase64 = (file: File): Promise<string> =>
 
 export default function ProductEditPage() {
   const [messageApi, contextHolder] = message.useMessage();
-  const [modal, modalContextHolder] = Modal.useModal();
   const { id } = useParams();
   const [form] = Form.useForm();
   const navigate = useNavigate();
@@ -48,7 +46,6 @@ export default function ProductEditPage() {
   const [pdfFileList, setPdfFileList] = useState<UploadFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
-  const [isEdited, setIsEdited] = useState(false);
 
   const watchedMainCategory = Form.useWatch('mainCategory', form);
 
@@ -58,7 +55,7 @@ export default function ProductEditPage() {
       const res = await productAPI.getProduct(Number(id));
 
       if (res.success) {
-        const product = res.data[0];
+        const product = res.data;
         form.setFieldsValue({
           ...product,
           details: product.details || '',
@@ -119,7 +116,6 @@ export default function ProductEditPage() {
 
   const handlePdfRemove = () => setPdfFileList([]);
 
-  // TODO: AI가 문서를 요약하는 동안 로딩 상태 표시!
   const handleAiSummarize = async () => {
     if (pdfFileList.length === 0 || !pdfFileList[0].originFileObj) {
       messageApi.warning('PDF 파일을 먼저 업로드해주세요.');
@@ -146,9 +142,9 @@ export default function ProductEditPage() {
 
   const handleSubmit = async (values: ProductCreateRequest) => {
     try {
-      const payload = {
+      const payload: ProductUpdateRequest = {
         productName: values.productName,
-        productCode: values.insuranceCode,
+        insuranceCode: values.insuranceCode,
         mainCategory: values.mainCategory,
         subCategory: values.subCategory,
         manufacturer: values.manufacturer,
@@ -156,7 +152,6 @@ export default function ProductEditPage() {
         unitPrice: values.unitPrice,
         details: values.details || '',
         productImgUrl: values.productImgUrl || '',
-        stock: values.stockQty,
       };
       await productAPI.updateProduct(Number(id), payload);
       messageApi.success('수정이 완료되었습니다.');
@@ -167,48 +162,9 @@ export default function ProductEditPage() {
     }
   };
 
-  const handleFormValuesChange = () => setIsEdited(true);
-
-  // BUG: 뒤로가기 씹히는 문제
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isEdited) e.preventDefault();
-    };
-
-    const handlePopState = () => {
-      if (isEdited) {
-        window.history.pushState(null, '', window.location.href);
-
-        modal.confirm({
-          title: '페이지를 나가시겠습니까?',
-          content: '수정 중인 내용이 사라집니다.',
-          okText: '나가기',
-          cancelText: '취소',
-          onOk: () => {
-            setIsEdited(false);
-            navigate(`/hq/products/${id}`);
-          },
-          onCancel: () => {},
-          centered: true,
-        });
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('popstate', handlePopState);
-
-    window.history.pushState(null, '', window.location.href);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [isEdited, modal, navigate]);
-
   return (
     <>
       {contextHolder}
-      {modalContextHolder}
       <Typography.Title level={3} style={{ marginBottom: '24px' }}>
         제품 정보 수정
       </Typography.Title>
@@ -221,7 +177,6 @@ export default function ProductEditPage() {
             form={form}
             name="product-edit"
             layout="vertical"
-            onValuesChange={handleFormValuesChange}
             onFinish={handleSubmit}
             autoComplete="off"
           >
@@ -281,12 +236,26 @@ export default function ProductEditPage() {
                 >
                   <Input />
                 </Form.Item>
+              </Flex>
+
+              <Flex vertical flex={1}>
                 <Form.Item
-                  name="productCode"
+                  name="insuranceCode"
                   label="보험코드"
                   rules={[{ required: true, message: '보험코드를 입력하세요.' }]}
                 >
                   <Input />
+                </Form.Item>
+                <Form.Item
+                  name="unitPrice"
+                  label="판매가"
+                  rules={[{ required: true, message: '판매가를 입력하세요.' }]}
+                >
+                  <InputNumber
+                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원'}
+                    parser={(value) => value?.replace(/[원,]/g, '') as unknown as number}
+                    style={{ width: '100%' }}
+                  />
                 </Form.Item>
               </Flex>
             </Flex>
@@ -328,22 +297,11 @@ export default function ProductEditPage() {
                   <Input />
                 </Form.Item>
                 <Form.Item
-                  name="unitPrice"
-                  label="판매가"
-                  rules={[{ required: true, message: '판매가를 입력하세요.' }]}
-                >
-                  <InputNumber
-                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원'}
-                    parser={(value) => value?.replace(/[원,]/g, '') as unknown as number}
-                    style={{ width: '100%' }}
-                  />
-                </Form.Item>
-                <Form.Item
-                  name="stock"
+                  name="stockQty"
                   label="재고"
                   rules={[{ required: true, message: '재고를 입력하세요.' }]}
                 >
-                  <InputNumber min={0} style={{ width: '100%' }} />
+                  <InputNumber disabled style={{ width: '100%' }} />
                 </Form.Item>
               </Flex>
             </Flex>
@@ -366,7 +324,7 @@ export default function ProductEditPage() {
                     <Button icon={<UploadOutlined />}>업로드</Button>
                   )}
                 </Upload>
-                <Tooltip title={pdfFileList.length === 0 ? 'PDF 파일을 업로드하세요.' : ''}>
+                <Tooltip title={pdfFileList.length === 0 ? 'PDF 파일을 업로드 해주세요' : ''}>
                   <Button
                     type="primary"
                     disabled={pdfFileList.length === 0}

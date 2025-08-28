@@ -9,6 +9,7 @@ import {
   Row,
   Select,
   Space,
+  Spin,
   Statistic,
   Table,
   Tag,
@@ -27,7 +28,13 @@ import {
   RETURN_STATUS_OPTIONS,
   RETURN_STATUS_TEXT,
 } from '../../constants';
-import { RETURN_STATUS, type ReturnDetail, type ReturnList, type ReturnStatus } from '../../types';
+import {
+  RETURN_STATUS,
+  type Region,
+  type ReturnDetail,
+  type ReturnList,
+  type ReturnStatus,
+} from '../../types';
 
 const getStatusTag = (status: ReturnStatus, isClickable: boolean) => {
   const color = RETURN_STATUS_COLORS[status];
@@ -48,15 +55,17 @@ export default function ReturnManagementPage() {
   const [form] = Form.useForm();
 
   const [returns, setReturns] = useState<ReturnList[]>([]);
+  const [expandedRowData, setExpandedRowData] = useState<Record<number, ReturnDetail>>({});
+  const [expandedRowLoading, setExpandedRowLoading] = useState<Record<number, boolean>>({});
   const [filters, setFilters] = useState({
-    region: undefined as string | undefined,
     status: undefined as ReturnStatus | undefined,
-    startDate: undefined as dayjs.Dayjs | undefined,
-    endDate: undefined as dayjs.Dayjs | undefined,
+    region: undefined as Region | undefined,
+    start: undefined as dayjs.Dayjs | undefined,
+    end: undefined as dayjs.Dayjs | undefined,
   });
   const [statistics, setStatistics] = useState({
     totalReturns: 0,
-    totalProcessing: 0,
+    totalReceived: 0,
     totalAmount: 0,
   });
 
@@ -66,28 +75,37 @@ export default function ReturnManagementPage() {
 
   const fetchStatistics = async () => {
     try {
-      const res = await returnAPI.getReturnsHq();
+      const now = dayjs();
+      const startOfMonth = now.startOf('month');
+      const endOfMonth = now.endOf('month');
+
+      const res = await returnAPI.getReturnsHq({
+        start: startOfMonth.format('YYYY-MM-DD'),
+        end: endOfMonth.format('YYYY-MM-DD'),
+        page: 0,
+        size: 9999,
+      });
 
       if (res.success) {
         const totalReturns = res.data.length;
         const calculatedStatistics = res.data.reduce(
           (acc: any, ret: ReturnList) => {
             if (ret.status === RETURN_STATUS.RECEIVED) {
-              acc.totalProcessing += 1;
+              acc.totalReceived += 1;
             }
             if (ret.status !== RETURN_STATUS.CANCELED) {
               acc.totalAmount += ret.totalPrice || 0;
             }
             return acc;
           },
-          { totalReturns: 0, totalProcessing: 0, totalAmount: 0 },
+          { totalReturns: 0, totalReceived: 0, totalAmount: 0 },
         );
         setStatistics({ ...calculatedStatistics, totalReturns: totalReturns });
       }
     } catch (e: any) {
-      console.error('전체 반품 요청 목록 로딩 실패:', e);
+      console.error('월간 반품 요청 통계 로딩 실패:', e);
       messageApi.error(
-        e.response?.data?.message || '전체 반품 요청 목록 로딩 중 오류가 발생했습니다.',
+        e.response?.data?.message || '월간 반품 요청 통계 로딩 중 오류가 발생했습니다.',
       );
     }
   };
@@ -96,12 +114,12 @@ export default function ReturnManagementPage() {
     setLoading(true);
     try {
       const res = await returnAPI.getReturnsHq({
+        status: filters.status,
+        region: filters.region,
+        start: filters.start?.format('YYYY-MM-DD'),
+        end: filters.end?.format('YYYY-MM-DD'),
         page: currentPage - 1,
         size: PAGE_SIZE,
-        region: filters.region,
-        status: filters.status,
-        start: filters.startDate,
-        end: filters.endDate,
       });
 
       if (res.success) {
@@ -133,15 +151,15 @@ export default function ReturnManagementPage() {
     setFilters({
       region: formValues.region,
       status: formValues.status,
-      startDate,
-      endDate,
+      start: startDate,
+      end: endDate,
     });
     setCurrentPage(1);
   };
 
   const handleReset = () => {
     form.resetFields();
-    setFilters({ region: undefined, status: undefined, startDate: undefined, endDate: undefined });
+    setFilters({ region: undefined, status: undefined, start: undefined, end: undefined });
     setCurrentPage(1);
   };
 
@@ -155,7 +173,7 @@ export default function ReturnManagementPage() {
         case 'REJECT':
           res = await returnAPI.updateReturn(returnId, { status: RETURN_STATUS.CANCELED });
           break;
-        case 'PROCESS':
+        case 'RECEIVE':
           res = await returnAPI.updateReturn(returnId, { status: RETURN_STATUS.RECEIVED });
           break;
         case 'COMPLETE':
@@ -201,7 +219,7 @@ export default function ReturnManagementPage() {
 
     switch (record.status) {
       case RETURN_STATUS.APPROVED:
-        nextAction = 'PROCESS';
+        nextAction = 'RECEIVE';
         confirmDescription = '처리중으로 변경하시겠습니까?';
         break;
       case RETURN_STATUS.RECEIVED:
@@ -232,26 +250,28 @@ export default function ReturnManagementPage() {
   };
 
   const tableColumns: TableProps<ReturnList>['columns'] = [
-    { title: '반품번호', dataIndex: 'returnId', key: 'returnId' },
-    { title: '주문번호', dataIndex: 'orderId', key: 'orderId' },
-    { title: '지점명', dataIndex: 'pharmacyName', key: 'pharmacyName' },
+    { title: '반품 번호', dataIndex: 'returnId', key: 'returnId', align: 'center' },
+    { title: '약국명', dataIndex: 'pharmacyName', key: 'pharmacyName', align: 'center' },
     {
-      title: '반품요약',
+      title: '반품 요약',
       dataIndex: 'summary',
       key: 'summary',
+      align: 'center',
     },
     {
-      title: '반품금액',
+      title: '반품 금액',
       dataIndex: 'totalPrice',
       key: 'totalPrice',
       render: (value) => `${value.toLocaleString()}원`,
+      align: 'center',
     },
 
     {
-      title: '요청일시',
+      title: '요청 일시',
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (value) => dayjs(value).format(DATE_FORMAT.DEFAULT),
+      align: 'center',
     },
 
     {
@@ -259,18 +279,59 @@ export default function ReturnManagementPage() {
       dataIndex: 'status',
       key: 'status',
       render: (_, record) => renderStatusTagWithActions(record),
+      align: 'center',
     },
   ];
 
-  const expandedRowRender = (record: ReturnDetail) => {
+  const fetchReturnDetail = async (returnId: number) => {
+    setExpandedRowLoading((prev) => ({ ...prev, [returnId]: true }));
+    try {
+      const res = await returnAPI.getReturn(returnId);
+      if (res.success) {
+        setExpandedRowData((prev) => ({ ...prev, [returnId]: res.data }));
+      }
+    } catch (e: any) {
+      console.error('반품 상세 로딩 실패:', e);
+      messageApi.error(e.response?.data?.message || '반품 상세 로딩 중 오류가 발생했습니다.');
+    } finally {
+      setExpandedRowLoading((prev) => ({ ...prev, [returnId]: false }));
+    }
+  };
+
+  const handleExpand = (expanded: boolean, record: ReturnList) => {
+    if (expanded && !expandedRowData[record.returnId]) {
+      fetchReturnDetail(record.returnId);
+    }
+  };
+
+  const expandedRowRender = (record: ReturnList) => {
+    const detail = expandedRowData[record.returnId];
+    const isLoading = expandedRowLoading[record.returnId];
+
+    if (isLoading) {
+      return <Spin />;
+    }
+
+    if (!detail) {
+      return (
+        <Typography.Text style={{ padding: '16px', textAlign: 'center' }}>
+          상세 정보를 불러올 수 없습니다.
+        </Typography.Text>
+      );
+    }
+
     return (
       <>
         <Table
           bordered={true}
-          dataSource={record.items}
+          dataSource={detail.items}
           columns={[
             { title: '제품명', dataIndex: 'productName', key: 'productName' },
+            { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer' },
+            { title: '대분류', dataIndex: 'mainCategory', key: 'mainCategory' },
+            { title: '소분류', dataIndex: 'subCategory', key: 'subCategory' },
             { title: '수량', dataIndex: 'quantity', key: 'quantity' },
+            { title: '단위', dataIndex: 'unit', key: 'unit' },
             {
               title: '단가',
               dataIndex: 'unitPrice',
@@ -290,7 +351,7 @@ export default function ReturnManagementPage() {
           summary={() => (
             <Table.Summary fixed>
               <Table.Summary.Row>
-                <Table.Summary.Cell index={0} colSpan={2} />
+                <Table.Summary.Cell index={0} colSpan={6} />
                 <Table.Summary.Cell index={1}>합계</Table.Summary.Cell>
                 <Table.Summary.Cell index={2}>
                   {record.totalPrice.toLocaleString()}원
@@ -318,7 +379,7 @@ export default function ReturnManagementPage() {
         </Col>
         <Col span={8}>
           <Card>
-            <Statistic title="처리중" value={statistics.totalProcessing} />
+            <Statistic title="처리중" value={statistics.totalReceived} />
           </Card>
         </Col>
         <Col span={8}>

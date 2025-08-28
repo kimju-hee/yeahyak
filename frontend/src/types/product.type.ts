@@ -96,4 +96,4 @@ export interface ProductUpdateRequest {
 
 export type ProductCreateResponse = ApiResponse<ProductCreate>;
 export type ProductListResponse = PaginatedResponse<ProductList>;
-export type ProductDetailResponse = PaginatedResponse<ProductDetail>;
+export type ProductDetailResponse = ApiResponse<ProductDetail>;

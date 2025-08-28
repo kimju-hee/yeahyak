@@ -20,9 +20,7 @@ export const chatQNA = async (data: ChatbotRequest): Promise<ChatbotResponse> =>
 export const summarizeLaw = async (data: { file: File }) => {
   const formData = new FormData();
   formData.append('file', data.file);
-  const response = await aiInstance.post(AI_ENDPOINT.LAW, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const response = await aiInstance.post(AI_ENDPOINT.LAW, formData);
   console.log('🤖 법령 AI 요약 응답:', response);
   return response.data;
 };
@@ -31,9 +29,7 @@ export const summarizeLaw = async (data: { file: File }) => {
 export const summarizeEpidemic = async (data: { file: File }) => {
   const formData = new FormData();
   formData.append('file', data.file);
-  const response = await aiInstance.post(AI_ENDPOINT.EPIDEMIC, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const response = await aiInstance.post(AI_ENDPOINT.EPIDEMIC, formData);
   console.log('🤖 감염병 AI 요약 응답:', response);
   return response.data;
 };
@@ -42,9 +38,7 @@ export const summarizeEpidemic = async (data: { file: File }) => {
 export const summarizeNewProduct = async (data: { file: File }) => {
   const formData = new FormData();
   formData.append('file', data.file);
-  const response = await aiInstance.post(AI_ENDPOINT.NEW_PRODUCT, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const response = await aiInstance.post(AI_ENDPOINT.NEW_PRODUCT, formData);
   console.log('🤖 신제품 AI 요약 응답:', response);
   return response.data;
 };

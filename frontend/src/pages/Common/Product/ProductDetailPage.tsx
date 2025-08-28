@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { productAPI } from '../../../api';
 import { ProductDetailSkeleton } from '../../../components/skeletons';
+import { SUB_CATEGORY_TEXT } from '../../../constants';
 import { useAuthStore } from '../../../stores/authStore';
 import { useOrderCartStore } from '../../../stores/orderCartStore';
 import { USER_ROLE, type OrderCartItem, type ProductDetail, type User } from '../../../types';
@@ -29,7 +30,7 @@ export default function ProductDetailPage() {
 
   const user = useAuthStore((state) => state.user) as User;
   const addItem = useOrderCartStore((state) => state.addItem);
-  const basePath = user.role === USER_ROLE.PHARMACY ? '/branch' : '/hq';
+  const basePath = user.role === USER_ROLE.ADMIN ? '/hq' : '/branch';
   const returnTo = location.state?.returnTo;
 
   const [product, setProduct] = useState<ProductDetail>();
@@ -41,7 +42,7 @@ export default function ProductDetailPage() {
       const res = await productAPI.getProduct(Number(id));
 
       if (res.success) {
-        setProduct(res.data[0]);
+        setProduct(res.data);
       }
     } catch (e: any) {
       console.error('제품 정보 로딩 실패:', e);
@@ -84,7 +85,7 @@ export default function ProductDetailPage() {
   const descriptionsItems: DescriptionsProps['items'] = [
     { key: 'manufacturer', label: '제조사', children: product.manufacturer },
     { key: 'productCode', label: '보험코드', children: product.insuranceCode },
-    { key: 'subCategory', label: '소분류', children: product.subCategory },
+    { key: 'subCategory', label: '소분류', children: SUB_CATEGORY_TEXT[product.subCategory] },
     { key: 'unit', label: '단위', children: product.unit },
     {
       key: 'unitPrice',
@@ -93,7 +94,6 @@ export default function ProductDetailPage() {
     },
   ];
 
-  // TODO: 목록으로 돌아가기 버튼 추가
   return (
     <>
       {contextHolder}
@@ -156,10 +156,10 @@ export default function ProductDetailPage() {
                         quantity: 1,
                         unitPrice: product.unitPrice,
                         subtotalPrice: product.unitPrice,
-                        productImgUrl: product.productImgUrl ? product.productImgUrl : PLACEHOLDER,
+                        productImgUrl: product.productImgUrl || PLACEHOLDER,
                       };
                       addItem(newItem);
-                      messageApi.success(`${product.productName}을(를) 장바구니에 추가했습니다.`);
+                      messageApi.success(`${product.productName}을(를) 장바구니에 추가했습니다!`);
                     }}
                   >
                     담기
