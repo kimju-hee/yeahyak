@@ -44,3 +44,4 @@ bin/
 # ========== 기타 ==========
 # 로그 / 민감 정보
 application.properties
+application.yml
