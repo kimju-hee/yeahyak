@@ -34,7 +34,7 @@ public class PharmacyRequestService {
   public Page<PharmacyRequestListResponse> getPharmacyRequests(
       PharmacyRequestStatus status, Region region, String keyword, int page, int size
   ) {
-    Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.DESC, "createdAt"));
+    Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.DESC, "requestedAt"));
     return pharmacyRequestRepo.findByStatusAndRegionAndPharmacyName(
         status, region, keyword, pageable
     ).map(pharmacyRequest -> PharmacyRequestListResponse.builder()

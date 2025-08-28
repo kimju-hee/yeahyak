@@ -1,5 +1,12 @@
 package com.yeahyak.backend.service;
 
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.yeahyak.backend.dto.AdminLoginResponse;
 import com.yeahyak.backend.dto.AdminProfile;
 import com.yeahyak.backend.dto.AdminSignupRequest;
@@ -24,15 +31,8 @@ import com.yeahyak.backend.repository.PharmacyRepository;
 import com.yeahyak.backend.repository.PharmacyRequestRepository;
 import com.yeahyak.backend.repository.UserRepository;
 import com.yeahyak.backend.security.JwtProvider;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 인증 및 사용자 관리와 관련된 비즈니스 로직을 처리하는 서비스 클래스입니다.
@@ -118,12 +118,10 @@ public class AuthService {
    * 관리자로 로그인합니다.
    */
   public AdminLoginResponse adminLogin(LoginRequest req) {
-    Authentication auth;
     try {
-      auth = authenticationManager.authenticate(
+      authenticationManager.authenticate(
           new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword())
       );
-      SecurityContextHolder.getContext().setAuthentication(auth);
     } catch (AuthenticationException e) {
       throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.");
     }
@@ -159,12 +157,10 @@ public class AuthService {
    * 가맹점으로 로그인합니다.
    */
   public PharmacyLoginResponse pharmacylogin(LoginRequest req) {
-    Authentication auth;
     try {
-      auth = authenticationManager.authenticate(
+      authenticationManager.authenticate(
           new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword())
       );
-      SecurityContextHolder.getContext().setAuthentication(auth);
     } catch (AuthenticationException e) {
       throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.");
     }

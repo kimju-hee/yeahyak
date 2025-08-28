@@ -1,24 +1,19 @@
 package com.yeahyak.backend.config;
 
-import com.yeahyak.backend.security.JwtAuthenticationFilter;
-import jakarta.servlet.http.HttpServletResponse;
-import java.time.Duration;
+import com.yeahyak.backend.security.CustomAuthenticationProvider;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder.BCryptVersion;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -26,6 +21,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import com.yeahyak.backend.security.JwtAuthenticationFilter;
 
 @Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
@@ -69,9 +65,9 @@ public class SecurityConfig {
   }
 
   @Bean
-  public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration)
-      throws Exception {
-    return configuration.getAuthenticationManager();
+  public AuthenticationManager authenticationManager(
+      CustomAuthenticationProvider customAuthenticationProvider) {
+    return new ProviderManager(List.of(customAuthenticationProvider));
   }
 
   @Bean
@@ -107,24 +103,9 @@ public class SecurityConfig {
     http
         .csrf(csrf -> csrf.disable())
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-        .sessionManagement(sess -> sess
-            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-        )
-
+        .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .formLogin(form -> form.disable())
         .httpBasic(basic -> basic.disable())
-        .exceptionHandling(ex -> ex
-            .authenticationEntryPoint((req, res, authEx) -> {
-              res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-              res.setContentType("application/json;charset=UTF-8");
-              res.getWriter().write("{\"error\":\"Unauthorized\"}");
-            })
-            .accessDeniedHandler((req, res, accEx) -> {
-              res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-              res.setContentType("application/json;charset=UTF-8");
-              res.getWriter().write("{\"error\":\"Forbidden\"}");
-            })
-        )
         .authorizeHttpRequests(auth -> auth
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             .requestMatchers(
@@ -139,14 +120,18 @@ public class SecurityConfig {
                 "/auth/admin/login",
                 "/auth/pharmacy/login",
                 "/auth/refresh",
-                "/auth/logout"
+                "/auth/logout",
+                "/actuator/**",
+                "/health",
+                "/error",
+                "/swagger-ui/**",
+                "/v3/api-docs/**",
+                "/docs/**"
             ).permitAll()
-            .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/docs/**").permitAll()
-            .requestMatchers("/actuator/**", "/health", "/error").permitAll()
-            .anyRequest().authenticated()
-        );
-
+            .anyRequest().authenticated());
+    // jwtAuthenticationFilter 제거
     http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
     return http.build();
   }
 }

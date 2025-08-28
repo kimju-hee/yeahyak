@@ -1,5 +1,20 @@
 package com.yeahyak.backend.controller;
 
+import java.net.URI;
+import java.util.Map;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import com.yeahyak.backend.dto.AdminLoginResponse;
 import com.yeahyak.backend.dto.AdminProfile;
 import com.yeahyak.backend.dto.AdminSignupRequest;
@@ -15,29 +30,11 @@ import com.yeahyak.backend.dto.PharmacySignupResponse;
 import com.yeahyak.backend.dto.PharmacyUpdateRequest;
 import com.yeahyak.backend.entity.User;
 import com.yeahyak.backend.repository.UserRepository;
+import com.yeahyak.backend.security.CustomUserDetails;
 import com.yeahyak.backend.security.JwtProvider;
 import com.yeahyak.backend.service.AuthService;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Positive;
-import java.net.URI;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseCookie;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 인증 및 인가 관련 API를 처리하는 컨트롤러입니다.
@@ -165,8 +162,8 @@ public class AuthController {
     if (auth == null || !auth.isAuthenticated()) {
       return ResponseEntity.status(401).build(); // 401 Unauthorized
     }
-    User user = (User) auth.getPrincipal();
-    Long userId = user.getUserId();
+    CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+    Long userId = userDetails.getUserId();
     authService.changePassword(userId, request);
     return ResponseEntity.noContent().build(); // 204 No Content
   }

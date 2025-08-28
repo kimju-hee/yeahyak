@@ -23,6 +23,7 @@ public interface PharmacyRequestRepository extends JpaRepository<PharmacyRequest
       WHERE (:status IS NULL OR r.status = :status)
       AND (:region IS NULL OR r.region = :region)
       AND (:keyword IS NULL OR  r.pharmacyName LIKE CONCAT('%', :keyword, '%'))
+      ORDER BY r.requestedAt DESC
       """)
   Page<PharmacyRequest> findByStatusAndRegionAndPharmacyName(
       @Param("status") PharmacyRequestStatus status,
