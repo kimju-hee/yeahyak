@@ -2,18 +2,18 @@ import { Card, Col, Image, Row } from 'antd';
 import { memo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { USER_ROLE, type Product, type User } from '../types';
+import { USER_ROLE, type ProductList, type User } from '../types';
 import { getProductImgSrc, PLACEHOLDER } from '../utils';
 
 interface ProductCardGridProps {
-  products: Product[];
+  products: ProductList[];
 }
 
 const ProductCard = memo(function ProductCard({
   product,
   onNavigate,
 }: {
-  product: Product;
+  product: ProductList;
   onNavigate: (productId: number) => void;
 }) {
   const imageSrc = getProductImgSrc(product.productImgUrl);

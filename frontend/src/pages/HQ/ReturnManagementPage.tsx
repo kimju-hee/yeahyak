@@ -426,6 +426,7 @@ export default function ReturnManagementPage() {
         }}
         expandable={{
           expandedRowRender,
+          onExpand: handleExpand,
           expandRowByClick: true,
           expandIcon: () => null,
         }}
