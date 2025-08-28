@@ -1,22 +1,11 @@
 package com.yeahyak.backend.controller;
 
-import com.yeahyak.backend.dto.ApiResponse;
-import com.yeahyak.backend.dto.NoticeCreateRequest;
-import com.yeahyak.backend.dto.NoticeCreateResponse;
-import com.yeahyak.backend.dto.NoticeDetailResponse;
-import com.yeahyak.backend.dto.NoticeListResponse;
-import com.yeahyak.backend.dto.NoticeUpdateRequest;
-import com.yeahyak.backend.entity.enums.NoticeType;
-import com.yeahyak.backend.service.NoticeService;
-import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -29,6 +18,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yeahyak.backend.dto.ApiResponse;
+import com.yeahyak.backend.dto.NoticeCreateRequest;
+import com.yeahyak.backend.dto.NoticeCreateResponse;
+import com.yeahyak.backend.dto.NoticeDetailResponse;
+import com.yeahyak.backend.dto.NoticeListResponse;
+import com.yeahyak.backend.dto.NoticeUpdateRequest;
+import com.yeahyak.backend.entity.enums.NoticeType;
+import com.yeahyak.backend.service.NoticeService;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * 공지사항 관련 API를 처리하는 컨트롤러입니다.
@@ -45,9 +46,18 @@ public class NoticeController {
    */
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ApiResponse<NoticeCreateResponse>> createNotice(
-      @RequestPart("notice") NoticeCreateRequest request,
+      @RequestPart(value = "notice", required = true) String noticeJson,
       @RequestPart(value = "file", required = false) MultipartFile file
   ) {
+    // JSON 문자열을 NoticeCreateRequest 객체로 변환
+    ObjectMapper objectMapper = new ObjectMapper();
+    NoticeCreateRequest request;
+    try {
+      request = objectMapper.readValue(noticeJson, NoticeCreateRequest.class);
+    } catch (Exception e) {
+      throw new RuntimeException("Invalid JSON format for notice", e);
+    }
+    
     NoticeCreateResponse res = noticeService.createNotice(request, file);
     URI location = URI.create("/api/notices/" + res.getNoticeId());
     return ResponseEntity
