@@ -23,18 +23,17 @@ export default function BranchProfileEditPage() {
       postcode: profile.postcode,
       address: profile.address,
       detailAddress: profile.detailAddress,
+      region: profile.region,
       contact: formatContact(profile.contact),
     });
   }, [profile]);
 
-  const handleSubmit = async (values: Omit<PharmacyUpdateRequest, 'status'>) => {
+  const handleSubmit = async (values: PharmacyUpdateRequest & { bizRegNo: string }) => {
     try {
-      const payload: PharmacyUpdateRequest = {
-        ...values,
-      };
-      const response = await authAPI.updatePharmacy(profile.pharmacyId, payload);
+      const { bizRegNo, ...payload } = values;
+      const res = await authAPI.updatePharmacy(profile.pharmacyId, payload);
 
-      if (response.success) {
+      if (res.success) {
         updateProfile(payload);
         messageApi.success('약국 정보가 수정되었습니다!');
       }
@@ -47,14 +46,17 @@ export default function BranchProfileEditPage() {
   return (
     <>
       {contextHolder}
-      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+      <Typography.Title
+        level={3}
+        style={{ marginBottom: '24px', textAlign: 'center', width: '100%' }}
+      >
         약국 정보 수정
       </Typography.Title>
 
       <Card style={{ width: '80%', padding: '8px', margin: '0 auto' }}>
         <Form
           form={form}
-          name="branch-profile-edit"
+          name="pharmacy-edit"
           onFinish={handleSubmit}
           labelCol={{ span: 6 }}
           labelWrap
@@ -81,7 +83,7 @@ export default function BranchProfileEditPage() {
             postcodeName="postcode"
             addressName="address"
             detailAddressName="detailAddress"
-            region="region"
+            regionName="region"
             label="주소"
           />
           <Form.Item

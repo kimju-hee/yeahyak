@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { authAPI } from '../../api';
 import { DEPARTMENT_OPTIONS } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
-import type { Admin, AdminUpdateRequest, Department } from '../../types';
+import type { Admin, AdminUpdateRequest } from '../../types';
 
 export default function HqProfileEditPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -19,13 +19,12 @@ export default function HqProfileEditPage() {
     });
   }, [profile]);
 
-  const handleSubmit = async (values: { adminName: string; department: Department }) => {
+  const handleSubmit = async (values: AdminUpdateRequest) => {
     try {
       const payload: AdminUpdateRequest = {
-        adminName: values.adminName,
-        department: values.department,
+        ...values,
       };
-      const res = await authAPI.updateAdmin(adminId, payload);
+      const res = await authAPI.updateAdmin(profile.adminId, payload);
 
       if (res.success) {
         updateProfile(payload);
@@ -40,14 +39,17 @@ export default function HqProfileEditPage() {
   return (
     <>
       {contextHolder}
-      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+      <Typography.Title
+        level={3}
+        style={{ marginBottom: '24px', textAlign: 'center', width: '100%' }}
+      >
         내 정보 수정
       </Typography.Title>
 
       <Card style={{ width: '80%', padding: '8px', margin: '0 auto' }}>
         <Form
           form={form}
-          name="hq-profile-edit"
+          name="admin-edit"
           onFinish={handleSubmit}
           labelCol={{ span: 6 }}
           labelWrap

@@ -1,10 +1,11 @@
-import { Card, Col, List, message, Row, Table, Typography } from 'antd';
+import { Card, Col, List, message, Row, Table, Typography, type TableProps } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { noticeAPI, orderAPI } from '../../api';
-import { DATE_FORMAT, NOTICE_TYPE_OPTIONS } from '../../constants';
-import { type NoticeList, type OrderList } from '../../types';
+import { DATE_FORMAT, NOTICE_TYPE_TEXT } from '../../constants';
+import { useAuthStore } from '../../stores/authStore';
+import { type Admin, type NoticeList, type OrderList } from '../../types';
 
 // FIXME: 베스트셀러 하드코딩 해놓음
 const bestSeller = [
@@ -18,14 +19,16 @@ export default function HqDashboardPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
 
-  const [latestNotices, setLatestNotices] = useState<NoticeList>([]);
-  const [requestedOrders, setRequestedOrders] = useState<OrderList>([]);
+  const profile = useAuthStore((state) => state.profile) as Admin;
+  const adminId = profile.adminId;
+
+  const [latestNotices, setLatestNotices] = useState<NoticeList[]>([]);
+  const [requestedOrders, setRequestedOrders] = useState<OrderList[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         const noticeRes = await noticeAPI.getLatestNotices();
-
         if (noticeRes.success && noticeRes.data.length > 0) {
           setLatestNotices(noticeRes.data);
         } else {
@@ -37,7 +40,6 @@ export default function HqDashboardPage() {
           page: 0,
           size: 5,
         });
-
         if (orderRes.success && orderRes.data.length > 0) {
           setRequestedOrders(orderRes.data);
         } else {
@@ -54,32 +56,36 @@ export default function HqDashboardPage() {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [adminId]);
 
-  const bestSellerColumns = [
-    { title: '제품명', dataIndex: 'productName', key: 'productName' },
-    { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer' },
+  const bestSellerColumns: TableProps['columns'] = [
+    { title: '제품명', dataIndex: 'productName', key: 'productName', align: 'center' },
+    { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer', align: 'center' },
     {
       title: '판매 수량',
       dataIndex: 'quantity',
       key: 'quantity',
       render: (value: number) => value.toLocaleString(),
+      align: 'center',
     },
   ];
 
-  const requestedOrdersColumns = [
-    { title: '지점', dataIndex: 'pharmacyName', key: 'pharmacyName' },
+  const requestedOrdersColumns: TableProps['columns'] = [
+    { title: '지점', dataIndex: 'pharmacyName', key: 'pharmacyName', align: 'center' },
     {
       title: '발주 일시',
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (value: string) => dayjs(value).format(DATE_FORMAT.DEFAULT),
+      align: 'center',
     },
+    { title: '발주 요약', dataIndex: 'summary', key: 'summary', align: 'center' },
     {
       title: '금액',
       dataIndex: 'totalPrice',
       key: 'totalPrice',
       render: (value: number) => `${value.toLocaleString()}원`,
+      align: 'center',
     },
   ];
 
@@ -102,7 +108,7 @@ export default function HqDashboardPage() {
                           });
                         }}
                       >
-                        {`[${NOTICE_TYPE_OPTIONS[item.type]}] ${item.title}`}
+                        {`[${NOTICE_TYPE_TEXT[item.type]}] ${item.title}`}
                       </Typography.Link>
                     }
                   />
@@ -122,7 +128,7 @@ export default function HqDashboardPage() {
               pagination={false}
               rowKey="key"
               size="small"
-            ></Table>
+            />
           </Card>
         </Col>
         <Col span={12}>

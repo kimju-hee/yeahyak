@@ -4,6 +4,8 @@ import HqLayout from './layouts/HqLayout';
 import PublicLayout from './layouts/PublicLayout';
 import BranchDashboardPage from './pages/Branch/BranchDashboardPage';
 import BranchProfileEditPage from './pages/Branch/BranchProfileEditPage';
+import OrderRequestPage from './pages/Branch/OrderRequestPage';
+import ReturnRequestPage from './pages/Branch/ReturnRequestPage';
 import BranchSignupPage from './pages/Common/Auth/BranchSignupPage';
 import HqSignupPage from './pages/Common/Auth/HqSignupPage';
 import LoginPage from './pages/Common/Auth/LoginPage';
@@ -12,6 +14,7 @@ import PasswordChangePage from './pages/Common/Auth/PasswordChangePage';
 import ForbiddenPage from './pages/Common/Error/ForbiddenPage';
 import NotFoundPage from './pages/Common/Error/NotFoundPage';
 import ServerErrorPage from './pages/Common/Error/ServerErrorPage';
+import BranchManagementPage from './pages/HQ/BranchManagementPage';
 import HqDashboardPage from './pages/HQ/HqDashboardPage';
 import HqProfileEditPage from './pages/HQ/HqProfileEditPage';
 
@@ -40,10 +43,10 @@ export default function App() {
         <Route path="password-change" element={<PasswordChangePage />} />
         <Route path="profile-edit" element={<BranchProfileEditPage />} />
         {/* <Route path="notices" element={<NoticeListPage />} />
-        <Route path="notices/:id" element={<NoticeDetailPage />} />
+        <Route path="notices/:id" element={<NoticeDetailPage />} /> */}
         <Route path="orders" element={<OrderRequestPage />} />
         <Route path="returns" element={<ReturnRequestPage />} />
-        <Route path="products" element={<ProductListPage />} />
+        {/* <Route path="products" element={<ProductListPage />} />
         <Route path="products/:id" element={<ProductDetailPage />} /> */}
       </Route>
       {/* 본사 */}
@@ -55,9 +58,9 @@ export default function App() {
         {/* <Route path="notices" element={<NoticeListPage />} />
         <Route path="notices/:id" element={<NoticeDetailPage />} />
         <Route path="notices/new" element={<NoticeRegisterPage />} />
-        <Route path="notices/:id/edit" element={<NoticeEditPage />} />
+        <Route path="notices/:id/edit" element={<NoticeEditPage />} /> */}
         <Route path="branches" element={<BranchManagementPage />} />
-        <Route path="credits" element={<CreditManagementPage />} />
+        {/* <Route path="credits" element={<CreditManagementPage />} />
         <Route path="orders" element={<OrderManagementPage />} />
         <Route path="returns" element={<ReturnManagementPage />} />
         <Route path="products" element={<ProductListPage />} />

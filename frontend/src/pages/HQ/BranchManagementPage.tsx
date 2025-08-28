@@ -3,6 +3,7 @@ import {
   Descriptions,
   Flex,
   Space,
+  Spin,
   Table,
   Tag,
   Typography,
@@ -39,25 +40,30 @@ export default function BranchManagementPage() {
   const [messageApi, contextHolder] = message.useMessage();
 
   const [requests, setRequests] = useState<PharmacyRequestList[]>([]);
-  const [search, setSearch] = useState({
-    field: 'pharmacyId' as 'pharmacyId' | 'pharmacyName',
-    keyword: undefined as string | undefined,
-    appliedField: 'pharmacyId' as 'pharmacyId' | 'pharmacyName',
-    appliedKeyword: undefined as string | undefined,
-  });
-
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
+
+  const [expandedRowData, setExpandedRowData] = useState<Record<number, PharmacyRequestDetail>>({});
+  const [expandedRowLoading, setExpandedRowLoading] = useState<Record<number, boolean>>({});
+  const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
+
+  const [search, setSearch] = useState({
+    field: 'pharmacyName',
+    keyword: undefined as string | undefined,
+    appliedField: 'pharmacyName',
+    appliedKeyword: undefined as string | undefined,
+  });
 
   const fetchRequests = async () => {
     setLoading(true);
     try {
       const res = await pharmacyRequestAPI.getPharmacyRequests({
+        //  status: status,
+        //  region: region,
+        keyword: search.appliedKeyword,
         page: currentPage - 1,
         size: PAGE_SIZE,
-        // field: search.appliedField,
-        // keyword: search.appliedKeyword,
       });
 
       if (res.success) {
@@ -70,10 +76,28 @@ export default function BranchManagementPage() {
       messageApi.error(
         e.response?.data?.message || '약국 등록 요청 목록 로딩 중 오류가 발생했습니다.',
       );
+    } finally {
       setRequests([]);
       setTotal(0);
-    } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRequestDetail = async (pharmacyRequestId: number) => {
+    setExpandedRowLoading((prev) => ({ ...prev, [pharmacyRequestId]: true }));
+    try {
+      const res = await pharmacyRequestAPI.getPharmacyRequest(pharmacyRequestId);
+
+      if (res.success) {
+        setExpandedRowData((prev) => ({ ...prev, [pharmacyRequestId]: res.data }));
+      }
+    } catch (e: any) {
+      console.error('약국 등록 요청 상세 로딩 실패:', e);
+      messageApi.error(
+        e.response?.data?.message || '약국 등록 요청 상세 로딩 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setExpandedRowLoading((prev) => ({ ...prev, [pharmacyRequestId]: false }));
     }
   };
 
@@ -103,51 +127,76 @@ export default function BranchManagementPage() {
     }
   };
 
+  const handleExpand = (expanded: boolean, record: PharmacyRequestList) => {
+    const pharmacyRequestId = record.pharmacyRequestId;
+    if (expanded) fetchRequestDetail(pharmacyRequestId);
+    setExpandedRowKeys(
+      expanded
+        ? [...expandedRowKeys, pharmacyRequestId]
+        : expandedRowKeys.filter((key) => key !== pharmacyRequestId),
+    );
+  };
+
   const tableColumns: TableProps<PharmacyRequestList>['columns'] = [
     {
-      title: '지점코드',
-      dataIndex: ['pharmacy', 'pharmacyId'],
-      key: 'pharmacy.pharmacyId',
+      title: '번호',
+      dataIndex: 'pharmacyRequestId',
+      key: 'pharmacyRequestId',
+      align: 'center',
     },
     {
-      title: '지점명',
-      dataIndex: ['pharmacy', 'pharmacyName'],
-      key: 'pharmacy.pharmacyName',
+      title: '이메일',
+      dataIndex: 'email',
+      key: 'email',
+      align: 'center',
     },
     {
-      title: '대표자명',
-      dataIndex: ['pharmacy', 'representativeName'],
-      key: 'pharmacy.representativeName',
+      title: '약국명',
+      dataIndex: 'pharmacyName',
+      key: 'pharmacyName',
+      align: 'center',
     },
-    { title: '연락처', dataIndex: ['pharmacy', 'contact'], key: 'pharmacy.contact' },
+    {
+      title: '사업자등록번호',
+      dataIndex: 'bizRegNo',
+      key: 'bizRegNo',
+      align: 'center',
+    },
+    { title: '연락처', dataIndex: 'contact', key: 'contact', align: 'center' },
     {
       title: '상태',
-      dataIndex: ['request', 'status'],
-      key: 'request.status',
+      dataIndex: 'status',
+      key: 'status',
       render: (_, record) => getStatusTag(record.status),
+      align: 'center',
     },
   ];
 
-  const expandedRowRender = (record: PharmacyRequestDetail) => {
+  const expandedRowRender = (record: PharmacyRequestList) => {
+    const detail = expandedRowData[record.pharmacyRequestId];
+    const isLoading = expandedRowLoading[record.pharmacyRequestId];
+    if (isLoading) return <Spin />;
+    if (!detail) return null;
     return (
       <>
-        <Descriptions bordered column={2} size="middle">
-          <Descriptions.Item label="대표자명">{record.representativeName}</Descriptions.Item>
-          <Descriptions.Item label="사업자등록번호">{record.bizRegNo}</Descriptions.Item>
-          <Descriptions.Item label="주소">{`${record.address} ${record.detailAddress}`}</Descriptions.Item>
-          <Descriptions.Item label="요청일시">
-            {dayjs(record.requestedAt).format(DATE_FORMAT.KR_DEFAULT)}
+        <Descriptions bordered column={2} size="middle" styles={{ label: { textAlign: 'center' } }}>
+          <Descriptions.Item label="대표자명">{detail.representativeName}</Descriptions.Item>
+          <Descriptions.Item label="주소">
+            {`${detail.address} ${detail.detailAddress}`}
           </Descriptions.Item>
-          <Descriptions.Item label="연락처">{record.contact}</Descriptions.Item>
-          <Descriptions.Item label="검토일시">
-            {record.processedAt
-              ? dayjs(record.processedAt).format(DATE_FORMAT.KR_DEFAULT)
+          <Descriptions.Item label="요청 일시">
+            {dayjs(detail.requestedAt).format(DATE_FORMAT.KR_DEFAULT)}
+          </Descriptions.Item>
+          <Descriptions.Item label="연락처"> {detail.contact}</Descriptions.Item>
+          <Descriptions.Item label="검토 일시">
+            {detail.processedAt
+              ? dayjs(detail.processedAt).format(DATE_FORMAT.KR_DEFAULT)
               : '미검토'}
           </Descriptions.Item>
           <Descriptions.Item label="상태">
             <Flex wrap justify="space-between" align="center">
               {getStatusTag(record.status)}
-              {record && record.status === 'PENDING' && (
+              {record.status === 'PENDING' && (
                 <Space>
                   <Button
                     type="primary"
@@ -178,17 +227,11 @@ export default function BranchManagementPage() {
       <Typography.Title level={3} style={{ marginBottom: '24px' }}>
         가맹점 관리
       </Typography.Title>
-      {/* TODO: 검색 기능 구현 */}
+
       <SearchBox
         searchField={search.field}
-        searchOptions={[
-          { value: 'pharmacyId', label: '지점코드' },
-          { value: 'pharmacyName', label: '지점명' },
-        ]}
+        searchOptions={[{ value: 'pharmacyName', label: '약국명' }]}
         searchKeyword={search.keyword || ''}
-        onSearchFieldChange={(value) =>
-          setSearch((prev) => ({ ...prev, field: value as 'pharmacyId' | 'pharmacyName' }))
-        }
         onSearchKeywordChange={(value) => setSearch((prev) => ({ ...prev, keyword: value }))}
         onSearch={() => {
           setSearch((prev) => ({
@@ -214,6 +257,8 @@ export default function BranchManagementPage() {
         }}
         expandable={{
           expandedRowRender,
+          onExpand: handleExpand,
+          expandedRowKeys,
           expandRowByClick: true,
           expandIcon: () => null,
         }}

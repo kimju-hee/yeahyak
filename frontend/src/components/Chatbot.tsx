@@ -249,7 +249,7 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
                 display: 'flex',
                 flexDirection: 'column',
                 flex: 1,
-                padding: '8px',
+                padding: '16px',
                 overflow: 'hidden',
               },
             }}

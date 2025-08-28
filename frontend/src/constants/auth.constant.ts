@@ -12,15 +12,15 @@ export const AUTH_ENDPOINT = {
 } as const;
 
 export const DEPARTMENT_OPTIONS = [
-  { value: 'MANAGEMENT' as Department, label: '운영' },
-  { value: 'SALES' as Department, label: '영업' },
-  { value: 'INVENTORY' as Department, label: '재고' },
-  { value: 'FINANCE' as Department, label: '재무' },
+  { value: 'MANAGEMENT' as Department, label: '운영팀' },
+  { value: 'SALES' as Department, label: '영업팀' },
+  { value: 'INVENTORY' as Department, label: '재고팀' },
+  { value: 'FINANCE' as Department, label: '재무팀' },
 ] as const;
 
 export const DEPARTMENT_TEXT: DepartmentTextMap = {
-  MANAGEMENT: '운영',
-  SALES: '영업',
-  INVENTORY: '재고',
-  FINANCE: '재무',
+  MANAGEMENT: '운영팀',
+  SALES: '영업팀',
+  INVENTORY: '재고팀',
+  FINANCE: '재무팀',
 } as const;

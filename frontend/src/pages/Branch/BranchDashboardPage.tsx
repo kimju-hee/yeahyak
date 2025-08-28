@@ -1,69 +1,93 @@
-import { Card, Col, List, message, Progress, Row, Space, Statistic, Table, Typography } from 'antd';
+import {
+  Card,
+  Col,
+  List,
+  message,
+  Progress,
+  Row,
+  Space,
+  Statistic,
+  Table,
+  Typography,
+  type TableProps,
+} from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { noticeAPI, orderAPI } from '../../api';
 import { NOTICE_TYPE_TEXT } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
-import type { NoticeList, OrderList, Pharmacy, User } from '../../types';
+import type { NoticeList, OrderDetail, OrderDetailItem, Pharmacy } from '../../types';
 import { calculateCreditInfo } from '../../utils';
 
 export default function BranchDashboardPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
 
-  const user = useAuthStore((state) => state.user) as User;
   const profile = useAuthStore((state) => state.profile) as Pharmacy;
   const pharmacyId = profile.pharmacyId;
 
   const [latestNotices, setLatestNotices] = useState<NoticeList[]>([]);
-  const [recentOrder, setRecentOrder] = useState<OrderList[]>([]);
+  const [recentOrder, setRecentOrder] = useState<OrderDetail | undefined>(undefined);
+  const [recentOrderItems, setRecentOrderItems] = useState<OrderDetailItem[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      // 최근 공지사항 5개
       try {
-        const noticeResponse = await noticeAPI.getNotices();
-
-        if (noticeResponse.success && noticeResponse.data.length > 0) {
-          setLatestNotices(noticeResponse.data);
+        const latest = await noticeAPI.getLatestNotices();
+        if (latest.success && latest.data.length > 0) {
+          setLatestNotices(latest.data);
         } else {
           setLatestNotices([]);
         }
+      } catch (e: any) {
+        console.error('최근 공지사항 로드 실패:', e);
+        messageApi.error(e.response?.data?.message || '최근 공지사항 로딩 중 오류가 발생했습니다.');
+        setLatestNotices([]);
+      }
+      // 최근 발주 1건 상세
+      try {
+        const list = await orderAPI.getOrdersBranch({ pharmacyId, page: 0, size: 1 });
 
-        const orderResponse = await orderAPI.getOrdersBranch({ pharmacyId, page: 0, size: 1 });
-
-        if (orderResponse.success && orderResponse.data.length > 0) {
-          setRecentOrder(orderResponse.data);
-        } else {
-          setRecentOrder([]);
+        if (list.success && list.data.length > 0) {
+          const order = list.data[0];
+          const detail = await orderAPI.getOrder(order.orderId);
+          if (detail.success) {
+            setRecentOrder(detail.data);
+            setRecentOrderItems(detail.data.items ?? []);
+          }
         }
       } catch (e: any) {
-        console.error('대시보드 데이터 로드 실패:', e);
+        console.error('최근 발주 상세 로드 실패:', e);
         messageApi.error(
-          e.response?.data?.message || '대시보드 데이터 로딩 중 오류가 발생했습니다.',
+          e.response?.data?.message || '최근 발주 상세 로딩 중 오류가 발생했습니다.',
         );
-        setLatestNotices([]);
-        setRecentOrder([]);
+        setRecentOrder(undefined);
+        setRecentOrderItems([]);
       }
     };
 
     fetchDashboardData();
   }, [pharmacyId]);
 
-  const recentOrderItemsColumns = [
-    { title: '제품명', dataIndex: 'productName', key: 'productName' },
-    { title: '수량', dataIndex: 'quantity', key: 'quantity' },
+  const recentOrderItemsColumns: TableProps['columns'] = [
+    { title: '제품명', dataIndex: 'productName', key: 'productName', align: 'center' },
+    { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer', align: 'center' },
+    { title: '수량', dataIndex: 'quantity', key: 'quantity', align: 'center' },
     {
       title: '단가',
       dataIndex: 'unitPrice',
       key: 'unitPrice',
       render: (value: number) => `${value.toLocaleString()}원`,
+      align: 'center',
     },
     {
       title: '소계',
       dataIndex: 'subtotalPrice',
       key: 'subtotalPrice',
       render: (value: number) => `${value.toLocaleString()}원`,
+      align: 'center',
     },
   ];
 
@@ -99,35 +123,26 @@ export default function BranchDashboardPage() {
 
       <Row wrap gutter={16} style={{ marginTop: '16px' }}>
         <Col span={12}>
-          {recentOrder.length > 0 ? (
-            <Card
-              title={`최근 발주 상세 (${(() => {
-                const orderDate = dayjs(recentOrder[0].createdAt);
-                const today = dayjs();
-                const diffDays = today.diff(orderDate, 'day');
-                return diffDays === 0 ? '오늘' : `${diffDays}일 전`;
-              })()})`}
-              variant="borderless"
-            >
-              <Table
-                dataSource={recentOrder[0].items} // FIXME: 우짜징...
-                columns={recentOrderItemsColumns}
-                pagination={false}
-                rowKey="productName"
-                size="small"
-              />
-            </Card>
-          ) : (
-            <Card title={`최근 발주 상세`} variant="borderless">
-              <Table
-                dataSource={[]}
-                columns={recentOrderItemsColumns}
-                pagination={false}
-                rowKey="productName"
-                size="small"
-              />
-            </Card>
-          )}
+          <Card
+            title={
+              recentOrder?.createdAt
+                ? `최근 발주 상세 (${
+                    dayjs().diff(dayjs(recentOrder.createdAt), 'day') === 0
+                      ? '오늘'
+                      : `${dayjs().diff(dayjs(recentOrder.createdAt), 'day')}일 전`
+                  })`
+                : '최근 발주 상세 (최근 발주 없음)'
+            }
+            variant="borderless"
+          >
+            <Table
+              dataSource={recentOrderItems}
+              columns={recentOrderItemsColumns}
+              pagination={false}
+              rowKey="productId"
+              size="small"
+            />
+          </Card>
         </Col>
         <Col span={12}>
           <Card title="크레딧 현황" variant="borderless">

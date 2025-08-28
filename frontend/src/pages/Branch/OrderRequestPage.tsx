@@ -38,13 +38,11 @@ import type {
   OrderCartItem,
   OrderCreateRequest,
   OrderDetail,
-  OrderDetailResponse,
   OrderForecastRequest,
   OrderList,
   OrderStatus,
   Pharmacy,
   ProductList,
-  User,
 } from '../../types';
 import { PLACEHOLDER } from '../../utils';
 
@@ -61,30 +59,28 @@ const getStatusTag = (status: OrderStatus) => {
 export default function OrderRequestPage() {
   const [messageApi, contextHolder] = message.useMessage();
 
-  const user = useAuthStore((state) => state.user) as User;
   const profile = useAuthStore((state) => state.profile) as Pharmacy;
-  const updateUser = useAuthStore((state) => state.updateUser);
   const updateProfile = useAuthStore((state) => state.updateProfile);
-  const balance = profile.outstandingBalance;
   const pharmacyId = profile.pharmacyId;
+  const balance = profile.outstandingBalance;
   const { items, addItem, removeItem, updateQuantity, clearCart, getTotalPrice } =
     useOrderCartStore();
 
   const [orders, setOrders] = useState<OrderList[]>([]);
-  const [currentStatusFilter, setCurrentStatusFilter] = useState<OrderStatus | undefined>(
-    undefined,
-  );
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>(undefined);
   const [ordersCurrentPage, setOrdersCurrentPage] = useState<number>(1);
   const [ordersTotal, setOrdersTotal] = useState<number>(0);
   const [ordersLoading, setOrdersLoading] = useState<boolean>(false);
-  const [expandedRowData, setExpandedRowData] = useState<Record<number, OrderDetailResponse>>({});
+  const [expandedRowData, setExpandedRowData] = useState<Record<number, OrderDetail>>({});
   const [expandedRowLoading, setExpandedRowLoading] = useState<Record<number, boolean>>({});
   const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
 
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [products, setProducts] = useState<ProductList[]>([]);
   const [search, setSearch] = useState({
+    field: 'productName',
     keyword: undefined as string | undefined,
+    appliedField: 'productName',
     appliedKeyword: undefined as string | undefined,
   });
   const [productsCurrentPage, setProductsCurrentPage] = useState<number>(1);
@@ -94,6 +90,7 @@ export default function OrderRequestPage() {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [aiLoading, setAiLoading] = useState<boolean>(false);
   const [submitLoading, setSubmitLoading] = useState<boolean>(false);
+
   const totalPrice = getTotalPrice();
 
   const fetchOrders = async (statusFilter: OrderStatus | undefined) => {
@@ -101,25 +98,22 @@ export default function OrderRequestPage() {
     try {
       const res = await orderAPI.getOrdersBranch({
         pharmacyId: pharmacyId,
+        status: statusFilter,
         page: ordersCurrentPage - 1,
         size: PAGE_SIZE,
-        status: statusFilter,
       });
 
       if (res.success) {
         const { data, page } = res;
         setOrders(data);
         setOrdersTotal(page.totalElements);
-      } else {
-        setOrders([]);
-        setOrdersTotal(0);
       }
     } catch (e: any) {
       console.error('주문 목록 로딩 실패:', e);
       messageApi.error(e.response?.data?.message || '주문 목록 로딩 중 오류가 발생했습니다.');
+    } finally {
       setOrders([]);
       setOrdersTotal(0);
-    } finally {
       setOrdersLoading(false);
     }
   };
@@ -130,7 +124,7 @@ export default function OrderRequestPage() {
       const res = await orderAPI.getOrder(orderId);
 
       if (res.success) {
-        setExpandedRowData((prev) => ({ ...prev, [orderId]: res }));
+        setExpandedRowData((prev) => ({ ...prev, [orderId]: res.data }));
       }
     } catch (e: any) {
       console.error('주문 상세 로딩 실패:', e);
@@ -144,42 +138,40 @@ export default function OrderRequestPage() {
     setProductsLoading(true);
     try {
       const res = await productAPI.getProducts({
+        // mainCategory: mainCategory,
+        // subCategory: subCategory,
+        keyword: search.appliedKeyword,
         page: productsCurrentPage - 1,
         size: PAGE_SIZE,
-        keyword: search.appliedKeyword ? search.appliedKeyword : undefined,
       });
 
       if (res.success) {
         const { data, page } = res;
         setProducts(data);
         setProductsTotal(page.totalElements);
-      } else {
-        setProducts([]);
-        setProductsTotal(0);
       }
     } catch (e: any) {
       console.error('상품 목록 로딩 실패:', e);
       messageApi.error(e.response?.data?.message || '상품 목록 로딩 중 오류가 발생했습니다.');
+    } finally {
       setProducts([]);
       setProductsTotal(0);
-    } finally {
       setProductsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchOrders(currentStatusFilter);
-  }, [ordersCurrentPage, currentStatusFilter]);
+    fetchOrders(statusFilter);
+  }, [ordersCurrentPage, statusFilter]);
 
   useEffect(() => {
     fetchProducts();
-  }, [isModalVisible, productsCurrentPage, search.appliedKeyword]);
+  }, [isModalVisible, productsCurrentPage, search.appliedKeyword, search.appliedField]);
 
   const handleUploadChange: UploadProps['onChange'] = ({ fileList }) => {
     setFileList(fileList);
   };
 
-  // FIXME: API response 수정 필요
   const handleAiSuggest = async () => {
     if (fileList.length === 0 || !fileList[0].originFileObj) {
       messageApi.warning('파일을 업로드 해주세요.');
@@ -195,7 +187,7 @@ export default function OrderRequestPage() {
         const recommendedItems: OrderCartItem[] = res.data.map((item: any) => ({
           productId: item.productId,
           productName: item.productName,
-          productCode: item.productCode,
+          insuranceCode: item.insuranceCode,
           manufacturer: item.manufacturer,
           unitPrice: item.unitPrice,
           quantity: item.quantity,
@@ -233,8 +225,8 @@ export default function OrderRequestPage() {
 
       if (res.success) {
         messageApi.success('발주 요청이 완료되었습니다.');
-        fetchOrders(currentStatusFilter);
-        updateProfile({ outstandingBalance: balance + res.data.totalPrice }); // FIXME: 우짜지/..
+        fetchOrders(statusFilter);
+        updateProfile({ outstandingBalance: balance + totalPrice });
         clearCart();
       }
     } catch (e: any) {
@@ -248,15 +240,15 @@ export default function OrderRequestPage() {
   const handleTableChange = (pagination: any, filters: any) => {
     const newStatus = filters.status ? filters.status[0] : undefined;
     const newPage = pagination.current;
-    if (newStatus !== currentStatusFilter) {
-      setCurrentStatusFilter(newStatus);
+    if (newStatus !== statusFilter) {
+      setStatusFilter(newStatus);
       setOrdersCurrentPage(1);
       return;
     }
     if (newPage !== ordersCurrentPage) setOrdersCurrentPage(newPage);
   };
 
-  const handleExpand = (expanded: boolean, record: OrderDetail) => {
+  const handleExpand = (expanded: boolean, record: OrderList) => {
     const orderId = record.orderId;
     if (expanded) fetchOrderDetail(orderId);
     setExpandedRowKeys(
@@ -267,16 +259,22 @@ export default function OrderRequestPage() {
   // 발주카트 테이블
   const cartColumns: TableProps<OrderCartItem>['columns'] = [
     {
-      title: '제품이미지',
+      title: '제품 이미지',
       dataIndex: 'productImgUrl',
       key: 'productImgUrl',
       render: (url) => (
         <img src={url || PLACEHOLDER} alt="제품 이미지" style={{ width: '60px', height: '60px' }} />
       ),
+      align: 'center',
     },
-    { title: '제품명', dataIndex: 'productName', key: 'productName' },
-    { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer' },
-    { title: '단가', dataIndex: 'unitPrice', render: (value) => `${value.toLocaleString()}원` },
+    { title: '제품명', dataIndex: 'productName', key: 'productName', align: 'center' },
+    { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer', align: 'center' },
+    {
+      title: '단가',
+      dataIndex: 'unitPrice',
+      render: (value) => `${Number(value ?? 0).toLocaleString()}원`,
+      align: 'center',
+    },
     {
       title: '수량',
       dataIndex: 'quantity',
@@ -294,12 +292,14 @@ export default function OrderRequestPage() {
           }}
         />
       ),
+      align: 'center',
     },
     {
       title: '소계',
       dataIndex: 'subtotalPrice',
       key: 'subtotalPrice',
-      render: (value) => `${value.toLocaleString()}원`,
+      render: (value) => `${Number(value ?? 0).toLocaleString()}원`,
+      align: 'center',
     },
     {
       key: 'actions',
@@ -314,16 +314,22 @@ export default function OrderRequestPage() {
   // 제품목록 테이블
   const productsColumns: TableProps<ProductList>['columns'] = [
     {
-      title: '제품이미지',
+      title: '제품 이미지',
       dataIndex: 'productImgUrl',
       key: 'productImgUrl',
       render: (url) => (
         <img src={url || PLACEHOLDER} alt="제품 이미지" style={{ width: '60px', height: '60px' }} />
       ),
+      align: 'center',
     },
-    { title: '제품명', dataIndex: 'productName', key: 'productName' },
-    { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer' },
-    { title: '단가', dataIndex: 'unitPrice', render: (value) => `${value.toLocaleString()}원` },
+    { title: '제품명', dataIndex: 'productName', key: 'productName', align: 'center' },
+    { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer', align: 'center' },
+    {
+      title: '단가',
+      dataIndex: 'unitPrice',
+      render: (value) => `${value.toLocaleString()}원`,
+      align: 'center',
+    },
     {
       key: 'actions',
       render: (_, record) => (
@@ -351,23 +357,26 @@ export default function OrderRequestPage() {
 
   // 발주내역 테이블
   const ordersColumns: TableProps<OrderList>['columns'] = [
-    { title: '주문번호', dataIndex: 'orderId', key: 'orderId' },
+    { title: '번호', dataIndex: 'orderId', key: 'orderId', align: 'center' },
     {
       title: '일시',
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (value) => dayjs(value).format(DATE_FORMAT.DEFAULT),
+      align: 'center',
     },
     {
       title: '요약',
       dataIndex: 'summary',
       key: 'summary',
+      align: 'center',
     },
     {
       title: '합계',
       dataIndex: 'totalPrice',
       key: 'totalPrice',
       render: (value) => `${value.toLocaleString()}원`,
+      align: 'center',
     },
     {
       title: '상태',
@@ -379,20 +388,21 @@ export default function OrderRequestPage() {
         value: option.value,
       })),
       filterMultiple: false,
+      align: 'center',
     },
   ];
 
   // 발주내역 테이블 상세
-  const expandedRowRender = (record: OrderDetail) => {
-    const detailData = expandedRowData[record.orderId];
+  const expandedRowRender = (record: OrderList) => {
+    const detail = expandedRowData[record.orderId];
     const isLoading = expandedRowLoading[record.orderId];
     if (isLoading) return <Spin />;
-    if (!detailData) return null;
+    if (!detail) return null;
     return (
       <>
         <Table
           bordered={true}
-          dataSource={detailData.data.items}
+          dataSource={detail.items}
           columns={[
             { title: '제품명', dataIndex: 'productName', key: 'productName' },
             { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer' },
@@ -429,9 +439,9 @@ export default function OrderRequestPage() {
         />
         <Typography.Text>
           최근 상태 업데이트:{' '}
-          {detailData.data.updatedAt
-            ? dayjs(detailData.data.updatedAt).format(DATE_FORMAT.DEFAULT)
-            : dayjs(detailData.data.createdAt).format(DATE_FORMAT.DEFAULT)}
+          {detail.updatedAt
+            ? dayjs(detail.updatedAt).format(DATE_FORMAT.DEFAULT)
+            : dayjs(detail.createdAt).format(DATE_FORMAT.DEFAULT)}
         </Typography.Text>
       </>
     );
@@ -443,10 +453,17 @@ export default function OrderRequestPage() {
       <Typography.Title level={3} style={{ marginBottom: '24px' }}>
         발주 요청
       </Typography.Title>
-      <Descriptions column={3} bordered size="middle" style={{ marginBottom: '24px' }}>
-        <Descriptions.Item label="지점명">{profile.pharmacyName}</Descriptions.Item>
+
+      <Descriptions
+        column={3}
+        bordered
+        size="middle"
+        style={{ marginBottom: '24px' }}
+        styles={{ label: { textAlign: 'center' } }}
+      >
+        <Descriptions.Item label="약국명">{profile.pharmacyName}</Descriptions.Item>
         <Descriptions.Item label="주소">{`${profile.address} ${profile.detailAddress}`}</Descriptions.Item>
-        <Descriptions.Item label="요청일자">{dayjs().format(DATE_FORMAT.DATE)}</Descriptions.Item>
+        <Descriptions.Item label="요청 일자">{dayjs().format(DATE_FORMAT.DATE)}</Descriptions.Item>
       </Descriptions>
 
       <Typography.Title level={4} style={{ marginBottom: '16px' }}>
@@ -457,7 +474,7 @@ export default function OrderRequestPage() {
           type="primary"
           onClick={() => {
             setIsModalVisible(true);
-            setSearch({ keyword: '', appliedKeyword: '' });
+            setSearch({ keyword: '', appliedKeyword: '', field: '', appliedField: '' });
             setProductsCurrentPage(1);
           }}
         >
@@ -501,7 +518,7 @@ export default function OrderRequestPage() {
           </Upload>
         ) : (
           <>
-            <Button onClick={handleAiSuggest} loading={aiLoading}>
+            <Button color="cyan" variant="outlined" onClick={handleAiSuggest} loading={aiLoading}>
               AI 발주 추천
             </Button>
             <Upload
@@ -520,7 +537,7 @@ export default function OrderRequestPage() {
         open={isModalVisible}
         onCancel={() => {
           setIsModalVisible(false);
-          setSearch({ keyword: '', appliedKeyword: '' });
+          setSearch({ keyword: '', appliedKeyword: '', field: '', appliedField: '' });
           setProductsCurrentPage(1);
         }}
         footer={null}
@@ -535,6 +552,7 @@ export default function OrderRequestPage() {
           onSearch={() => {
             setSearch((prev) => ({
               ...prev,
+              appliedField: prev.field,
               appliedKeyword: prev.keyword,
             }));
             setProductsCurrentPage(1);

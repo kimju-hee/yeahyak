@@ -34,19 +34,22 @@ export default function PasswordChangePage() {
       };
       await authAPI.changePassword(payload);
 
-      // 204 No Content 응답이므로 예외가 발생하지 않으면 성공
       messageApi.success('비밀번호가 변경되었습니다!');
-      form.resetFields(['currentPassword', 'newPassword', 'confirmNewPassword']);
     } catch (e: any) {
       console.error('비밀번호 변경 실패:', e);
       messageApi.error(e.response?.data?.message || '비밀번호 변경 중 오류가 발생했습니다.');
+    } finally {
+      form.resetFields(['currentPassword', 'newPassword', 'confirmNewPassword']);
     }
   };
 
   return (
     <>
       {contextHolder}
-      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+      <Typography.Title
+        level={3}
+        style={{ marginBottom: '24px', textAlign: 'center', width: '100%' }}
+      >
         비밀번호 변경
       </Typography.Title>
 
