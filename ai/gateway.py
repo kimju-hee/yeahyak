@@ -21,11 +21,21 @@ qna_chatbot = create_chatbot_agent()
 
 
 def extract_text_from_pdf(file_storage):
+    print("📚 PDF 텍스트 추출 함수 시작")
     text = ""
-    with fitz.open(stream=file_storage.read(), filetype="pdf") as doc:
-        for page in doc:
-            text += page.get_text()
-    return text
+    try:
+        print("📖 PDF 파일 열기 시도...")
+        with fitz.open(stream=file_storage.read(), filetype="pdf") as doc:
+            print(f"📄 PDF 페이지 수: {len(doc)}")
+            for i, page in enumerate(doc):
+                page_text = page.get_text()
+                text += page_text
+                print(f"📄 페이지 {i+1}: {len(page_text)} 문자 추출")
+        print(f"✅ 총 텍스트 추출 완료: {len(text)} 문자")
+        return text
+    except Exception as e:
+        print(f"🚨 PDF 추출 에러: {e}")
+        raise e
 
 
 def wrap_success(data, code=200):
@@ -77,17 +87,41 @@ def law():
 # 3) 약품 요약
 @app.route("/summarize/new-product", methods=["POST"])
 def new_product():
+    print("🚀 신제품 요약 요청 받음")
+
     file = request.files.get("file")
+    print(f"📁 파일 정보: {file}")
+
+    if file:
+        print(f"📄 파일명: {file.filename}")
+        print(f"📊 파일 크기: {len(file.read())} bytes")
+        file.seek(0)  # 파일 포인터 리셋
 
     if not file or not file.filename.lower().endswith(".pdf"):
+        print("❌ PDF 파일이 아님")
         return wrap_error("PDF 파일을 업로드 해주세요.", 400)
+
     try:
+        print("📖 PDF에서 텍스트 추출 시작...")
         text = extract_text_from_pdf(file)
+        print(f"📝 추출된 텍스트 길이: {len(text)} 문자")
+        print(f"📝 텍스트 미리보기: {text[:200]}...")
+
+        print("🤖 AI 요약 시작...")
         summary = summarize_pdf(text)
+        print(f"✅ AI 요약 완료: {len(summary)} 문자")
+        print(f"📋 요약 미리보기: {summary[:100]}...")
+
         return wrap_success({"summary": summary})
     except APIError as api_e:
+        print(f"🚨 OpenAI API 에러: {api_e}")
         return wrap_error(str(api_e), 502)
     except Exception as e:
+        print(f"🚨 일반 에러: {e}")
+        print(f"🚨 에러 타입: {type(e)}")
+        import traceback
+
+        print(f"🚨 스택 트레이스: {traceback.format_exc()}")
         return wrap_error(str(e), 500)
 
 

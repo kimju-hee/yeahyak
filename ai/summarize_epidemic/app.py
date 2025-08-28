@@ -24,14 +24,15 @@ SUMMARY_PROMPT = """
 NOTICE_PROMPT = """
 다음은 감염병 주간 통계 보고서 요약문입니다.
 아래 요약을 바탕으로 전국 지점 공지문을 HTML로 다시 작성하세요(마크다운 사용 금지).
-반드시 HTML '본문만'을 반환하세요.
 
 [HTML 출력 규칙]
 - 마크다운/코드펜스 금지: 백틱(```) 및 ```html 금지
-- DOCTYPE, <html>, <head>, <body> 없이 '본문'만 출력
+- DOCTYPE, <html>, <head>, <body> 없이 '본문만' 출력
 - 허용 태그만 사용: <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <br>
-- 문서는 <h1> 또는 <h2>로 시작
+- 문서는 <h2> 또는 <h3>로 시작
 - style/script/onclick 등 속성 사용 금지
+
+반드시 HTML '본문만'을 반환하세요.
 
 문서 골격 예시:
 <h2>감염병 주간 공지</h2>
@@ -53,7 +54,7 @@ def generate_summary(text):
         messages=[
             {
                 "role": "system",
-                "content": "당신은 감염병 보고서를 공지문으로 요약하는 전문 AI입니다.",
+                "content": "당신은 감염병 보고서를 공지문으로 요약하는 전문 AI입니다. HTML 형식으로만 응답하며, 마크다운은 절대 사용하지 않습니다.",
             },
             {"role": "user", "content": f"{SUMMARY_PROMPT}\n\n{text}"},
         ],

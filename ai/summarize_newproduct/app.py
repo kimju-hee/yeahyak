@@ -15,9 +15,23 @@ if "OPENAI_API_KEY" not in os.environ:
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# 프롬프트 정의
-SYSTEM_PROMPT = """
-다음은 약품 설명서입니다. 아래 항목에 따라 500자를 넘지않게 간결하게 요약해주세요:
+
+# GPT 요청 함수
+def summarize_pdf(text):
+    # 텍스트를 3000자로 제한
+    limited_text = text[:3000]
+
+    # 프롬프트 구성
+    user_prompt = f"""
+다음은 약품 설명서입니다. 아래 항목에 따라 1000자를 넘지않게 간결하게 요약해주세요:
+
+[HTML 출력 규칙]
+- 마크다운/코드펜스 금지: 백틱(```) 및 ```html 금지
+- DOCTYPE, <html>, <head>, <body> 없이 '본문만' 출력
+- 허용 태그만 사용: <h1>, <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <br>
+- 문서는 <h2> 또는 <h3>로 시작
+- style/script/onclick 등 속성 사용 금지
+
 [작성 형식]
 - 500자를 넘지 않게 간결하게
 - 아래 섹션을 반드시 포함:
@@ -25,25 +39,24 @@ SYSTEM_PROMPT = """
 <h3>성분</h3><p>...</p>
 <h3>효능</h3><p>...</p>
 <h3>사용법</h3><p>...</p>
-<h3>주의사항</h3>
+<h3>주의사항</h3><p>...</p>
 <h3>보관법</h3>
 <ul><li>...</li></ul>
 
+반드시 HTML '본문만'을 반환하세요.
+
 설명서:
-{text[:3000]}
+{limited_text}
 """
 
-
-# GPT 요청 함수
-def summarize_pdf(text):
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
             {
                 "role": "system",
-                "content": "약사에게 의약 정보를 명확하게 정리하는 전문가",
+                "content": "약사에게 의약 정보를 명확하게 정리하는 전문가입니다. HTML 형식으로만 응답하며, 마크다운은 절대 사용하지 않습니다.",
             },
-            {"role": "user", "content": f"{SYSTEM_PROMPT.format(text=text)}"},
+            {"role": "user", "content": user_prompt},
         ],
         temperature=0.3,
     )
