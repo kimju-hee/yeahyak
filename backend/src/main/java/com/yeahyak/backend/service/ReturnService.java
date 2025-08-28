@@ -205,6 +205,7 @@ public class ReturnService {
             .manufacturer(item.getProduct().getManufacturer())
             .productImgUrl(item.getProduct().getProductImgUrl())
             .quantity(item.getQuantity())
+            .unit(item.getProduct().getUnit())
             .unitPrice(item.getUnitPrice())
             .subtotalPrice(item.getSubtotalPrice())
             .build()

@@ -43,6 +43,7 @@ public class OrderDetailResponse {
     private String manufacturer;
     private String productImgUrl;
     private Integer quantity;
+    private String unit;
     private BigDecimal unitPrice;
     private BigDecimal subtotalPrice;
   }
