@@ -37,7 +37,8 @@
     VITE_API_BASE_URL=http://localhost:8080/api
 
     # AI API 주소
-    VITE_AI_API_URL=http://localhost:5000
+
+    VITE_AI_API_BASE_URL=http://localhost:5000
     ```
 
 3.  **개발 서버 실행**: 개발 서버를 시작하고 브라우저에서 앱을 확인합니다.
@@ -56,10 +57,10 @@ frontend/src/
 ├── constants/   # 상수 정의
 ├── hooks/       # 커스텀 훅
 ├── layouts/     # 페이지 레이아웃 컴포넌트
+├── mocks/       # 목 데이터
 ├── pages/       # 라우팅되는 실제 페이지
 ├── stores/      # zustand 상태 관리
 ├── types/       # 공통 타입 정의
-├── utils/       # 유틸리티 함수
 ├── App.tsx      # 메인 앱 컴포넌트 및 라우팅 설정
 └── main.tsx     # 앱의 진입점
 ```
