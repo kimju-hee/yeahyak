@@ -21,6 +21,7 @@ import ProductListPage from './pages/Common/Product/ProductListPage';
 import BranchManagementPage from './pages/HQ/BranchManagementPage';
 import HqDashboardPage from './pages/HQ/HqDashboardPage';
 import HqProfileEditPage from './pages/HQ/HqProfileEditPage';
+import HqStockPage from './pages/HQ/HqStockPage';
 import NoticeEditPage from './pages/HQ/NoticeEditPage';
 import NoticeRegisterPage from './pages/HQ/NoticeRegisterPage';
 import OrderManagementPage from './pages/HQ/OrderManagementPage';
@@ -47,7 +48,7 @@ export default function App() {
         <Route path="*" element={<Navigate to="/404" replace />} />
       </Route>
       {/* 가맹점 */}
-      {/*<Route element={<ProtectedRoute allowedRoles={['PHARMACY']} />}>*/}
+      {/* <Route element={<ProtectedRoute allowedRoles={['PHARMACY']} />}> */}
       <Route path="/branch" element={<BranchLayout />}>
         <Route index element={<BranchDashboardPage />} />
         <Route path="password-change" element={<PasswordChangePage />} />
@@ -60,7 +61,7 @@ export default function App() {
         <Route path="products/:id" element={<ProductDetailPage />} />
       </Route>
       {/* 본사 */}
-      {/*<Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>*/}
+      {/* <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}> */}
       <Route path="/hq" element={<HqLayout />}>
         <Route index element={<HqDashboardPage />} />
         <Route path="password-change" element={<PasswordChangePage />} />
@@ -77,7 +78,7 @@ export default function App() {
         <Route path="products/:id" element={<ProductDetailPage />} />
         <Route path="products/new" element={<ProductRegisterPage />} />
         <Route path="products/:id/edit" element={<ProductEditPage />} />
-        {/*  <Route path="stock" element={<HqStockPage />} /> */}
+        <Route path="stock" element={<HqStockPage />} />
       </Route>
     </Routes>
   );
@@ -85,7 +86,6 @@ export default function App() {
 
 // export default function App() {
 //   return (
-//       {/* 본사 */}
 //       <Route path="/hq" element={<HqLayout />}>
 //         <Route path="monitoring" element={<BranchMonitoringPage />} />
 //         <Route path="forecast" element={<DemandForecastPage />} />

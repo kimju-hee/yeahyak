@@ -5,7 +5,6 @@ import {
   KeyOutlined,
   LogoutOutlined,
   MinusSquareFilled,
-  MoneyCollectOutlined,
   NotificationFilled,
   PlusSquareFilled,
   ProductFilled,
@@ -52,11 +51,11 @@ const siderMenuItems = [
     label: <Link to="/hq/branches">가맹점 관리</Link>,
     icon: <ApartmentOutlined />,
   },
-  {
-    key: 'credits',
-    label: <Link to="/hq/credits">정산 관리</Link>,
-    icon: <MoneyCollectOutlined />,
-  },
+  // {
+  //   key: 'credits',
+  //   label: <Link to="/hq/credits">정산 관리</Link>,
+  //   icon: <MoneyCollectOutlined />,
+  // },
   {
     key: 'orders',
     label: <Link to="/hq/orders">발주 요청 관리</Link>,
