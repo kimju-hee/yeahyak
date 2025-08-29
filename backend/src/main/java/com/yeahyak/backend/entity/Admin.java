@@ -18,6 +18,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Admin Entity representing an administrator in the system.
+ */
 @Entity
 @Getter
 @Setter
@@ -40,6 +43,6 @@ public class Admin {
   private String adminName;
 
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
+  @Column(nullable = false, length = 45)
   private Department department;
 }

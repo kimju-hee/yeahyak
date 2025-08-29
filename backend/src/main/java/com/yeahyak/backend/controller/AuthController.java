@@ -1,20 +1,5 @@
 package com.yeahyak.backend.controller;
 
-import java.net.URI;
-import java.util.Map;
-
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import com.yeahyak.backend.dto.AdminLoginResponse;
 import com.yeahyak.backend.dto.AdminProfile;
 import com.yeahyak.backend.dto.AdminSignupRequest;
@@ -30,14 +15,27 @@ import com.yeahyak.backend.dto.PharmacySignupResponse;
 import com.yeahyak.backend.dto.PharmacyUpdateRequest;
 import com.yeahyak.backend.entity.User;
 import com.yeahyak.backend.repository.UserRepository;
-import com.yeahyak.backend.security.CustomUserDetails;
 import com.yeahyak.backend.security.JwtProvider;
 import com.yeahyak.backend.service.AuthService;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 인증 및 인가 관련 API를 처리하는 컨트롤러입니다.
+ * 인증 및 인가 관련 API 처리하는 컨트롤러입니다.
  */
 @RestController
 @RequestMapping("/api/auth")
@@ -46,7 +44,7 @@ public class AuthController {
 
   private final AuthService authService;
   private final JwtProvider jwtProvider;
-  private final UserRepository userRepo;
+  private final UserRepository userRepository;
 
   private ResponseCookie buildRefreshCookie(String refreshToken, long maxAge) {
     return ResponseCookie.from("refreshToken", refreshToken)
@@ -63,7 +61,7 @@ public class AuthController {
    */
   @PostMapping("/admin/signup")
   public ResponseEntity<ApiResponse<AdminSignupResponse>> adminSignup(
-      @RequestBody AdminSignupRequest request
+      @RequestBody @Valid AdminSignupRequest request
   ) {
     AdminSignupResponse res = authService.adminSignup(request);
     // 생성된 관리자 리소스 위치
@@ -76,7 +74,7 @@ public class AuthController {
    */
   @PostMapping("/pharmacy/signup")
   public ResponseEntity<ApiResponse<PharmacySignupResponse>> pharmacySignup(
-      @RequestBody PharmacySignupRequest request
+      @RequestBody @Valid PharmacySignupRequest request
   ) {
     PharmacySignupResponse res = authService.pharmacySignup(request);
     // 함께 생성된 약국 등록 요청 리소스 위치
@@ -89,11 +87,11 @@ public class AuthController {
    */
   @PostMapping("/admin/login")
   public ResponseEntity<ApiResponse<AdminLoginResponse>> adminLogin(
-      @RequestBody LoginRequest request,
+      @RequestBody @Valid LoginRequest request,
       HttpServletResponse response
   ) {
     AdminLoginResponse res = authService.adminLogin(request);
-    User user = userRepo.findByEmail(res.getUser().getEmail())
+    User user = userRepository.findByEmail(res.getUser().getEmail())
         .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
     String refreshToken = jwtProvider.createRefreshToken(user);
@@ -108,11 +106,11 @@ public class AuthController {
    */
   @PostMapping("/pharmacy/login")
   public ResponseEntity<ApiResponse<PharmacyLoginResponse>> pharmacyLogin(
-      @RequestBody LoginRequest request,
+      @RequestBody @Valid LoginRequest request,
       HttpServletResponse response
   ) {
-    PharmacyLoginResponse res = authService.pharmacylogin(request);
-    User user = userRepo.findByEmail(res.getUser().getEmail())
+    PharmacyLoginResponse res = authService.pharmacyLogin(request);
+    User user = userRepository.findByEmail(res.getUser().getEmail())
         .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
     String refreshToken = jwtProvider.createRefreshToken(user);
@@ -131,6 +129,7 @@ public class AuthController {
       HttpServletResponse response
   ) {
     if (refreshToken == null || !jwtProvider.validateToken(refreshToken)) {
+      response.addHeader(HttpHeaders.SET_COOKIE, buildRefreshCookie("", 0).toString());
       return ResponseEntity.status(401)
           .body(ApiResponse.<Map<String, String>>builder()
               .success(false)
@@ -139,7 +138,7 @@ public class AuthController {
     }
 
     String email = jwtProvider.getClaims(refreshToken).getSubject();
-    User user = userRepo.findByEmail(email)
+    User user = userRepository.findByEmail(email)
         .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
     String newAccessToken = jwtProvider.createAccessToken(user);
@@ -156,25 +155,23 @@ public class AuthController {
    */
   @PostMapping("/password")
   public ResponseEntity<Void> changePassword(
-      @RequestBody PasswordChangeRequest request
+      @AuthenticationPrincipal User user,
+      @RequestBody @Valid PasswordChangeRequest request
   ) {
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-    if (auth == null || !auth.isAuthenticated()) {
+    if (user == null) {
       return ResponseEntity.status(401).build(); // 401 Unauthorized
     }
-    CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
-    Long userId = userDetails.getUserId();
-    authService.changePassword(userId, request);
+    authService.changePassword(user.getUserId(), request);
     return ResponseEntity.noContent().build(); // 204 No Content
   }
 
   /**
    * 관리자 프로필을 수정합니다.
    */
-  @PatchMapping("/admin/{adminId}")
+  @PatchMapping("/admin/{adminId}/update")
   public ResponseEntity<ApiResponse<AdminProfile>> updateAdmin(
       @PathVariable Long adminId,
-      @RequestBody AdminUpdateRequest request
+      @RequestBody @Valid AdminUpdateRequest request
   ) {
     AdminProfile profile = authService.updateAdmin(adminId, request);
     return ResponseEntity.ok(ApiResponse.ok(profile)); // FE 동기화 편의상 200 OK + 데이터 반환
@@ -183,10 +180,10 @@ public class AuthController {
   /**
    * 약국 프로필을 수정합니다.
    */
-  @PatchMapping("/pharmacy/{pharmacyId}")
+  @PatchMapping("/pharmacy/{pharmacyId}/update")
   public ResponseEntity<ApiResponse<PharmacyProfile>> updatePharmacy(
       @PathVariable Long pharmacyId,
-      @RequestBody PharmacyUpdateRequest request
+      @RequestBody @Valid PharmacyUpdateRequest request
   ) {
     PharmacyProfile profile = authService.updatePharmacy(pharmacyId, request);
     return ResponseEntity.ok(ApiResponse.ok(profile)); // FE 동기화 편의상 200 OK + 데이터 반환

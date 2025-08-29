@@ -26,7 +26,6 @@ public class AdminSignupRequest {
   private String password;
 
   @NotBlank
-  @Size(max = 45)
   private String adminName;
 
   @NotNull

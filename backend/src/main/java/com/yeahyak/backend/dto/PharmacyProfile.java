@@ -22,5 +22,5 @@ public class PharmacyProfile {
   private String detailAddress;
   private Region region;
   private String contact;
-  private BigDecimal outstandingBalance;
+  private BigDecimal balance;
 }

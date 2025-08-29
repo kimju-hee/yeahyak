@@ -1,5 +1,6 @@
 package com.yeahyak.backend.entity;
 
+
 import com.yeahyak.backend.entity.enums.UserRole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -20,6 +21,9 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+/**
+ * User Entity representing a user in the system.
+ */
 @Entity
 @Getter
 @Setter
@@ -34,14 +38,14 @@ public class User implements UserDetails {
   @Column(name = "user_id")
   private Long userId;
 
-  @Column(nullable = false, unique = true)
+  @Column(nullable = false, unique = true, length = 255)
   private String email;
 
-  @Column(nullable = false)
+  @Column(nullable = false, length = 255)
   private String password;
 
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
+  @Column(nullable = false, length = 45)
   private UserRole role;
 
   @Override
@@ -52,11 +56,6 @@ public class User implements UserDetails {
   @Override
   public String getUsername() {
     return email;
-  }
-
-  @Override
-  public String getPassword() {
-    return password;
   }
 
   @Override
