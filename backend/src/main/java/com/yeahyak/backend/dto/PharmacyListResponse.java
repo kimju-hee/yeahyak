@@ -25,6 +25,6 @@ public class PharmacyListResponse {
   private String detailAddress;
   private Region region;
   private String contact;
-  private BigDecimal outstandingBalance;
+  private BigDecimal balance;
   private LocalDateTime latestSettlementAt;
 }

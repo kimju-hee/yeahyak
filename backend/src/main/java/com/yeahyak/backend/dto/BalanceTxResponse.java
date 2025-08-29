@@ -14,10 +14,11 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class BalanceTxListResponse {
+public class BalanceTxResponse {
 
   private Long balanceTxId;
   private Long pharmacyId;
+  private String pharmacyName;
   private BalanceTxType type;
   private BigDecimal amount;
   private BigDecimal balanceAfter;
