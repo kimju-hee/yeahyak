@@ -14,5 +14,5 @@ import lombok.Setter;
 public class ProductCreateResponse {
 
   private Long productId;
-  private Long stockTxId;
+  private Long inventoryTxId;
 }

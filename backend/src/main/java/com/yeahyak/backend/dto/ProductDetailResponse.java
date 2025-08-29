@@ -28,5 +28,5 @@ public class ProductDetailResponse {
   private String details;
   private String productImgUrl;
   private LocalDateTime createdAt;
-  private Integer stockQty;
+  private Integer inventoryQty;
 }

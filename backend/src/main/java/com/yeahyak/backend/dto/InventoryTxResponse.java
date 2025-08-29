@@ -1,6 +1,6 @@
 package com.yeahyak.backend.dto;
 
-import com.yeahyak.backend.entity.enums.StockTxType;
+import com.yeahyak.backend.entity.enums.InventoryTxType;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,12 +13,13 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class StockTxDetailResponse {
+public class InventoryTxResponse {
 
-  private Long stockTxId;
+  private Long inventoryTxId;
   private Long productId;
-  private StockTxType type;
+  private String productName;
+  private InventoryTxType type;
   private Integer amount;
-  private Integer quantityAfter;
+  private Integer inventoryAfter;
   private LocalDateTime createdAt;
 }

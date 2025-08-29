@@ -1,16 +1,26 @@
 package com.yeahyak.backend.controller;
 
 import com.yeahyak.backend.dto.ApiResponse;
+import com.yeahyak.backend.dto.InventoryInRequest;
+import com.yeahyak.backend.dto.InventoryInResponse;
+import com.yeahyak.backend.dto.InventoryTxResponse;
 import com.yeahyak.backend.dto.ProductCreateRequest;
 import com.yeahyak.backend.dto.ProductCreateResponse;
 import com.yeahyak.backend.dto.ProductDetailResponse;
 import com.yeahyak.backend.dto.ProductListResponse;
 import com.yeahyak.backend.dto.ProductUpdateRequest;
+import com.yeahyak.backend.entity.InventoryTx;
+import com.yeahyak.backend.entity.Product;
+import com.yeahyak.backend.entity.enums.InventoryTxType;
 import com.yeahyak.backend.entity.enums.MainCategory;
 import com.yeahyak.backend.entity.enums.SubCategory;
+import com.yeahyak.backend.repository.InventoryTxRepository;
+import com.yeahyak.backend.repository.ProductRepository;
+import com.yeahyak.backend.service.InventoryTxService;
 import com.yeahyak.backend.service.ProductService;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
@@ -18,10 +28,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.MediaType;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -33,7 +41,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 제품 관련 API를 처리하는 컨트롤러입니다.
+ * 제품 관련 API 처리하는 컨트롤러입니다.
  */
 @RestController
 @RequestMapping("/api/products")
@@ -41,13 +49,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductController {
 
   private final ProductService productService;
+  private final InventoryTxService inventoryTxService;
+  private final ProductRepository productRepository;
+  private final InventoryTxRepository inventoryTxRepository;
 
   /**
    * 제품을 생성합니다.
    */
   @PostMapping
   public ResponseEntity<ApiResponse<ProductCreateResponse>> createProduct(
-      @RequestBody ProductCreateRequest request
+      @RequestBody @Valid ProductCreateRequest request
   ) {
     ProductCreateResponse res = productService.createProduct(request);
     URI location = URI.create("/api/products/" + res.getProductId());
@@ -62,12 +73,12 @@ public class ProductController {
       @RequestParam(required = false) MainCategory mainCategory,
       @RequestParam(required = false) SubCategory subCategory,
       @RequestParam(required = false) String keyword,
-      @RequestParam(defaultValue = "100") int stockQtyThreshold,
+      @RequestParam(defaultValue = "100") int threshold,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size
   ) {
     Page<ProductListResponse> result =
-        productService.getProducts(mainCategory, subCategory, keyword, stockQtyThreshold, page,
+        productService.getProducts(mainCategory, subCategory, keyword, threshold, page,
             size);
     return ResponseEntity.ok(ApiResponse.withPagination(result)); // 200 OK
   }
@@ -89,7 +100,7 @@ public class ProductController {
   @PatchMapping("/{productId}")
   public ResponseEntity<Void> updateProduct(
       @PathVariable Long productId,
-      @RequestBody ProductUpdateRequest request
+      @RequestBody @Valid ProductUpdateRequest request
   ) {
     productService.updateProduct(productId, request);
     return ResponseEntity.noContent().build(); // 204 No Content
@@ -104,6 +115,52 @@ public class ProductController {
   ) {
     productService.deleteProduct(productId);
     return ResponseEntity.noContent().build(); // 204 No Content
+  }
+
+  /**
+   * 제품 입고를 처리합니다.
+   */
+  @PostMapping("{productId}/in")
+  public ResponseEntity<ApiResponse<InventoryInResponse>> inventoryIn(
+      @RequestBody @Valid InventoryInRequest request
+  ) {
+    Product product = productRepository.findById(request.getProductId())
+        .orElseThrow(() -> new RuntimeException("제품 정보를 찾을 수 없습니다."));
+    int before = product.getInventoryQty();
+
+    Long inventoryTxId = inventoryTxService.createInventoryTx(
+        request.getProductId(), InventoryTxType.IN, request.getAmount());
+
+    InventoryTx inventoryTx = inventoryTxRepository.findById(inventoryTxId)
+        .orElseThrow(() -> new RuntimeException("재고 거래 내역을 찾을 수 없습니다."));
+
+    InventoryInResponse res = InventoryInResponse.builder()
+        .inventoryTxId(inventoryTxId)
+        .productId(request.getProductId())
+        .amount(request.getAmount())
+        .inventoryBefore(before)
+        .inventoryAfter(inventoryTx.getInventoryAfter())
+        .createdAt(inventoryTx.getCreatedAt())
+        .build();
+
+    return ResponseEntity.ok(ApiResponse.ok(res)); // 200 OK
+  }
+
+  /**
+   * 특정 제품의 재고 거래 내역을 조회합니다.
+   */
+  @GetMapping("/{productId}/inventory-txs")
+  public ResponseEntity<ApiResponse<List<InventoryTxResponse>>> getInventoryTxsByProduct(
+      @RequestParam Long productId,
+      @RequestParam(required = false) InventoryTxType type,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size
+  ) {
+    Page<InventoryTxResponse> result = inventoryTxService.getInventoryTxs(
+        productId, type, start, end, page, size);
+    return ResponseEntity.ok(ApiResponse.withPagination(result)); // 200 OK
   }
 
   /**

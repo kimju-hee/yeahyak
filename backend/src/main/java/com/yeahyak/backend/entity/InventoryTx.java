@@ -1,6 +1,6 @@
 package com.yeahyak.backend.entity;
 
-import com.yeahyak.backend.entity.enums.StockTxType;
+import com.yeahyak.backend.entity.enums.InventoryTxType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -20,33 +20,36 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
+/**
+ * Represents an inventory transaction for a product.
+ */
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "stock_txs")
-public class StockTx {
+@Table(name = "inventory_txs")
+public class InventoryTx {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "stock_tx_id")
-  private Long stockTxId;
+  @Column(name = "inventory_tx_id")
+  private Long inventoryTxId;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "product_id", nullable = false)
   private Product product;
 
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private StockTxType type;
+  @Column(nullable = false, length = 45)
+  private InventoryTxType type;
 
   @Column(nullable = false)
   private Integer amount;
 
-  @Column(name = "quantity_after", nullable = false)
-  private Integer quantityAfter;
+  @Column(name = "inventory_after", nullable = false)
+  private Integer inventoryAfter;
 
   @CreationTimestamp
   @Column(name = "created_at", nullable = false)

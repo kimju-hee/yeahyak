@@ -21,6 +21,6 @@ public class ProductListResponse {
   private String unit;
   private BigDecimal unitPrice;
   private String productImgUrl;
-  private Integer stockQty;
-  private LocalDateTime latestStockInAt;
+  private Integer inventoryQty;
+  private LocalDateTime latestInventoryInAt;
 }
