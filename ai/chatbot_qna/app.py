@@ -65,39 +65,39 @@ SYSTEM_PROMPT = """
 """.strip()
 
 
-# @app.route("/chat/qna", methods=["POST"])
-# def handle_chat():
-#     data = request.json
-#     user_query = data.get("query")
-#     conversation_history = data.get("history", [])
+@app.route("/chat/qna", methods=["POST"])
+def handle_chat():
+    data = request.json
+    user_query = data.get("query")
+    conversation_history = data.get("history", [])
 
-#     if not user_query:
-#         return jsonify({"error": "query가 비어있습니다."}), 400
+    if not user_query:
+        return jsonify({"error": "query가 비어있습니다."}), 400
 
-#     messages = [SystemMessage(content=SYSTEM_PROMPT)]
-#     for message in conversation_history:
-#         if message.get("type") == "human":
-#             messages.append(HumanMessage(content=message.get("content")))
-#         elif message.get("type") == "ai":
-#             messages.append(AIMessage(content=message.get("content")))
+    messages = [SystemMessage(content=SYSTEM_PROMPT)]
+    for message in conversation_history:
+        if message.get("type") == "human":
+            messages.append(HumanMessage(content=message.get("content")))
+        elif message.get("type") == "ai":
+            messages.append(AIMessage(content=message.get("content")))
 
-#     messages.append(HumanMessage(content=user_query))
+    messages.append(HumanMessage(content=user_query))
 
-#     try:
-#         response = chatbot.invoke({"messages": messages})
-#         ai_response = response["messages"][-1].content
+    try:
+        response = chatbot.invoke({"messages": messages})
+        ai_response = response["messages"][-1].content
 
-#         new_history = conversation_history + [
-#             {"type": "human", "content": user_query},
-#             {"type": "ai", "content": ai_response},
-#         ]
+        new_history = conversation_history + [
+            {"type": "human", "content": user_query},
+            {"type": "ai", "content": ai_response},
+        ]
 
-#         return jsonify({"reply": ai_response, "history": new_history})
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
+        return jsonify({"reply": ai_response, "history": new_history})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-# if __name__ == "__main__":
-#     print("🤖 챗봇 에이전트를 생성 중입니다...")
-#     app.run(host="0.0.0.0", port=5000, debug=True)
-#     print("✅ 챗봇 에이전트가 준비되었습니다.")
+if __name__ == "__main__":
+    print("🤖 챗봇 에이전트를 생성 중입니다...")
+    app.run(host="0.0.0.0", port=5000, debug=True)
+    print("✅ 챗봇 에이전트가 준비되었습니다.")
