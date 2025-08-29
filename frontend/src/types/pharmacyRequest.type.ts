@@ -1,5 +1,4 @@
-import type { PharmacyRequestStatus, Region } from '.';
-import type { ApiResponse, PaginatedResponse } from './api.type';
+import type { ApiResponse, PaginatedResponse, PharmacyRequestStatus, Region } from '.';
 
 export interface PharmacyRequestListParams {
   status?: PharmacyRequestStatus;

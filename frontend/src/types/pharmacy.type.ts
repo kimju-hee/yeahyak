@@ -1,5 +1,4 @@
-import type { BalanceTxType, Region } from '.';
-import type { ApiResponse, PaginatedResponse } from './api.type';
+import type { ApiResponse, BalanceTxType, PaginatedResponse, Region } from '.';
 
 export interface PharmacyListParams {
   unsettled?: boolean;
@@ -33,7 +32,6 @@ export interface Settlement {
 }
 
 export interface BalanceTxParams {
-  pharmacyId: number;
   type?: BalanceTxType;
   start?: string;
   end?: string;

@@ -1,5 +1,4 @@
-import type { InventoryTxType, MainCategory, SubCategory } from '.';
-import type { ApiResponse, PaginatedResponse } from './api.type';
+import type { ApiResponse, InventoryTxType, MainCategory, PaginatedResponse, SubCategory } from '.';
 
 export interface ProductCreateRequest {
   productName: string;
@@ -20,7 +19,7 @@ export interface ProductCreate {
 }
 
 export interface ProductListParams {
-  mainCategory?: MainCategory;
+  mainCategory: MainCategory;
   subCategory?: SubCategory;
   keyword?: string; // 제품명
   page?: number;
@@ -70,7 +69,6 @@ export type ProductListResponse = PaginatedResponse<ProductList>;
 export type ProductDetailResponse = ApiResponse<ProductDetail>;
 
 export interface InventoryInRequest {
-  productId: number;
   amount: number;
 }
 
@@ -84,7 +82,6 @@ export interface InventoryIn {
 }
 
 export interface InventoryTxParams {
-  productId: number;
   page?: number;
   size?: number;
 }

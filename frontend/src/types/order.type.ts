@@ -90,10 +90,6 @@ export interface OrderUpdateRequest {
   status: OrderStatus;
 }
 
-export interface OrderForecastRequest {
-  file: File;
-}
-
 export interface OrderForecast {
   productId: number;
   productName: string;
