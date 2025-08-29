@@ -19,4 +19,5 @@ public class NoticeListResponse {
   private NoticeType type;
   private String title;
   private LocalDateTime createdAt;
+  private Integer viewCount;
 }

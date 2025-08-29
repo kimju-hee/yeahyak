@@ -19,7 +19,8 @@ public class NoticeDetailResponse {
   private NoticeType type;
   private String title;
   private String content;
-  private String attachmentUrl;
+  private String fileName;
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
+  private Integer viewCount;
 }
