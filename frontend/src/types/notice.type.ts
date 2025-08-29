@@ -1,13 +1,4 @@
-import type { ApiResponse, PaginatedResponse } from './api.type';
-
-export const NOTICE_TYPE = {
-  GENERAL: 'GENERAL',
-  LAW: 'LAW',
-  EPIDEMIC: 'EPIDEMIC',
-  NEW_PRODUCT: 'NEW_PRODUCT',
-} as const;
-export type NoticeType = keyof typeof NOTICE_TYPE;
-export type NoticeTypeTextMap = { [key in NoticeType]: string };
+import type { ApiResponse, NoticeType, PaginatedResponse } from '.';
 
 export interface NoticeCreateRequest {
   type: NoticeType;
@@ -24,20 +15,10 @@ export interface NoticeCreate {
   noticeId: number;
 }
 
-export interface NoticeDetail {
-  noticeId: number;
-  type: NoticeType;
-  title: string;
-  content: string;
-  attachmentUrl?: string;
-  createdAt: string;
-  updatedAt?: string;
-}
-
 export interface NoticeListParams {
   type: NoticeType;
-  keyword?: string;
-  scope?: 'TITLE' | 'CONTENT';
+  keyword?: string; // 제목 또는 내용
+  scope?: 'TITLE' | 'CONTENT'; // 검색 범위
   page?: number;
   size?: number;
 }
@@ -47,15 +28,24 @@ export interface NoticeList {
   type: NoticeType;
   title: string;
   createdAt: string;
+  viewCount: number;
+}
+
+export interface NoticeDetail {
+  noticeId: number;
+  type: NoticeType;
+  title: string;
+  content: string;
+  fileName?: string;
+  createdAt: string;
+  updatedAt?: string;
+  viewCount: number;
 }
 
 export interface NoticeUpdateRequest {
   title: string;
   content: string;
-}
-
-export interface NoticeFileUpdateRequest {
-  file: File;
+  removeFile: boolean;
 }
 
 export interface NoticeUpdateRequestWithFile {

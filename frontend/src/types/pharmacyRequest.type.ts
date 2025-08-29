@@ -1,10 +1,10 @@
-import type { Region } from '.';
+import type { PharmacyRequestStatus, Region } from '.';
 import type { ApiResponse, PaginatedResponse } from './api.type';
 
 export interface PharmacyRequestListParams {
   status?: PharmacyRequestStatus;
   region?: Region;
-  keyword?: string;
+  keyword?: string; // 약국명
   page?: number;
   size?: number;
 }
@@ -18,17 +18,8 @@ export interface PharmacyRequestList {
   region: Region;
   contact: string;
   status: PharmacyRequestStatus;
-  requestedAt: string;
+  createdAt: string;
 }
-
-export const PHARMACY_REQUEST_STATUS = {
-  PENDING: 'PENDING',
-  APPROVED: 'APPROVED',
-  REJECTED: 'REJECTED',
-} as const;
-export type PharmacyRequestStatus = keyof typeof PHARMACY_REQUEST_STATUS;
-export type PharmacyRequestStatusColorMap = { [key in PharmacyRequestStatus]: string };
-export type PharmacyRequestStatusTextMap = { [key in PharmacyRequestStatus]: string };
 
 export interface PharmacyRequestDetail {
   pharmacyRequestId: number;
@@ -43,8 +34,8 @@ export interface PharmacyRequestDetail {
   region: Region;
   contact: string;
   status: PharmacyRequestStatus;
-  requestedAt: string;
-  processedAt?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export type PharmacyRequestListResponse = PaginatedResponse<PharmacyRequestList>;

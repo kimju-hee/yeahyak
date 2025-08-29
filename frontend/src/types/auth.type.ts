@@ -1,5 +1,4 @@
-import type { Region } from '.';
-import type { ApiResponse } from './api.type';
+import type { ApiResponse, Department, Region, UserRole } from '.';
 
 export interface User {
   userId: number;
@@ -7,26 +6,11 @@ export interface User {
   role: UserRole;
 }
 
-export const USER_ROLE = {
-  ADMIN: 'ADMIN',
-  PHARMACY: 'PHARMACY',
-} as const;
-export type UserRole = keyof typeof USER_ROLE;
-
 export interface Admin {
   adminId: number;
   adminName: string;
   department: Department;
 }
-
-export const DEPARTMENT = {
-  MANAGEMENT: 'MANAGEMENT',
-  SALES: 'SALES',
-  INVENTORY: 'INVENTORY',
-  FINANCE: 'FINANCE',
-} as const;
-export type Department = keyof typeof DEPARTMENT;
-export type DepartmentTextMap = { [key in Department]: string };
 
 export interface Pharmacy {
   pharmacyId: number;
@@ -38,7 +22,7 @@ export interface Pharmacy {
   detailAddress?: string;
   region: Region;
   contact: string;
-  outstandingBalance: number;
+  balance: number;
 }
 
 // 회원가입 요청 및 응답
@@ -123,5 +107,13 @@ export interface PharmacyUpdateRequest {
   contact: string;
 }
 
-export type AdminUpdateResponse = ApiResponse<Admin>;
-export type PharmacyUpdateResponse = ApiResponse<Pharmacy>;
+export interface AdminUpdate {
+  profile: Admin;
+}
+
+export interface PharmacyUpdate {
+  profile: Pharmacy;
+}
+
+export type AdminUpdateResponse = ApiResponse<AdminUpdate>;
+export type PharmacyUpdateResponse = ApiResponse<PharmacyUpdate>;
