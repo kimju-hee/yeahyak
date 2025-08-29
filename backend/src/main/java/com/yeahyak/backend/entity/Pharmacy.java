@@ -19,6 +19,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Pharmacy entity representing a pharmacy in the system.
+ */
 @Entity
 @Getter
 @Setter
@@ -49,19 +52,19 @@ public class Pharmacy {
   @Column(nullable = false, length = 20)
   private String postcode;
 
-  @Column(nullable = false)
+  @Column(nullable = false, length = 255)
   private String address;
 
-  @Column(name = "detail_address")
+  @Column(name = "detail_address", length = 255)
   private String detailAddress;
 
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
+  @Column(nullable = false, length = 45)
   private Region region;
 
   @Column(nullable = false, length = 20)
   private String contact;
 
-  @Column(name = "outstanding_balance", nullable = false, precision = 10, scale = 2)
-  private BigDecimal outstandingBalance;
+  @Column(nullable = false, precision = 10, scale = 2)
+  private BigDecimal balance;
 }

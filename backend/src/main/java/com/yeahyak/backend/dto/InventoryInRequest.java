@@ -11,7 +11,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class StockInRequest {
+public class InventoryInRequest {
 
   @NotNull
   private Long productId;

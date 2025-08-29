@@ -12,12 +12,12 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class StockInResponse {
+public class InventoryInResponse {
 
-  private Long stockTxId;
+  private Long inventoryTxId;
   private Long productId;
   private Integer amount;
-  private Integer quantityBefore;
-  private Integer quantityAfter;
+  private Integer inventoryBefore;
+  private Integer inventoryAfter;
   private LocalDateTime createdAt;
 }

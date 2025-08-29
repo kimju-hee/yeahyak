@@ -22,6 +22,9 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+/**
+ * Represents an order placed by a pharmacy.
+ */
 @Entity
 @Getter
 @Setter
@@ -40,12 +43,12 @@ public class Orders {
   @JoinColumn(name = "pharmacy_id", nullable = false)
   private Pharmacy pharmacy;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private OrderStatus status;
-
   @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
   private BigDecimal totalPrice;
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 45)
+  private OrderStatus status;
 
   @CreationTimestamp
   @Column(name = "created_at", nullable = false)

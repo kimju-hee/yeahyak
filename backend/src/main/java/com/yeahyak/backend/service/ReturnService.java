@@ -12,16 +12,15 @@ import com.yeahyak.backend.entity.Product;
 import com.yeahyak.backend.entity.ReturnItem;
 import com.yeahyak.backend.entity.Returns;
 import com.yeahyak.backend.entity.enums.BalanceTxType;
+import com.yeahyak.backend.entity.enums.InventoryTxType;
 import com.yeahyak.backend.entity.enums.Region;
 import com.yeahyak.backend.entity.enums.ReturnStatus;
-import com.yeahyak.backend.entity.enums.StockTxType;
 import com.yeahyak.backend.repository.OrderItemRepository;
 import com.yeahyak.backend.repository.OrderRepository;
 import com.yeahyak.backend.repository.PharmacyRepository;
 import com.yeahyak.backend.repository.ProductRepository;
 import com.yeahyak.backend.repository.ReturnItemRepository;
 import com.yeahyak.backend.repository.ReturnRepository;
-import com.yeahyak.backend.repository.StockTxRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -32,8 +31,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,63 +41,59 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ReturnService {
 
-  private final ReturnRepository returnRepo;
-  private final ReturnItemRepository returnItemRepo;
-  private final OrderRepository orderRepo;
-  private final OrderItemRepository orderItemRepo;
-  private final PharmacyRepository pharmacyRepo;
-  private final ProductRepository productRepo;
-  private final StockTxRepository stockTxRepo;
+  private final ReturnRepository returnRepository;
+  private final ReturnItemRepository returnItemRepository;
+  private final OrderRepository orderRepository;
+  private final OrderItemRepository orderItemRepository;
+  private final PharmacyRepository pharmacyRepository;
+  private final ProductRepository productRepository;
   private final BalanceTxService balanceTxService;
-  private final StockTxService stockTxService;
+  private final InventoryTxService inventoryTxService;
 
   /**
    * 반품 요청을 생성합니다.
    */
   @Transactional
   public ReturnCreateResponse createReturn(ReturnCreateRequest req) {
-    Pharmacy pharmacy = pharmacyRepo.findById(req.getPharmacyId())
-        .orElseThrow(() -> new RuntimeException("가맹점 정보를 찾을 수 없습니다."));
-    Orders orders = orderRepo.findById(req.getOrderId())
+    Pharmacy pharmacy = pharmacyRepository.findById(req.getPharmacyId())
+        .orElseThrow(() -> new RuntimeException("약국 정보를 찾을 수 없습니다."));
+    Orders orders = orderRepository.findById(req.getOrderId())
         .orElseThrow(() -> new RuntimeException("발주 정보를 찾을 수 없습니다."));
+
     if (!orders.getPharmacy().getPharmacyId().equals(pharmacy.getPharmacyId())) {
-      throw new RuntimeException("해당 가맹점의 발주 내역이 아닙니다.");
+      throw new RuntimeException("해당 약국의 발주 내역이 아닙니다.");
     }
     if (req.getItems() == null || req.getItems().isEmpty()) {
       throw new RuntimeException("반품 요청 품목이 없습니다.");
     }
 
-    List<OrderItem> orderItems = orderItemRepo.findByOrders(orders);
+    List<OrderItem> orderItems = orderItemRepository.findByOrders(orders);
     Map<Long, OrderItem> orderedItemMap = orderItems.stream()
-        .collect(Collectors
-            .toMap(oi -> oi.getProduct().getProductId(), oi -> oi));
-
-    final List<ReturnStatus> statuses = List.of(
-        ReturnStatus.REQUESTED,
-        ReturnStatus.APPROVED,
-        ReturnStatus.RECEIVED,
-        ReturnStatus.COMPLETED
-    );
+        .collect(Collectors.toMap(
+            oi -> oi.getProduct().getProductId(),
+            oi -> oi
+        ));
+    Map<Long, Integer> orderedQtyMap = orderItems.stream()
+        .collect(Collectors.toMap(
+            oi -> oi.getProduct().getProductId(),
+            OrderItem::getQuantity
+        ));
 
     BigDecimal totalPrice = BigDecimal.ZERO;
     List<ReturnItem> returnItems = new ArrayList<>();
 
-    Map<Long, Integer> orderedQtyMap = orderItems.stream()
-        .collect(Collectors
-            .toMap(oi -> oi.getProduct().getProductId(), OrderItem::getQuantity));
-
     for (ReturnCreateRequest.Item reqItem : req.getItems()) {
-      Product product = productRepo.findById(reqItem.getProductId())
+      Product product = productRepository.findById(reqItem.getProductId())
           .orElseThrow(() -> new RuntimeException("제품 정보를 찾을 수 없습니다."));
 
       int quantity = reqItem.getQuantity();
 
       // 반품 가능 수량 제한
-      int orderedQty = orderedQtyMap.getOrDefault(product.getProductId(), 0);
-      long already = returnItemRepo.sumReturnedQtyForOrderAndProduct(
-          orders, product.getProductId(), statuses
+      int orderedQty = orderedQtyMap.get(product.getProductId());
+      int already = returnItemRepository.sumReturnedQtyForOrderAndProduct(
+          orders, product.getProductId()
       );
-      long left = Math.max(0L, (long) orderedQty - already);
+      int left = Math.max(0, orderedQty - already);
       if (quantity > left) {
         throw new RuntimeException(
             String.format("반품 가능 수량을 초과했습니다. (주문수량=%d개, 누적반품=%d개)", orderedQty, already)
@@ -129,16 +122,16 @@ public class ReturnService {
     Returns returns = Returns.builder()
         .pharmacy(pharmacy)
         .orders(orders)
-        .status(ReturnStatus.REQUESTED)
         .reason(req.getReason())
         .totalPrice(totalPrice)
+        .status(ReturnStatus.REQUESTED)
         .build();
-    returnRepo.save(returns);
+    returnRepository.save(returns);
 
     for (ReturnItem returnItem : returnItems) {
       returnItem.setReturns(returns);
     }
-    returnItemRepo.saveAll(returnItems);
+    returnItemRepository.saveAll(returnItems);
 
     return new ReturnCreateResponse(returns.getReturnId());
   }
@@ -151,8 +144,8 @@ public class ReturnService {
       ReturnStatus status, Region region, LocalDateTime start, LocalDateTime end,
       int page, int size
   ) {
-    Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.DESC, "createdAt"));
-    return returnRepo.findByStatusAndRegionAndCreatedAtBetween(
+    Pageable pageable = PageRequest.of(page, size);
+    return returnRepository.findByStatusAndRegionAndCreatedAtBetween(
             status, region, start, end, pageable)
         .map(returns -> ReturnListResponse.builder()
             .returnId(returns.getReturnId())
@@ -173,8 +166,8 @@ public class ReturnService {
   public Page<ReturnListResponse> getReturnsByPharmacy(
       Long pharmacyId, ReturnStatus status, int page, int size
   ) {
-    Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.DESC, "createdAt"));
-    return returnRepo.findByPharmacy_PharmacyIdAndStatus(pharmacyId, status, pageable)
+    Pageable pageable = PageRequest.of(page, size);
+    return returnRepository.findByPharmacyIdAndStatus(pharmacyId, status, pageable)
         .map(returns -> ReturnListResponse.builder()
             .returnId(returns.getReturnId())
             .pharmacyId(pharmacyId)
@@ -192,10 +185,10 @@ public class ReturnService {
    */
   @Transactional(readOnly = true)
   public ReturnDetailResponse getReturnById(Long returnId) {
-    Returns returns = returnRepo.findById(returnId)
+    Returns returns = returnRepository.findById(returnId)
         .orElseThrow(() -> new RuntimeException("반품 요청 정보를 찾을 수 없습니다."));
 
-    List<ReturnItem> items = returnItemRepo.findByReturns(returns);
+    List<ReturnItem> items = returnItemRepository.findByReturns(returns);
     List<ReturnDetailResponse.Item> itemsList = items.stream()
         .map(item -> ReturnDetailResponse.Item.builder()
             .productId(item.getProduct().getProductId())
@@ -226,7 +219,7 @@ public class ReturnService {
   }
 
   private String makeSummary(Returns returns) {
-    List<ReturnItem> items = returnItemRepo.findByReturns(returns);
+    List<ReturnItem> items = returnItemRepository.findByReturns(returns);
     String firstProductName = items.get(0).getProduct().getProductName();
     int count = items.size();
     return (count > 1) ? firstProductName + " 외 " + (count - 1) + "개" : firstProductName;
@@ -239,11 +232,11 @@ public class ReturnService {
   }
 
   /**
-   * 반품 요청의 상태를 업데이트합니다. 업데이트 상태가 COMPLETED인 경우, 유저의 미정산 잔액을 감소시키고 제품의 재고를 복구합니다.
+   * 반품 요청의 상태를 업데이트합니다. 업데이트 상태가 COMPLETED 경우, 유저의 미정산 잔액을 감소시키고 제품의 재고를 복구합니다.
    */
   @Transactional
   public void updateReturnStatus(Long returnId, ReturnUpdateRequest req) {
-    Returns returns = returnRepo.findById(returnId)
+    Returns returns = returnRepository.findById(returnId)
         .orElseThrow(() -> new RuntimeException("반품 요청 정보를 찾을 수 없습니다."));
 
     if (returns.getStatus() == ReturnStatus.CANCELED) {
@@ -257,16 +250,16 @@ public class ReturnService {
           returns.getPharmacy().getPharmacyId(), BalanceTxType.RETURN, returns.getTotalPrice()
       );
 
-      List<ReturnItem> items = returnItemRepo.findByReturns(returns);
+      List<ReturnItem> items = returnItemRepository.findByReturns(returns);
       for (ReturnItem ri : items) {
-        stockTxService.createStockTx(
-            ri.getProduct().getProductId(), StockTxType.RETURN, ri.getQuantity()
+        inventoryTxService.createInventoryTx(
+            ri.getProduct().getProductId(), InventoryTxType.RETURN, ri.getQuantity()
         );
       }
     }
 
     returns.setStatus(req.getStatus());
-    returnRepo.save(returns);
+    returnRepository.save(returns);
   }
 
   /**
@@ -274,10 +267,10 @@ public class ReturnService {
    */
   @Transactional
   public void deleteReturn(Long returnId) {
-    Returns returns = returnRepo.findById(returnId)
+    Returns returns = returnRepository.findById(returnId)
         .orElseThrow(() -> new RuntimeException("반품 요청 정보를 찾을 수 없습니다."));
 
-    returnItemRepo.deleteAllByReturns(returns);
-    returnRepo.delete(returns);
+    returnItemRepository.deleteAllByReturns(returns);
+    returnRepository.delete(returns);
   }
 }

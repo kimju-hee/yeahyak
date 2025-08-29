@@ -10,14 +10,13 @@ import com.yeahyak.backend.entity.Orders;
 import com.yeahyak.backend.entity.Pharmacy;
 import com.yeahyak.backend.entity.Product;
 import com.yeahyak.backend.entity.enums.BalanceTxType;
+import com.yeahyak.backend.entity.enums.InventoryTxType;
 import com.yeahyak.backend.entity.enums.OrderStatus;
 import com.yeahyak.backend.entity.enums.Region;
-import com.yeahyak.backend.entity.enums.StockTxType;
 import com.yeahyak.backend.repository.OrderItemRepository;
 import com.yeahyak.backend.repository.OrderRepository;
 import com.yeahyak.backend.repository.PharmacyRepository;
 import com.yeahyak.backend.repository.ProductRepository;
-import com.yeahyak.backend.repository.StockTxRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,8 +25,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,21 +35,20 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrderService {
 
-  private final OrderRepository orderRepo;
-  private final OrderItemRepository orderItemRepo;
-  private final PharmacyRepository pharmacyRepo;
-  private final ProductRepository productRepo;
-  private final StockTxRepository stockTxRepo;
+  private final OrderRepository orderRepository;
+  private final OrderItemRepository orderItemRepository;
+  private final PharmacyRepository pharmacyRepository;
+  private final ProductRepository productRepository;
   private final BalanceTxService balanceTxService;
-  private final StockTxService stockTxService;
+  private final InventoryTxService inventoryTxService;
 
   /**
    * 발주 요청을 생성합니다.
    */
   @Transactional
   public OrderCreateResponse createOrder(OrderCreateRequest req) {
-    Pharmacy pharmacy = pharmacyRepo.findById(req.getPharmacyId())
-        .orElseThrow(() -> new RuntimeException("가맹점 정보를 찾을 수 없습니다."));
+    Pharmacy pharmacy = pharmacyRepository.findById(req.getPharmacyId())
+        .orElseThrow(() -> new RuntimeException("약국 정보를 찾을 수 없습니다."));
 
     if (req.getItems() == null || req.getItems().isEmpty()) {
       throw new RuntimeException("발주 요청 품목이 없습니다.");
@@ -62,7 +58,7 @@ public class OrderService {
     List<OrderItem> orderItems = new ArrayList<>();
 
     for (OrderCreateRequest.Item reqItem : req.getItems()) {
-      Product product = productRepo.findById(reqItem.getProductId())
+      Product product = productRepository.findById(reqItem.getProductId())
           .orElseThrow(() -> new RuntimeException("제품 정보를 찾을 수 없습니다."));
 
       int quantity = reqItem.getQuantity();
@@ -79,9 +75,13 @@ public class OrderService {
           .subtotalPrice(subtotalPrice)
           .build();
       orderItems.add(orderItem);
+
+      inventoryTxService.createInventoryTx(
+          product.getProductId(), InventoryTxType.ORDER, reqItem.getQuantity()
+      );
     }
 
-    BigDecimal balance = pharmacy.getOutstandingBalance();
+    BigDecimal balance = pharmacy.getBalance();
     BigDecimal limit = new BigDecimal("10000000");
     BigDecimal next = balance.add(totalPrice);
     if (next.compareTo(limit) > 0) {
@@ -97,21 +97,12 @@ public class OrderService {
         .status(OrderStatus.REQUESTED)
         .totalPrice(totalPrice)
         .build();
-    orderRepo.save(orders);
-
-    for (OrderCreateRequest.Item reqItem : req.getItems()) {
-      Product product = productRepo.findById(reqItem.getProductId())
-          .orElseThrow(() -> new RuntimeException("제품 정보를 찾을 수 없습니다."));
-
-      stockTxService.createStockTx(
-          product.getProductId(), StockTxType.ORDER, reqItem.getQuantity()
-      );
-    }
+    orderRepository.save(orders);
 
     for (OrderItem orderItem : orderItems) {
       orderItem.setOrders(orders);
     }
-    orderItemRepo.saveAll(orderItems);
+    orderItemRepository.saveAll(orderItems);
 
     return new OrderCreateResponse(orders.getOrderId());
   }
@@ -124,8 +115,8 @@ public class OrderService {
       OrderStatus status, Region region, LocalDateTime start, LocalDateTime end,
       int page, int size
   ) {
-    Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.DESC, "createdAt"));
-    return orderRepo.findByStatusAndRegionAndCreatedAtBetween(
+    Pageable pageable = PageRequest.of(page, size);
+    return orderRepository.findByStatusAndRegionAndCreatedAtBetween(
             status, region, start, end, pageable)
         .map(orders -> OrderListResponse.builder()
             .orderId(orders.getOrderId())
@@ -145,8 +136,8 @@ public class OrderService {
   public Page<OrderListResponse> getOrdersByPharmacy(
       Long pharmacyId, OrderStatus status, int page, int size
   ) {
-    Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.DESC, "createdAt"));
-    return orderRepo.findByPharmacy_PharmacyIdAndStatus(pharmacyId, status, pageable)
+    Pageable pageable = PageRequest.of(page, size);
+    return orderRepository.findByPharmacyIdAndStatus(pharmacyId, status, pageable)
         .map(orders -> OrderListResponse.builder()
             .orderId(orders.getOrderId())
             .pharmacyId(pharmacyId)
@@ -163,10 +154,10 @@ public class OrderService {
    */
   @Transactional(readOnly = true)
   public OrderDetailResponse getOrderById(Long orderId) {
-    Orders orders = orderRepo.findById(orderId)
+    Orders orders = orderRepository.findById(orderId)
         .orElseThrow(() -> new RuntimeException("발주 요청 정보를 찾을 수 없습니다."));
 
-    List<OrderItem> items = orderItemRepo.findByOrders(orders);
+    List<OrderItem> items = orderItemRepository.findByOrders(orders);
     List<OrderDetailResponse.Item> itemsList = items.stream()
         .map(item -> OrderDetailResponse.Item.builder()
             .productId(item.getProduct().getProductId())
@@ -196,7 +187,7 @@ public class OrderService {
   }
 
   private String makeSummary(Orders orders) {
-    List<OrderItem> items = orderItemRepo.findByOrders(orders);
+    List<OrderItem> items = orderItemRepository.findByOrders(orders);
     String firstProductName = items.get(0).getProduct().getProductName();
     int count = items.size();
     return (count > 1) ? firstProductName + " 외 " + (count - 1) + "개" : firstProductName;
@@ -209,11 +200,11 @@ public class OrderService {
   }
 
   /**
-   * 발주 요청의 상태를 업데이트합니다. 업데이트 상태가 CANCELED인 경우, 유저의 미정산 잔액을 감소시키고 제품의 재고를 복구합니다.
+   * 발주 요청의 상태를 업데이트합니다. 업데이트 상태가 CANCELED 경우, 유저의 미정산 잔액을 감소시키고 제품의 재고를 복구합니다.
    */
   @Transactional
   public void updateOrderStatus(Long orderId, OrderUpdateRequest req) {
-    Orders orders = orderRepo.findById(orderId)
+    Orders orders = orderRepository.findById(orderId)
         .orElseThrow(() -> new RuntimeException("발주 요청 정보를 찾을 수 없습니다."));
 
     if (orders.getStatus() == OrderStatus.CANCELED) {
@@ -227,16 +218,16 @@ public class OrderService {
           orders.getPharmacy().getPharmacyId(), BalanceTxType.ORDER_CANCEL, orders.getTotalPrice()
       );
 
-      List<OrderItem> items = orderItemRepo.findByOrders(orders);
+      List<OrderItem> items = orderItemRepository.findByOrders(orders);
       for (OrderItem oi : items) {
-        stockTxService.createStockTx(
-            oi.getProduct().getProductId(), StockTxType.ORDER_CANCEL, oi.getQuantity()
+        inventoryTxService.createInventoryTx(
+            oi.getProduct().getProductId(), InventoryTxType.ORDER_CANCEL, oi.getQuantity()
         );
       }
     }
 
     orders.setStatus(req.getStatus());
-    orderRepo.save(orders);
+    orderRepository.save(orders);
   }
 
   /**
@@ -244,10 +235,10 @@ public class OrderService {
    */
   @Transactional
   public void deleteOrder(Long orderId) {
-    Orders orders = orderRepo.findById(orderId)
+    Orders orders = orderRepository.findById(orderId)
         .orElseThrow(() -> new RuntimeException("발주 요청 정보를 찾을 수 없습니다."));
 
-    orderItemRepo.deleteAllByOrders(orders);
-    orderRepo.delete(orders);
+    orderItemRepository.deleteAllByOrders(orders);
+    orderRepository.delete(orders);
   }
 }

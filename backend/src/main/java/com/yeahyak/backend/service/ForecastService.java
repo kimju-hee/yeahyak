@@ -2,8 +2,8 @@ package com.yeahyak.backend.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yeahyak.backend.dto.ForecastProduct;
 import com.yeahyak.backend.dto.ForecastRawResult;
+import com.yeahyak.backend.dto.ForecastResponse;
 import com.yeahyak.backend.entity.Product;
 import com.yeahyak.backend.exception.FlaskPredictException;
 import com.yeahyak.backend.repository.ProductRepository;
@@ -32,14 +32,14 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class ForecastService {
 
-  private final ProductRepository productRepo;
+  private final ProductRepository productRepository;
   private final RestTemplate restTemplate;
   private final ObjectMapper objectMapper;
 
   @Value("${ai.service.url}/forecast/order")
-  private String aiForecastUrl;
+  private String url;
 
-  public List<ForecastProduct> forecastOrder(MultipartFile file) {
+  public List<ForecastResponse> forecastOrder(MultipartFile file) {
     try {
       HttpHeaders partHeaders = new HttpHeaders();
       partHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
@@ -56,12 +56,11 @@ public class ForecastService {
 
       HttpHeaders headers = new HttpHeaders();
       headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-
       HttpEntity<MultiValueMap<String, Object>> httpEntity = new HttpEntity<>(body, headers);
 
       // Flask 호출
       ResponseEntity<String> response = restTemplate.exchange(
-          aiForecastUrl,
+          url,
           HttpMethod.POST,
           httpEntity,
           String.class
@@ -85,7 +84,7 @@ public class ForecastService {
           .distinct()
           .toList();
 
-      Map<String, Product> productMap = productRepo
+      Map<String, Product> productMap = productRepository
           .findByInsuranceCodeIn(insuranceCodes).stream()
           .collect(Collectors.toMap(Product::getInsuranceCode, p -> p));
 
@@ -95,16 +94,16 @@ public class ForecastService {
         int quantity = (rawResult.getPredictedQuantity() != null)
             ? rawResult.getPredictedQuantity()
             : 0;
-        BigDecimal unitPrice = (product != null) ? product.getUnitPrice() : null;
+        BigDecimal unitPrice = (product != null) ? product.getUnitPrice() : BigDecimal.ZERO;
         BigDecimal subtotalPrice = (product != null && unitPrice != null)
             ? unitPrice.multiply(BigDecimal.valueOf(quantity))
-            : null;
+            : BigDecimal.ZERO;
 
-        return ForecastProduct.builder()
+        return ForecastResponse.builder()
             .productId(product != null ? product.getProductId() : null)
             .productName(rawResult.getProductName())
             .insuranceCode(rawResult.getInsuranceCode())
-            .manufacturer(product != null ? product.getManufacturer() : null)
+            .manufacturer(product != null ? product.getManufacturer() : "알 수 없음")
             .productImgUrl(product != null ? product.getProductImgUrl() : null)
             .unitPrice(unitPrice)
             .quantity(quantity)

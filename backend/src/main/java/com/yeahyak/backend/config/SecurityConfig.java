@@ -1,17 +1,19 @@
 package com.yeahyak.backend.config;
 
+import com.yeahyak.backend.security.JwtAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder.BCryptVersion;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -19,11 +21,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import com.yeahyak.backend.security.CustomAuthenticationProvider;
-import com.yeahyak.backend.security.JwtAuthenticationFilter;
-
-import lombok.RequiredArgsConstructor;
 
 @Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
@@ -34,47 +31,19 @@ public class SecurityConfig {
 
   @Bean
   public PasswordEncoder passwordEncoder() {
-    BCryptPasswordEncoder enc2a = new BCryptPasswordEncoder(BCryptPasswordEncoder.BCryptVersion.$2A);
-    BCryptPasswordEncoder enc2y = new BCryptPasswordEncoder(BCryptPasswordEncoder.BCryptVersion.$2Y);
-
-    return new PasswordEncoder() {
-      @Override
-      public String encode(CharSequence rawPassword) {
-        return enc2y.encode(rawPassword);
-      }
-
-      @Override
-      public boolean matches(CharSequence rawPassword, String encodedPassword) {
-        if (encodedPassword == null) return false;
-
-        String enc = encodedPassword.startsWith("{bcrypt}")
-            ? encodedPassword.substring("{bcrypt}".length())
-            : encodedPassword;
-
-        if (enc.startsWith("$2y$")) return enc2y.matches(rawPassword, enc);
-        if (enc.startsWith("$2a$")) return enc2a.matches(rawPassword, enc);
-
-        return false;
-      }
-
-      @Override
-      public boolean upgradeEncoding(String encodedPassword) {
-        return encodedPassword != null
-            && !encodedPassword.startsWith("$2y$")
-            && !encodedPassword.startsWith("{bcrypt}$2y$");
-      }
-    };
+    return new BCryptPasswordEncoder(BCryptVersion.$2Y);
   }
 
   @Bean
-  public AuthenticationManager authenticationManager(
-      CustomAuthenticationProvider customAuthenticationProvider) {
-    return new ProviderManager(List.of(customAuthenticationProvider));
+  public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
+      throws Exception {
+    return config.getAuthenticationManager();
   }
 
   @Bean
   public WebSecurityCustomizer webSecurityCustomizer() {
-    return web -> web.ignoring().requestMatchers("/static/**", "/uploads/**", "/api/uploads/**", "/favicon.ico");
+    return web -> web.ignoring()
+        .requestMatchers("/static/**", "/favicon.ico");
   }
 
   @Bean
@@ -92,7 +61,7 @@ public class SecurityConfig {
     ));
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
-    config.setExposedHeaders(List.of("Authorization"));
+    config.setExposedHeaders(List.of("Authorization", "Content-Disposition", "Content-Length"));
     config.setAllowCredentials(true);
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -108,8 +77,13 @@ public class SecurityConfig {
         .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .formLogin(form -> form.disable())
         .httpBasic(basic -> basic.disable())
+        .exceptionHandling(ex -> ex
+            .authenticationEntryPoint((req, res, authEx) ->
+                res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized"))
+            .accessDeniedHandler((req, res, accEx) ->
+                res.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden"))
+        )
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             .requestMatchers(
                 "/api/auth/admin/signup",
                 "/api/auth/pharmacy/signup",
@@ -117,12 +91,6 @@ public class SecurityConfig {
                 "/api/auth/pharmacy/login",
                 "/api/auth/refresh",
                 "/api/auth/logout",
-                "/auth/admin/signup",
-                "/auth/pharmacy/signup",
-                "/auth/admin/login",
-                "/auth/pharmacy/login",
-                "/auth/refresh",
-                "/auth/logout",
                 "/actuator/**",
                 "/health",
                 "/error",
@@ -131,7 +99,6 @@ public class SecurityConfig {
                 "/docs/**"
             ).permitAll()
             .anyRequest().authenticated());
-    // jwtAuthenticationFilter 제거
     http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();

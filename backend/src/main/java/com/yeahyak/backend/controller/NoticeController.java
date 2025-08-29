@@ -1,25 +1,5 @@
 package com.yeahyak.backend.controller;
 
-import java.net.URI;
-import java.util.List;
-
-import org.springframework.data.domain.Page;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yeahyak.backend.dto.ApiResponse;
 import com.yeahyak.backend.dto.NoticeCreateRequest;
 import com.yeahyak.backend.dto.NoticeCreateResponse;
@@ -27,12 +7,33 @@ import com.yeahyak.backend.dto.NoticeDetailResponse;
 import com.yeahyak.backend.dto.NoticeListResponse;
 import com.yeahyak.backend.dto.NoticeUpdateRequest;
 import com.yeahyak.backend.entity.enums.NoticeType;
+import com.yeahyak.backend.service.BlobStorageService.DownloadPayload;
 import com.yeahyak.backend.service.NoticeService;
-
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriUtils;
 
 /**
- * 공지사항 관련 API를 처리하는 컨트롤러입니다.
+ * 공지사항 관련 API 처리하는 컨트롤러입니다.
  */
 @RestController
 @RequestMapping("/api/notices")
@@ -46,23 +47,12 @@ public class NoticeController {
    */
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ApiResponse<NoticeCreateResponse>> createNotice(
-      @RequestPart(value = "notice", required = true) String noticeJson,
-      @RequestPart(value = "file", required = false) MultipartFile file
+      @RequestPart(value = "notice") @Valid NoticeCreateRequest req,
+      @RequestPart(value = "files", required = false) MultipartFile file
   ) {
-    // JSON 문자열을 NoticeCreateRequest 객체로 변환
-    ObjectMapper objectMapper = new ObjectMapper();
-    NoticeCreateRequest request;
-    try {
-      request = objectMapper.readValue(noticeJson, NoticeCreateRequest.class);
-    } catch (Exception e) {
-      throw new RuntimeException("Invalid JSON format for notice", e);
-    }
-    
-    NoticeCreateResponse res = noticeService.createNotice(request, file);
+    NoticeCreateResponse res = noticeService.createNotice(req, file);
     URI location = URI.create("/api/notices/" + res.getNoticeId());
-    return ResponseEntity
-        .created(location)
-        .body(ApiResponse.ok(res)); // 201 Created
+    return ResponseEntity.created(location).body(ApiResponse.ok(res)); // 201 Created
   }
 
   /**
@@ -111,37 +101,31 @@ public class NoticeController {
   }
 
   /**
+   * 공지사항 첨부파일을 다운로드합니다.
+   */
+  @GetMapping("/{noticeId}/download")
+  public ResponseEntity<Resource> download(@PathVariable Long noticeId) {
+    DownloadPayload payload = noticeService.download(noticeId);
+    ByteArrayResource resource = new ByteArrayResource(payload.getBytes());
+    String encoded = UriUtils.encode(payload.getFilename(), StandardCharsets.UTF_8);
+
+    return ResponseEntity.ok()
+        .contentType(MediaType.parseMediaType(payload.getContentType()))
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encoded + "\"")
+        .contentLength(payload.getBytes().length)
+        .body(resource);
+  }
+
+  /**
    * 공지사항을 수정합니다.
    */
-  @PatchMapping("/{noticeId}")
+  @PatchMapping(path = "/{noticeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Void> updateNotice(
       @PathVariable Long noticeId,
-      @RequestBody NoticeUpdateRequest request
+      @RequestPart(value = "notice") @Valid NoticeUpdateRequest req,
+      @RequestPart(value = "file", required = false) MultipartFile file
   ) {
-    noticeService.updateNotice(noticeId, request);
-    return ResponseEntity.noContent().build(); // 204 No Content
-  }
-
-  /**
-   * 공지사항 첨부파일을 수정합니다.
-   */
-  @PutMapping(path = "/{noticeId}/attachment", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public ResponseEntity<Void> updateAttachment(
-      @PathVariable Long noticeId,
-      @RequestPart("file") MultipartFile file
-  ) {
-    noticeService.updateNoticeAttachment(noticeId, file);
-    return ResponseEntity.noContent().build(); // 204 No Content
-  }
-
-  /**
-   * 공지사항 첨부파일을 삭제합니다.
-   */
-  @DeleteMapping("/{noticeId}/attachment")
-  public ResponseEntity<Void> deleteAttachment(
-      @PathVariable Long noticeId
-  ) {
-    noticeService.deleteNoticeAttachment(noticeId);
+    noticeService.updateNotice(noticeId, req, file);
     return ResponseEntity.noContent().build(); // 204 No Content
   }
 

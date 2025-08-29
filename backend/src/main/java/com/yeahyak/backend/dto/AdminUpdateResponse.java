@@ -1,7 +1,7 @@
 package com.yeahyak.backend.dto;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -10,8 +10,8 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class SettlementRequest {
+@Builder
+public class AdminUpdateResponse {
 
-  @NotNull
-  private Long pharmacyId;
+  private AdminProfile profile;
 }

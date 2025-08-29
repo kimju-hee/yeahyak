@@ -22,6 +22,9 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+/**
+ * Represents a pharmacy request made by a user.
+ */
 @Entity
 @Getter
 @Setter
@@ -40,14 +43,10 @@ public class PharmacyRequest {
   @JoinColumn(name = "user_id", nullable = false, unique = true)
   private User user;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private PharmacyRequestStatus status;
-
   @Column(name = "pharmacy_name", nullable = false, length = 100)
   private String pharmacyName;
 
-  @Column(name = "biz_reg_no", nullable = false, length = 20)
+  @Column(name = "biz_reg_no", nullable = false, unique = true, length = 20)
   private String bizRegNo;
 
   @Column(name = "representative_name", nullable = false, length = 45)
@@ -56,24 +55,28 @@ public class PharmacyRequest {
   @Column(nullable = false, length = 20)
   private String postcode;
 
-  @Column(nullable = false)
+  @Column(nullable = false, length = 255)
   private String address;
 
-  @Column(name = "detail_address")
+  @Column(name = "detail_address", length = 255)
   private String detailAddress;
 
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
+  @Column(nullable = false, length = 45)
   private Region region;
 
   @Column(nullable = false, length = 20)
   private String contact;
 
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 45)
+  private PharmacyRequestStatus status;
+
   @CreationTimestamp
-  @Column(name = "requested_at", nullable = false)
-  private LocalDateTime requestedAt;
+  @Column(name = "created_at", nullable = false)
+  private LocalDateTime createdAt;
 
   @UpdateTimestamp
-  @Column(name = "processed_at")
-  private LocalDateTime processedAt;
+  @Column(name = "updated_at")
+  private LocalDateTime updatedAt;
 }

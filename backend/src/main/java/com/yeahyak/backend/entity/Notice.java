@@ -19,6 +19,9 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+/**
+ * Notice Entity representing a notice in the system.
+ */
 @Entity
 @Getter
 @Setter
@@ -34,24 +37,30 @@ public class Notice {
   private Long noticeId;
 
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
+  @Column(nullable = false, length = 45)
   private NoticeType type;
 
-  @Column(nullable = false)
+  @Column(nullable = false, length = 100)
   private String title;
 
   @Lob
   @Column(nullable = false, columnDefinition = "TEXT")
   private String content;
 
-  @Column(name = "attachment_url", length = 2048)
-  private String attachmentUrl;
+  @Column(name = "blob_key", length = 512)
+  private String blobKey;
 
-  @CreationTimestamp
+  @Column(name = "file_name", length = 255)
+  private String fileName;
+  
+  @CreationTimestamp // 생성 시각 자동 저장
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
 
-  @UpdateTimestamp
+  @UpdateTimestamp // 수정 시각 자동 저장
   @Column(name = "updated_at")
   private LocalDateTime updatedAt;
+
+  @Column(name = "view_count", nullable = false)
+  private Integer viewCount;
 }

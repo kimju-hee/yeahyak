@@ -21,6 +21,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
+/**
+ * BalanceTx Entity representing a balance transaction for a pharmacy.
+ */
 @Entity
 @Getter
 @Setter
@@ -40,7 +43,7 @@ public class BalanceTx {
   private Pharmacy pharmacy;
 
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
+  @Column(nullable = false, length = 45)
   private BalanceTxType type;
 
   @Column(nullable = false, precision = 10, scale = 2)
@@ -49,7 +52,7 @@ public class BalanceTx {
   @Column(name = "balance_after", nullable = false, precision = 10, scale = 2)
   private BigDecimal balanceAfter;
 
-  @CreationTimestamp
+  @CreationTimestamp // 생성 시각 자동 저장
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
 }

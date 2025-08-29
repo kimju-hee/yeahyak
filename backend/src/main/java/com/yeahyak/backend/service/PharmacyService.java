@@ -4,7 +4,6 @@ import com.yeahyak.backend.dto.PharmacyListResponse;
 import com.yeahyak.backend.entity.Pharmacy;
 import com.yeahyak.backend.entity.enums.BalanceTxType;
 import com.yeahyak.backend.entity.enums.Region;
-import com.yeahyak.backend.repository.BalanceTxRepository;
 import com.yeahyak.backend.repository.PharmacyRepository;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -15,8 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,28 +21,27 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class PharmacyService {
 
-  private final PharmacyRepository pharmacyRepo;
-  private final BalanceTxRepository balanceTxRepo;
+  private final PharmacyRepository pharmacyRepository;
 
   @Transactional(readOnly = true)
   public Page<PharmacyListResponse> getPharmacies(
       Boolean unsettled, Region region, String keyword, int page, int size
   ) {
-    Pageable pageable = PageRequest.of(page, size, Sort.by(Direction.DESC, "createdAt"));
-    Page<Pharmacy> pharmacies = pharmacyRepo.findByUnsettledAndRegionAndPharmacyName(
+    Pageable pageable = PageRequest.of(page, size);
+    Page<Pharmacy> pharmacies = pharmacyRepository.findByUnsettledAndRegionAndPharmacyName(
         unsettled, region, keyword, pageable
     );
-    List<Long> pharmacyIds = pharmacies.stream()
-        .map(Pharmacy::getPharmacyId)
-        .toList();
+
+    List<Long> pharmacyIds = pharmacies.stream().map(Pharmacy::getPharmacyId).toList();
     final Map<Long, LocalDateTime> latestSettlementMap = pharmacyIds.isEmpty()
         ? Collections.emptyMap()
-        : balanceTxRepo.findLatestSettlementDateByPharmacyIds(pharmacyIds, BalanceTxType.SETTLEMENT)
-            .stream()
-            .collect(Collectors.toMap(
-                BalanceTxRepository.PharmacyLatestSettlementProjection::getPharmacyId,
-                BalanceTxRepository.PharmacyLatestSettlementProjection::getLatestSettlementAt
-            ));
+        : pharmacyRepository.findLatestSettlementDatesByPharmacyIds(
+            pharmacyIds, BalanceTxType.SETTLEMENT
+        ).stream().collect(Collectors.toMap(
+            PharmacyRepository.PharmacyLatestSettlementProjection::getPharmacyId,
+            PharmacyRepository.PharmacyLatestSettlementProjection::getLatestSettlementAt
+        ));
+
     return pharmacies.map(pharmacy -> PharmacyListResponse.builder()
         .pharmacyId(pharmacy.getPharmacyId())
         .pharmacyName(pharmacy.getPharmacyName())
@@ -56,7 +52,7 @@ public class PharmacyService {
         .detailAddress(pharmacy.getDetailAddress())
         .region(pharmacy.getRegion())
         .contact(pharmacy.getContact())
-        .outstandingBalance(pharmacy.getOutstandingBalance())
+        .balance(pharmacy.getBalance())
         .latestSettlementAt(latestSettlementMap.get(pharmacy.getPharmacyId()))
         .build());
   }

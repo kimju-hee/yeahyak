@@ -20,6 +20,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
+/**
+ * Product entity representing a product in the system.
+ */
 @Entity
 @Getter
 @Setter
@@ -41,11 +44,11 @@ public class Product {
   private String insuranceCode;
 
   @Enumerated(EnumType.STRING)
-  @Column(name = "main_category", nullable = false)
+  @Column(name = "main_category", nullable = false, length = 45)
   private MainCategory mainCategory;
 
   @Enumerated(EnumType.STRING)
-  @Column(name = "sub_category", nullable = false)
+  @Column(name = "sub_category", nullable = false, length = 45)
   private SubCategory subCategory;
 
   @Column(nullable = false, length = 100)
@@ -69,6 +72,6 @@ public class Product {
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
 
-  @Column(name = "stock_qty", nullable = false)
-  private Integer stockQty;
+  @Column(name = "inventory_qty", nullable = false)
+  private Integer inventoryQty;
 }

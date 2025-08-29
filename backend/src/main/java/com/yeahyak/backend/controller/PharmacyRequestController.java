@@ -9,10 +9,7 @@ import com.yeahyak.backend.service.PharmacyRequestService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 약국 등록 요청 관련 API를 처리하는 컨트롤러입니다.
+ * 약국 등록 요청 관련 API 처리하는 컨트롤러입니다.
  */
 @RestController
 @RequestMapping("/api/pharmacy-requests")

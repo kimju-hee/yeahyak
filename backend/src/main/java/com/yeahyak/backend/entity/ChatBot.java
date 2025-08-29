@@ -1,6 +1,6 @@
 package com.yeahyak.backend.entity;
 
-import com.yeahyak.backend.entity.enums.ChatbotType;
+import com.yeahyak.backend.entity.enums.ChatType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -20,6 +20,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Chatbot Entity representing a chatbot interaction.
+ */
 @Entity
 @Getter
 @Setter
@@ -27,7 +30,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 @Table(name = "chatbot")
-public class ChatBot {
+public class Chatbot {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,20 +42,22 @@ public class ChatBot {
   private User user;
 
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private ChatbotType type;
+  @Column(nullable = false, length = 45)
+  private ChatType type;
 
   @Lob
   @Column(nullable = false, columnDefinition = "TEXT")
   private String question;
 
   @Lob
-  @Column(nullable = false, columnDefinition = "TEXT")
+  @Column(columnDefinition = "TEXT")
   private String answer;
 
+  // 질문 시각 직접 저장
   @Column(name = "asked_at", nullable = false)
   private LocalDateTime askedAt;
 
+  // 답변 시각 직접 저장
   @Column(name = "answered_at")
   private LocalDateTime answeredAt;
 }

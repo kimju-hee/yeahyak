@@ -28,6 +28,6 @@ public class PharmacyRequestDetailResponse {
   private Region region;
   private String contact;
   private PharmacyRequestStatus status;
-  private LocalDateTime requestedAt;
-  private LocalDateTime processedAt;
+  private LocalDateTime createdAt;
+  private LocalDateTime updatedAt;
 }

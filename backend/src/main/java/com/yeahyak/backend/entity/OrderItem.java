@@ -16,6 +16,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Represents an item in an order transaction.
+ */
 @Entity
 @Getter
 @Setter

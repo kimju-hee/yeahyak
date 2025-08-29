@@ -26,34 +26,27 @@ public class PharmacySignupRequest {
   private String password;
 
   @NotBlank
-  @Size(max = 100)
   private String pharmacyName;
 
   @NotBlank
-  @Size(max = 20)
   @Pattern(regexp = "^\\d{3}-\\d{2}-\\d{5}$", message = "사업자등록번호 형식이 올바르지 않습니다.")
   private String bizRegNo;
 
   @NotBlank
-  @Size(max = 45)
   private String representativeName;
 
   @NotBlank
-  @Size(max = 20)
   private String postcode;
 
   @NotBlank
-  @Size(max = 255)
   private String address;
 
-  @Size(max = 255)
   private String detailAddress;
 
   @NotNull
   private Region region;
 
   @NotBlank
-  @Size(max = 20)
   @Pattern(regexp = "^\\d{2,3}-\\d{3,4}-\\d{4}$", message = "연락처 형식이 올바르지 않습니다.")
   private String contact;
 }
