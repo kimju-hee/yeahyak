@@ -24,5 +24,5 @@ public class PharmacyRequestListResponse {
   private Region region;
   private String contact;
   private PharmacyRequestStatus status;
-  private LocalDateTime requestedAt;
+  private LocalDateTime createdAt;
 }
