@@ -22,6 +22,9 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+/**
+ * Represents a return placed by a pharmacy.
+ */
 @Entity
 @Getter
 @Setter
@@ -44,15 +47,15 @@ public class Returns {
   @JoinColumn(name = "order_id", nullable = false)
   private Orders orders;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private ReturnStatus status;
-
-  @Column(nullable = false)
+  @Column(nullable = false, length = 255)
   private String reason;
 
   @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
   private BigDecimal totalPrice;
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 45)
+  private ReturnStatus status;
 
   @CreationTimestamp
   @Column(name = "created_at", nullable = false)

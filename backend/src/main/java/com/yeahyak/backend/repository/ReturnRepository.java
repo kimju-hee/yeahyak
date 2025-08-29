@@ -16,8 +16,9 @@ public interface ReturnRepository extends JpaRepository<Returns, Long> {
       SELECT r FROM Returns r
       WHERE r.pharmacy.pharmacyId = :pharmacyId
       AND (:status IS NULL OR r.status = :status)
+      ORDER BY r.createdAt DESC
       """)
-  Page<Returns> findByPharmacy_PharmacyIdAndStatus(
+  Page<Returns> findByPharmacyIdAndStatus(
       @Param("pharmacyId") Long pharmacyId,
       @Param("status") ReturnStatus status,
       Pageable pageable
@@ -29,6 +30,7 @@ public interface ReturnRepository extends JpaRepository<Returns, Long> {
       AND (:region IS NULL OR r.pharmacy.region = :region)
       AND (:start IS NULL OR r.createdAt >= :start)
       AND (:end IS NULL OR r.createdAt <= :end)
+      ORDER BY r.createdAt DESC
       """)
   Page<Returns> findByStatusAndRegionAndCreatedAtBetween(
       @Param("status") ReturnStatus status,

@@ -16,10 +16,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -31,12 +28,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 반품 관련 API를 처리하는 컨트롤러입니다.
+ * 반품 관련 API 처리하는 컨트롤러입니다.
  */
 @RestController
 @RequestMapping("/api/returns")
 @RequiredArgsConstructor
-@Validated
 public class ReturnController {
 
   private final ReturnService returnService;
@@ -46,13 +42,11 @@ public class ReturnController {
    */
   @PostMapping
   public ResponseEntity<ApiResponse<ReturnCreateResponse>> createReturn(
-      @RequestBody ReturnCreateRequest request
+      @RequestBody @Valid ReturnCreateRequest request
   ) {
     ReturnCreateResponse res = returnService.createReturn(request);
     URI location = URI.create("/api/returns/" + res.getReturnId());
-    return ResponseEntity
-        .created(location)
-        .body(ApiResponse.ok(res)); // 201 Created
+    return ResponseEntity.created(location).body(ApiResponse.ok(res)); // 201 Created
   }
 
   /**
@@ -90,7 +84,7 @@ public class ReturnController {
   /**
    * (본사, 가맹점) 반품 상세를 조회합니다.
    */
-  
+  @GetMapping("/{returnId}")
   public ResponseEntity<ApiResponse<ReturnDetailResponse>> getReturnDetail(
       @PathVariable Long returnId
   ) {
@@ -101,10 +95,10 @@ public class ReturnController {
   /**
    * (본사) 반품 상태를 변경합니다.
    */
-  @PatchMapping("/{returnId}/status")
+  @PatchMapping("/{returnId}/update")
   public ResponseEntity<Void> updateReturnStatus(
       @PathVariable Long returnId,
-      @RequestBody ReturnUpdateRequest request
+      @RequestBody @Valid ReturnUpdateRequest request
   ) {
     returnService.updateReturnStatus(returnId, request);
     return ResponseEntity.noContent().build(); // 204 No Content

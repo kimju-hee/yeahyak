@@ -16,8 +16,9 @@ public interface OrderRepository extends JpaRepository<Orders, Long> {
       SELECT o FROM Orders o
       WHERE o.pharmacy.pharmacyId = :pharmacyId
       AND (:status IS NULL OR o.status = :status)
+      ORDER BY o.createdAt DESC
       """)
-  Page<Orders> findByPharmacy_PharmacyIdAndStatus(
+  Page<Orders> findByPharmacyIdAndStatus(
       @Param("pharmacyId") Long pharmacyId,
       @Param("status") OrderStatus status,
       Pageable pageable
@@ -29,6 +30,7 @@ public interface OrderRepository extends JpaRepository<Orders, Long> {
       AND (:region IS NULL OR o.pharmacy.region = :region)
       AND (:start IS NULL OR o.createdAt >= :start)
       AND (:end IS NULL OR o.createdAt <= :end)
+      ORDER BY o.createdAt DESC
       """)
   Page<Orders> findByStatusAndRegionAndCreatedAtBetween(
       @Param("status") OrderStatus status,

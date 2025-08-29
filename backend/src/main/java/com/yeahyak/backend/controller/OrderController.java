@@ -16,10 +16,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -31,12 +28,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 발주 관련 API를 처리하는 컨트롤러입니다.
+ * 발주 관련 API 처리하는 컨트롤러입니다.
  */
 @RestController
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
-@Validated
 public class OrderController {
 
   private final OrderService orderService;
@@ -46,13 +42,11 @@ public class OrderController {
    */
   @PostMapping
   public ResponseEntity<ApiResponse<OrderCreateResponse>> createOrder(
-      @RequestBody OrderCreateRequest request
+      @RequestBody @Valid OrderCreateRequest request
   ) {
     OrderCreateResponse res = orderService.createOrder(request);
     URI location = URI.create("/api/orders/" + res.getOrderId());
-    return ResponseEntity
-        .created(location)
-        .body(ApiResponse.ok(res)); // 201 Created
+    return ResponseEntity.created(location).body(ApiResponse.ok(res)); // 201 Created
   }
 
   /**
@@ -100,10 +94,10 @@ public class OrderController {
   /**
    * (본사) 발주 상태를 변경합니다.
    */
-  @PatchMapping("/{orderId}/status")
+  @PatchMapping("/{orderId}/update")
   public ResponseEntity<Void> updateOrderStatus(
       @PathVariable Long orderId,
-      @RequestBody OrderUpdateRequest request
+      @RequestBody @Valid OrderUpdateRequest request
   ) {
     orderService.updateOrderStatus(orderId, request);
     return ResponseEntity.noContent().build(); // 204 No Content
