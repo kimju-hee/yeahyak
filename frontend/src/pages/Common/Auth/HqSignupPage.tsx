@@ -1,9 +1,9 @@
 import { Button, Card, Flex, Form, Input, message, Select, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../../../api';
-import TermsAndPrivacyCheckbox from '../../../components/TermsAndPolicyCheckbox';
+import { TermsAndPrivacyCheckbox } from '../../../components';
 import { DEPARTMENT_OPTIONS } from '../../../constants';
-import type { AdminSignupRequest } from '../../../types/auth.type';
+import type { AdminSignupRequest } from '../../../types';
 import {
   passwordConfirmRule,
   passwordNotSameAsIdRule,
@@ -13,6 +13,7 @@ import {
 export default function HqSignupPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
+
   const navigate = useNavigate();
 
   const handleSubmit = async (
@@ -28,12 +29,12 @@ export default function HqSignupPage() {
       if (res.success) {
         navigate('/login', {
           replace: true,
-          state: { message: '관리자 회원가입이 완료되었습니다.' },
+          state: { message: '관리자 회원가입이 완료되었습니다' }, // 로그인 페이지에서 띄울 메시지
         });
       }
     } catch (e: any) {
-      console.error('관리자 회원가입 실패:', e);
-      messageApi.error(e.response?.data?.message || '회원가입 중 오류가 발생했습니다.');
+      console.error('회원가입 실패:', e);
+      messageApi.error(e.response?.data?.message || '회원가입 중 오류가 발생했습니다');
     }
   };
 
@@ -41,27 +42,42 @@ export default function HqSignupPage() {
     <>
       {contextHolder}
       <Flex vertical justify="center" align="center">
-        <Typography.Title level={1} style={{ marginBottom: '24px' }}>
-          예약 관리자 회원가입
+        <Typography.Title
+          level={2}
+          style={{
+            marginBottom: 24,
+            color: '#ffffff',
+            textShadow: '0px 3px 6px rgba(0, 0, 0, 0.12)',
+          }}
+        >
+          YeahYak
         </Typography.Title>
-
-        <Card style={{ padding: '24px' }}>
+        <Card
+          title="본사 회원가입"
+          variant="borderless"
+          style={{ maxWidth: 640, minWidth: 480, padding: 36, borderRadius: 36 }}
+          styles={{ header: { fontSize: 20, borderBottom: 'none' } }}
+        >
           <Form
             form={form}
             name="signup-hq"
             onFinish={handleSubmit}
-            scrollToFirstError
-            autoComplete="off"
             layout="vertical"
+            size="large"
+            autoComplete="off"
+            scrollToFirstError={true}
+            validateMessages={{
+              required: '${label}을(를) 입력해주세요',
+              types: {
+                email: '잘못된 형식의 ${label}입니다',
+              },
+            }}
           >
-            <Flex vertical justify="center">
+            <Flex vertical justify="center" gap={4}>
               <Form.Item
                 name="email"
                 label="이메일"
-                rules={[
-                  { required: true, message: '이메일을 입력해주세요.' },
-                  { type: 'email', message: '잘못된 형식의 이메일입니다.' },
-                ]}
+                rules={[{ required: true }, { type: 'email' }]}
                 validateTrigger="onBlur"
               >
                 <Input />
@@ -70,7 +86,7 @@ export default function HqSignupPage() {
                 name="password"
                 label="비밀번호"
                 rules={[
-                  { required: true, message: '비밀번호를 입력해주세요.' },
+                  { required: true },
                   passwordValidationRule,
                   passwordNotSameAsIdRule(form.getFieldValue, 'email'),
                 ]}
@@ -82,10 +98,7 @@ export default function HqSignupPage() {
                 name="confirmPassword"
                 label="비밀번호 확인"
                 dependencies={['password']}
-                rules={[
-                  { required: true, message: '비밀번호 확인을 입력해주세요.' },
-                  passwordConfirmRule(form.getFieldValue, 'password'),
-                ]}
+                rules={[{ required: true }, passwordConfirmRule(form.getFieldValue, 'password')]}
                 hasFeedback
               >
                 <Input.Password />
@@ -93,7 +106,7 @@ export default function HqSignupPage() {
               <Form.Item
                 name="adminName"
                 label="이름"
-                rules={[{ required: true, message: '이름을 입력해주세요.' }]}
+                rules={[{ required: true }]}
                 validateTrigger="onBlur"
               >
                 <Input />
@@ -101,14 +114,13 @@ export default function HqSignupPage() {
               <Form.Item
                 name="department"
                 label="소속 부서"
-                rules={[{ required: true, message: '소속 부서를 선택해주세요.' }]}
+                rules={[{ required: true }]}
                 validateTrigger="onBlur"
               >
                 <Select placeholder="소속 부서를 선택하세요" options={[...DEPARTMENT_OPTIONS]} />
               </Form.Item>
-
+              {/* 약관 동의 체크박스 */}
               <TermsAndPrivacyCheckbox />
-
               <Button type="primary" htmlType="submit" block>
                 관리자 회원가입
               </Button>

@@ -1,8 +1,7 @@
 import { Button, Card, Flex, Form, Input, message, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../../../api';
-import AddressInput from '../../../components/AddressInput';
-import TermsAndPrivacyCheckbox from '../../../components/TermsAndPolicyCheckbox';
+import { AddressInput, TermsAndPrivacyCheckbox } from '../../../components';
 import type { PharmacySignupRequest } from '../../../types';
 import {
   formatBizRegNo,
@@ -16,6 +15,7 @@ import {
 export default function BranchSignupPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
+
   const navigate = useNavigate();
 
   const handleSubmit = async (
@@ -31,11 +31,11 @@ export default function BranchSignupPage() {
       if (res.success) {
         navigate('/login', {
           replace: true,
-          state: { message: '회원가입이 완료되었습니다! 관리자 승인 후 서비스 이용이 가능합니다.' },
+          state: { message: '회원가입이 완료되었습니다! 관리자 승인 후 서비스 이용이 가능합니다.' }, // 로그인 페이지에서 띄울 메시지
         });
       }
     } catch (e: any) {
-      console.error('약국 회원가입 실패:', e);
+      console.error('회원가입 실패:', e);
       messageApi.error(e.response?.data?.message || '회원가입 중 오류가 발생했습니다.');
     }
   };
@@ -44,27 +44,42 @@ export default function BranchSignupPage() {
     <>
       {contextHolder}
       <Flex vertical justify="center" align="center">
-        <Typography.Title level={1} style={{ marginBottom: '48px' }}>
-          예약 회원가입
+        <Typography.Title
+          level={2}
+          style={{
+            marginBottom: 24,
+            color: '#ffffff',
+            textShadow: '0px 3px 6px rgba(0, 0, 0, 0.12)',
+          }}
+        >
+          YeahYak
         </Typography.Title>
-
-        <Card style={{ padding: '48px 48px' }}>
+        <Card
+          title="가맹점 회원가입"
+          variant="borderless"
+          style={{ width: 640, minWidth: 480, padding: 36, borderRadius: 36 }}
+          styles={{ header: { fontSize: 20, borderBottom: 'none' } }}
+        >
           <Form
             form={form}
             name="signup-branch"
             onFinish={handleSubmit}
-            scrollToFirstError
-            autoComplete="off"
             layout="vertical"
+            size="large"
+            autoComplete="off"
+            scrollToFirstError={true}
+            validateMessages={{
+              required: '${label}을(를) 입력해주세요',
+              types: {
+                email: '잘못된 형식의 ${label}입니다',
+              },
+            }}
           >
-            <Flex vertical justify="center">
+            <Flex vertical justify="center" gap={4}>
               <Form.Item
                 name="email"
                 label="이메일"
-                rules={[
-                  { required: true, message: '이메일을 입력해주세요.' },
-                  { type: 'email', message: '잘못된 형식의 이메일입니다.' },
-                ]}
+                rules={[{ required: true }, { type: 'email' }]}
                 validateTrigger="onBlur"
               >
                 <Input />
@@ -73,7 +88,7 @@ export default function BranchSignupPage() {
                 name="password"
                 label="비밀번호"
                 rules={[
-                  { required: true, message: '비밀번호를 입력해주세요.' },
+                  { required: true },
                   passwordValidationRule,
                   passwordNotSameAsIdRule(form.getFieldValue, 'email'),
                 ]}
@@ -85,10 +100,7 @@ export default function BranchSignupPage() {
                 name="confirmPassword"
                 label="비밀번호 확인"
                 dependencies={['password']}
-                rules={[
-                  { required: true, message: '비밀번호 확인을 입력해주세요.' },
-                  passwordConfirmRule(form.getFieldValue, 'password'),
-                ]}
+                rules={[{ required: true }, passwordConfirmRule(form.getFieldValue, 'password')]}
                 hasFeedback
               >
                 <Input.Password />
@@ -96,7 +108,7 @@ export default function BranchSignupPage() {
               <Form.Item
                 name="pharmacyName"
                 label="약국명"
-                rules={[{ required: true, message: '약국명을 입력해주세요.' }]}
+                rules={[{ required: true }]}
                 validateTrigger="onBlur"
               >
                 <Input />
@@ -104,10 +116,10 @@ export default function BranchSignupPage() {
               <Form.Item
                 name="bizRegNo"
                 label="사업자등록번호"
-                rules={[{ required: true, message: '사업자등록번호를 입력해주세요.' }]}
+                rules={[{ required: true }]}
                 normalize={(value) => {
                   if (!value) return '';
-                  return value.replace(/\D/g, '');
+                  return value.replace(/\D/g, ''); // 하이픈 제거 후 숫자만 DB 저장
                 }}
                 validateTrigger="onBlur"
               >
@@ -123,25 +135,20 @@ export default function BranchSignupPage() {
               <Form.Item
                 name="representativeName"
                 label="대표자명"
-                rules={[{ required: true, message: '대표자명을 입력해주세요.' }]}
+                rules={[{ required: true }]}
                 validateTrigger="onBlur"
               >
                 <Input />
               </Form.Item>
-              <AddressInput
-                postcodeName="postcode"
-                addressName="address"
-                detailAddressName="detailAddress"
-                regionName="region"
-                label="주소"
-              />
+              {/* 주소 입력 컴포넌트 */}
+              <AddressInput />
               <Form.Item
                 name="contact"
                 label="연락처"
-                rules={[{ required: true, message: '연락처를 입력해주세요.' }]}
+                rules={[{ required: true }]}
                 normalize={(value) => {
                   if (!value) return '';
-                  return value.replace(/\D/g, '');
+                  return value.replace(/\D/g, ''); // 하이픈 제거 후 숫자만 DB 저장
                 }}
                 validateTrigger="onBlur"
               >
@@ -154,9 +161,8 @@ export default function BranchSignupPage() {
                   onKeyDown={handleNumberOnlyKeyDown}
                 />
               </Form.Item>
-
+              {/* 약관 동의 체크박스 */}
               <TermsAndPrivacyCheckbox />
-
               <Button type="primary" htmlType="submit" block>
                 회원가입
               </Button>
