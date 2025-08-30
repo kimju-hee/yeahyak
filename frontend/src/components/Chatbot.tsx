@@ -13,14 +13,14 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { Rnd } from 'react-rnd';
 import { aiAPI } from '../api';
 import { useAuthStore } from '../stores/authStore';
-import type { User } from '../types';
 import {
   CHAT_ROLE,
   CHAT_TYPE,
   type ChatbotRequest,
   type ChatMessage,
   type ChatType,
-} from '../types/chatbot.type';
+  type User,
+} from '../types';
 
 interface ChatbotProps {
   boundsRef: RefObject<HTMLDivElement | null>;
@@ -101,7 +101,6 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
             : '안녕하세요 저는 의약품 AI 어시스턴트입니다! 무엇을 도와드릴까요?',
         key: makeKey(),
       };
-
       setMessages([initialMessage]);
     },
     [makeKey],
@@ -134,8 +133,15 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
       setMessages((prev) => [...prev, userMessage, loadingMessage]);
       setContent('');
 
-      // ✅ 공통(FAQ/QNA 모두): 직전 메시지 + 방금 보낸 메시지
-      const merged = [...messages, userMessage];
+      const payload: ChatbotRequest = {
+        userId: user.userId,
+        type: chatType,
+        question: raw.trim(),
+        history: [...messages, userMessage].map((message) => ({
+          role: message.role,
+          content: message.content,
+        })),
+      };
 
       setRequesting(true);
       const controller = new AbortController();
@@ -145,42 +151,9 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
         let response;
 
         if (chatType === CHAT_TYPE.FAQ) {
-          // ✅ FAQ도 /ai 게이트웨이로 직접 호출 + 필드/히스토리 포맷 맞추기
-          const payloadFaq = {
-            userId: user.userId,
-            chatType: CHAT_TYPE.FAQ, // type -> chatType
-            question: raw.trim(),
-            history: merged.map((m) => ({
-              type: m.role === CHAT_ROLE.AI ? 'ai' : 'user', // role -> type('user'|'ai')
-              content: m.content,
-            })),
-          };
-
-          response = await fetch('/ai/chat/faq', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payloadFaq),
-            signal: controller.signal,
-          }).then((r) => r.json());
+          response = await aiAPI.chatFAQ(payload);
         } else {
-          // ✅ QNA는 /ai 게이트웨이로 직접 호출 (FAQ는 기존대로 유지)
-          const payloadQna = {
-            userId: user.userId,
-            chatType: CHAT_TYPE.QNA, // type -> chatType
-            question: raw.trim(),
-            history: merged.map((m) => ({
-              type: m.role === CHAT_ROLE.AI ? 'ai' : 'user', // role/human -> type/user
-              content: m.content,
-            })),
-          };
-
-          // aiAPI.chatQNA가 '/api'로 나가는 문제를 우회하기 위해 fetch로 직접 호출
-          response = await fetch('/ai/chat/qna', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payloadQna),
-            signal: controller.signal,
-          }).then((r) => r.json());
+          response = await aiAPI.chatQNA(payload);
         }
 
         if (response.success) {

@@ -1,6 +1,5 @@
 package com.yeahyak.backend.service;
 
-import com.yeahyak.backend.dto.ApiResponse;
 import com.yeahyak.backend.dto.ChatMessage;
 import com.yeahyak.backend.dto.ChatbotRequest;
 import com.yeahyak.backend.dto.ChatbotResponse;
@@ -60,11 +59,12 @@ public class ChatbotService {
     List<Map<String, String>> historyPayload = new ArrayList<>();
     if (req.getHistory() != null) {
       for (ChatMessage m : req.getHistory()) {
-        String role = (m.getRole() != null && m.getRole().name().equalsIgnoreCase("USER"))
+        // AI 서버가 기대하는 "type" 키 사용 (gateway.py의 "type" 키와 일치)
+        String type = (m.getRole() != null && m.getRole().name().equalsIgnoreCase("USER"))
             ? "user"
             : "ai";
         Map<String, String> item = new HashMap<>();
-        item.put("role", role);
+        item.put("type", type);
         item.put("content", m.getContent());
         historyPayload.add(item);
       }
@@ -80,27 +80,37 @@ public class ChatbotService {
     HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(payload, headers);
     log.debug("[ChatbotService] POST {} → {}", url, payload);
 
-    ResponseEntity<ApiResponse<ChatbotResponse>> response = restTemplate.exchange(
+    // AI 서버 응답을 Map 파싱 (실제 응답 구조: { success: true, data: { answer: "...", history: [...] } })
+    ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
         url,
         HttpMethod.POST,
         httpEntity,
-        new ParameterizedTypeReference<ApiResponse<ChatbotResponse>>() {
+        new ParameterizedTypeReference<Map<String, Object>>() {
         }
     );
 
-    ApiResponse<ChatbotResponse> api = response.getBody();
-    if (api == null) {
+    Map<String, Object> responseBody = response.getBody();
+    if (responseBody == null) {
       throw new RuntimeException("AI 서비스 응답이 비어있습니다.");
     }
-    if (!api.isSuccess()) {
-      throw new RuntimeException("AI 서비스 요청에 실패했습니다.");
+
+    Boolean success = (Boolean) responseBody.get("success");
+    if (success == null || !success) {
+      String error = (String) responseBody.get("error");
+      throw new RuntimeException("AI 서비스 요청에 실패했습니다: " + (error != null ? error : "Unknown error"));
     }
 
-    ChatbotResponse ai = api.getData();
-    if (ai == null || ai.getAnswer() == null || ai.getAnswer().isBlank()) {
+    @SuppressWarnings("unchecked")
+    Map<String, Object> data = (Map<String, Object>) responseBody.get("data");
+    if (data == null) {
+      throw new RuntimeException("AI 응답 데이터가 없습니다.");
+    }
+
+    String answer = (String) data.get("answer");
+    if (answer == null || answer.isBlank()) {
       throw new RuntimeException("AI 응답이 올바르지 않습니다.");
     }
-    log.debug("[ChatbotService] answer → len(answer)={}", ai.getAnswer().length());
+    log.debug("[ChatbotService] answer → len(answer)={}", answer.length());
 
     // 응답 도착 시각
     LocalDateTime answeredAt = LocalDateTime.now();
@@ -110,7 +120,7 @@ public class ChatbotService {
         .user(user)
         .type(req.getType())
         .question(req.getQuestion())
-        .answer(ai.getAnswer())
+        .answer(answer)
         .askedAt(askedAt)
         .answeredAt(answeredAt)
         .build();
