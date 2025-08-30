@@ -1,18 +1,20 @@
 package com.yeahyak.backend.repository;
 
-import com.yeahyak.backend.entity.Product;
-import com.yeahyak.backend.entity.enums.InventoryTxType;
-import com.yeahyak.backend.entity.enums.MainCategory;
-import com.yeahyak.backend.entity.enums.SubCategory;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import com.yeahyak.backend.entity.Product;
+import com.yeahyak.backend.entity.enums.InventoryTxType;
+import com.yeahyak.backend.entity.enums.MainCategory;
+import com.yeahyak.backend.entity.enums.SubCategory;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
@@ -40,7 +42,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   @Query("""
       SELECT p.productId AS productId, MAX(i.createdAt) AS latestInAt
       FROM Product p
-      LEFT JOIN InventoryTx i ON p.productId = s.product.productId AND s.type = :type
+      LEFT JOIN InventoryTx i ON p.productId = i.product.productId AND i.type = :type
       WHERE p.productId IN :productIds
       GROUP BY p.productId
       """)

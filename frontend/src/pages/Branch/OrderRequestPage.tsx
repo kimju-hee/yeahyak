@@ -1,6 +1,7 @@
 import { UploadOutlined } from '@ant-design/icons';
 import {
   Button,
+  Cascader,
   Col,
   Descriptions,
   Divider,
@@ -16,6 +17,7 @@ import {
   Tooltip,
   Typography,
   Upload,
+  type CascaderProps,
   type TableProps,
   type UploadFile,
   type UploadProps,
@@ -25,25 +27,28 @@ import { useEffect, useState } from 'react';
 import { orderAPI, productAPI } from '../../api';
 import { SearchBox } from '../../components/SearchBox';
 import {
-  CREDIT_CONSTANTS,
+  CREDIT_LIMIT,
   DATE_FORMAT,
   ORDER_STATUS_COLORS,
   ORDER_STATUS_OPTIONS,
   ORDER_STATUS_TEXT,
   PAGE_SIZE,
+  SUB_CATEGORY_TEXT,
 } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
 import { useOrderCartStore } from '../../stores/orderCartStore';
 import type {
+  MainCategory,
   OrderCartItem,
   OrderCreateRequest,
   OrderDetail,
-  OrderForecastRequest,
   OrderList,
   OrderStatus,
   Pharmacy,
   ProductList,
+  SubCategoryWithAll,
 } from '../../types';
+import { PRODUCT_CATEGORIES } from '../../types';
 import { PLACEHOLDER } from '../../utils';
 
 const getStatusTag = (status: OrderStatus) => {
@@ -62,7 +67,7 @@ export default function OrderRequestPage() {
   const profile = useAuthStore((state) => state.profile) as Pharmacy;
   const updateProfile = useAuthStore((state) => state.updateProfile);
   const pharmacyId = profile.pharmacyId;
-  const balance = profile.outstandingBalance;
+  const balance = profile.balance;
   const { items, addItem, removeItem, updateQuantity, clearCart, getTotalPrice } =
     useOrderCartStore();
 
@@ -77,6 +82,8 @@ export default function OrderRequestPage() {
 
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [products, setProducts] = useState<ProductList[]>([]);
+  const [activeMainCategory, setActiveMainCategory] = useState<MainCategory>('전문의약품');
+  const [activeSubCategory, setActiveSubCategory] = useState<SubCategoryWithAll>('전체');
   const [search, setSearch] = useState({
     field: 'productName',
     keyword: undefined as string | undefined,
@@ -92,6 +99,34 @@ export default function OrderRequestPage() {
   const [submitLoading, setSubmitLoading] = useState<boolean>(false);
 
   const totalPrice = getTotalPrice();
+
+  // Cascader 옵션 생성
+  const cascaderOptions: CascaderProps['options'] = Object.entries(PRODUCT_CATEGORIES).map(
+    ([mainCategory, subCategories]) => ({
+      value: mainCategory,
+      label: mainCategory,
+      children: [
+        { value: '전체', label: '전체' },
+        ...subCategories.map((subCategory) => ({
+          value: subCategory,
+          label: SUB_CATEGORY_TEXT[subCategory],
+        })),
+      ],
+    }),
+  );
+
+  // 카테고리 선택 처리
+  const handleCategoryChange = (value: (string | number | null)[] | undefined) => {
+    if (value && value.length >= 1 && value[0] !== null) {
+      const mainCategory = value[0] as MainCategory;
+      const subCategory =
+        value.length >= 2 && value[1] !== null ? (value[1] as SubCategoryWithAll) : '전체';
+
+      setActiveMainCategory(mainCategory);
+      setActiveSubCategory(subCategory);
+      setProductsCurrentPage(1);
+    }
+  };
 
   const fetchOrders = async (statusFilter: OrderStatus | undefined) => {
     setOrdersLoading(true);
@@ -138,8 +173,8 @@ export default function OrderRequestPage() {
     setProductsLoading(true);
     try {
       const res = await productAPI.getProducts({
-        // mainCategory: mainCategory,
-        // subCategory: subCategory,
+        mainCategory: activeMainCategory,
+        subCategory: activeSubCategory === '전체' ? undefined : activeSubCategory,
         keyword: search.appliedKeyword || undefined,
         page: productsCurrentPage - 1,
         size: PAGE_SIZE,
@@ -166,7 +201,14 @@ export default function OrderRequestPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, [isModalVisible, productsCurrentPage, search.appliedKeyword, search.appliedField]);
+  }, [
+    isModalVisible,
+    productsCurrentPage,
+    activeMainCategory,
+    activeSubCategory,
+    search.appliedKeyword,
+    search.appliedField,
+  ]);
 
   const handleUploadChange: UploadProps['onChange'] = ({ fileList }) => {
     setFileList(fileList);
@@ -179,8 +221,8 @@ export default function OrderRequestPage() {
     }
     setAiLoading(true);
     try {
-      const payload: OrderForecastRequest = { file: fileList[0].originFileObj as File };
-      const res = await orderAPI.forecastOrder(payload);
+      const file = fileList[0].originFileObj as File;
+      const res = await orderAPI.forecastOrder({ file });
 
       if (res.success) {
         messageApi.success('AI 발주 추천이 완료되었습니다!');
@@ -205,7 +247,7 @@ export default function OrderRequestPage() {
   };
 
   const handleSubmit = async () => {
-    if (balance + totalPrice > CREDIT_CONSTANTS.CREDIT_LIMIT) {
+    if (balance + totalPrice > CREDIT_LIMIT) {
       messageApi.error('신용 한도를 초과합니다.');
       return;
     }
@@ -226,7 +268,7 @@ export default function OrderRequestPage() {
       if (res.success) {
         messageApi.success('발주 요청이 완료되었습니다.');
         fetchOrders(statusFilter);
-        updateProfile({ outstandingBalance: balance + totalPrice });
+        updateProfile({ balance: balance + totalPrice });
         clearCart();
       }
     } catch (e: any) {
@@ -476,6 +518,8 @@ export default function OrderRequestPage() {
             setIsModalVisible(true);
             setSearch({ keyword: '', appliedKeyword: '', field: '', appliedField: '' });
             setProductsCurrentPage(1);
+            setActiveMainCategory('전문의약품');
+            setActiveSubCategory('전체');
           }}
         >
           제품 검색
@@ -487,7 +531,7 @@ export default function OrderRequestPage() {
           title={
             items.length === 0
               ? '장바구니에 담긴 제품이 없습니다.'
-              : balance + totalPrice > CREDIT_CONSTANTS.CREDIT_LIMIT
+              : balance + totalPrice > CREDIT_LIMIT
                 ? '신용 한도를 초과합니다.'
                 : ''
           }
@@ -495,7 +539,7 @@ export default function OrderRequestPage() {
           <Button
             type="primary"
             danger
-            disabled={items.length === 0 || balance + totalPrice > CREDIT_CONSTANTS.CREDIT_LIMIT}
+            disabled={items.length === 0 || balance + totalPrice > CREDIT_LIMIT}
             onClick={handleSubmit}
             loading={submitLoading}
           >
@@ -539,25 +583,37 @@ export default function OrderRequestPage() {
           setIsModalVisible(false);
           setSearch({ keyword: '', appliedKeyword: '', field: '', appliedField: '' });
           setProductsCurrentPage(1);
+          setActiveMainCategory('전문의약품');
+          setActiveSubCategory('전체');
         }}
         footer={null}
         width={'800px'}
       >
-        <SearchBox
-          searchField="productName"
-          searchOptions={[{ label: '제품명', value: 'productName' }]}
-          searchKeyword={search.keyword || ''}
-          onSearchFieldChange={() => {}}
-          onSearchKeywordChange={(value) => setSearch((prev) => ({ ...prev, keyword: value }))}
-          onSearch={() => {
-            setSearch((prev) => ({
-              ...prev,
-              appliedField: prev.field,
-              appliedKeyword: prev.keyword,
-            }));
-            setProductsCurrentPage(1);
-          }}
-        />
+        <Flex vertical gap="16px">
+          <Cascader
+            options={cascaderOptions}
+            onChange={handleCategoryChange}
+            placeholder="카테고리를 선택해주세요"
+            value={[activeMainCategory, activeSubCategory === '전체' ? '전체' : activeSubCategory]}
+            style={{ width: '100%' }}
+            size="large"
+          />
+          <SearchBox
+            searchField="productName"
+            searchOptions={[{ label: '제품명', value: 'productName' }]}
+            searchKeyword={search.keyword || ''}
+            onSearchFieldChange={() => {}}
+            onSearchKeywordChange={(value) => setSearch((prev) => ({ ...prev, keyword: value }))}
+            onSearch={() => {
+              setSearch((prev) => ({
+                ...prev,
+                appliedField: prev.field,
+                appliedKeyword: prev.keyword,
+              }));
+              setProductsCurrentPage(1);
+            }}
+          />
+        </Flex>
         <Table
           columns={productsColumns}
           dataSource={products}
@@ -571,6 +627,7 @@ export default function OrderRequestPage() {
             onChange: (page) => setProductsCurrentPage(page),
             showSizeChanger: false,
           }}
+          style={{ marginTop: '16px' }}
         />
       </Modal>
 
@@ -597,7 +654,7 @@ export default function OrderRequestPage() {
             title="주문 후 예상 잔액"
             value={balance + totalPrice}
             valueStyle={{
-              color: balance + totalPrice > CREDIT_CONSTANTS.CREDIT_LIMIT ? '#f5222d' : '#52c41a',
+              color: balance + totalPrice > CREDIT_LIMIT ? '#f5222d' : '#52c41a',
             }}
             suffix="원"
           />

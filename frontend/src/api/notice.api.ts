@@ -76,7 +76,7 @@ export const deleteNotice = async (noticeId: number): Promise<void> => {
 };
 
 // 공지사항 첨부파일 다운로드
-export const download = async (noticeId: number): Promise<void> => {
+export const download = async (noticeId: number): Promise<string> => {
   const response = await instance.get(NOTICE_ENDPOINT.DOWNLOAD(noticeId), {
     responseType: 'blob',
   });
@@ -85,15 +85,14 @@ export const download = async (noticeId: number): Promise<void> => {
   const match = dispo.match(/filename\*?=UTF-8''([^;]+)|filename="?([^"]+)"?/i);
   const filename = decodeURIComponent(match?.[1] || match?.[2] || 'download.bin');
 
-  const url = URL.createObjectURL(response.data);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  const href = URL.createObjectURL(response.data);
+  const link = document.createElement('a');
+  link.href = href;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(href);
 
-  console.log('📢 공지사항 첨부파일 다운로드 완료:', filename);
-  return response.data;
+  return filename;
 };

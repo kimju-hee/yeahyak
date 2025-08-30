@@ -185,13 +185,11 @@ export default function BranchManagementPage() {
             {`${detail.address} ${detail.detailAddress}`}
           </Descriptions.Item>
           <Descriptions.Item label="요청 일시">
-            {dayjs(detail.requestedAt).format(DATE_FORMAT.KR_DEFAULT)}
+            {dayjs(detail.createdAt).format(DATE_FORMAT.KR_DEFAULT)}
           </Descriptions.Item>
           <Descriptions.Item label="연락처"> {detail.contact}</Descriptions.Item>
           <Descriptions.Item label="검토 일시">
-            {detail.processedAt
-              ? dayjs(detail.processedAt).format(DATE_FORMAT.KR_DEFAULT)
-              : '미검토'}
+            {detail.updatedAt ? dayjs(detail.updatedAt).format(DATE_FORMAT.KR_DEFAULT) : '미검토'}
           </Descriptions.Item>
           <Descriptions.Item label="상태">
             <Flex wrap justify="space-between" align="center">

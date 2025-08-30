@@ -148,7 +148,7 @@ export default function BranchDashboardPage() {
           <Card title="크레딧 현황" variant="borderless">
             <Space direction="vertical" style={{ width: '100%' }}>
               {(() => {
-                const creditInfo = calculateCreditInfo(profile.outstandingBalance);
+                const creditInfo = calculateCreditInfo(profile.balance);
                 return (
                   <>
                     <Statistic

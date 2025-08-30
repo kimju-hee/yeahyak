@@ -61,7 +61,7 @@ export default function ReturnRequestPage() {
   const profile = useAuthStore((state) => state.profile) as Pharmacy;
   const updateProfile = useAuthStore((state) => state.updateProfile);
   const pharmacyId = profile.pharmacyId;
-  const balance = profile.outstandingBalance;
+  const balance = profile.balance;
   const { items, addItem, removeItem, clearCart, getTotalPrice } = useReturnCartStore();
 
   const [returns, setReturns] = useState<ReturnList[]>([]);
@@ -247,7 +247,7 @@ export default function ReturnRequestPage() {
       if (res.success) {
         messageApi.success('반품 요청이 완료되었습니다.');
         fetchReturns(statusFilter);
-        updateProfile({ outstandingBalance: balance + totalPrice });
+        updateProfile({ balance: balance + totalPrice });
         clearCart();
         setSelectedOrder(undefined);
         form.resetFields(['orderId', 'productId', 'quantity', 'unitPrice']);

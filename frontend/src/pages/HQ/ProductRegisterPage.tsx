@@ -106,7 +106,7 @@ export default function ProductRegisterPage() {
         unitPrice: values.unitPrice,
         details: values.details || '',
         productImgUrl: values.productImgUrl || '',
-        stockQty: values.stockQty,
+        inventoryQty: values.inventoryQty,
       };
       const res = await productAPI.createProduct(payload);
 
@@ -241,7 +241,7 @@ export default function ProductRegisterPage() {
                 <Input />
               </Form.Item>
               <Form.Item
-                name="stockQty"
+                name="inventoryQty"
                 label="재고"
                 rules={[{ required: true, message: '재고를 입력하세요.' }]}
               >

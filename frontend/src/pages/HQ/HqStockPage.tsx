@@ -1,10 +1,10 @@
 import { Button, Card, Form, InputNumber, message, Modal, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import React, { useEffect, useMemo, useState } from 'react';
-import { productAPI, stockAPI } from '../../api';
+import { productAPI } from '../../api';
 import { SearchBox } from '../../components/SearchBox';
-import { STOCK_TX_TYPE_TEXT } from '../../constants';
-import type { ProductList, StockInRequest, StockTxDetail } from '../../types';
+import { INVENTORY_TX_TYPE_TEXT } from '../../constants';
+import type { InventoryInRequest, InventoryTx, ProductList } from '../../types';
 
 // 입고 처리 폼 컴포넌트
 const StockInForm: React.FC<{
@@ -28,7 +28,7 @@ const StockInForm: React.FC<{
     <Card title="입고" style={{ marginBottom: 16 }}>
       <div style={{ marginBottom: 16 }}>
         <p>
-          <strong>현재 재고:</strong> {product.stockQty.toLocaleString()}개
+          <strong>현재 재고:</strong> {product.inventoryQty.toLocaleString()}개
         </p>
       </div>
       <Form form={form} layout="inline" onFinish={handleSubmit} initialValues={{ amount: 1 }}>
@@ -54,10 +54,10 @@ const StockInForm: React.FC<{
 
 // 재고 거래 내역 테이블 컴포넌트
 const StockTransactionTable: React.FC<{
-  data: StockTxDetail[];
+  data: InventoryTx[];
   loading?: boolean;
 }> = ({ data, loading }) => {
-  const columns: ColumnsType<StockTxDetail> = [
+  const columns: ColumnsType<InventoryTx> = [
     {
       title: '날짜',
       dataIndex: 'createdAt',
@@ -68,7 +68,7 @@ const StockTransactionTable: React.FC<{
       title: '구분',
       dataIndex: 'type',
       key: 'type',
-      render: (type: keyof typeof STOCK_TX_TYPE_TEXT) => STOCK_TX_TYPE_TEXT[type] || type,
+      render: (type: keyof typeof INVENTORY_TX_TYPE_TEXT) => INVENTORY_TX_TYPE_TEXT[type] || type,
     },
     {
       title: '수량',
@@ -111,7 +111,7 @@ export default function HqStockPage() {
   const [loading, setLoading] = useState(false);
   const [txLoading, setTxLoading] = useState(false);
   const [stockInLoading, setStockInLoading] = useState(false);
-  const [txData, setTxData] = useState<StockTxDetail[]>([]);
+  const [txData, setTxData] = useState<InventoryTx[]>([]);
   const pageSize = 10;
 
   // 제품 목록 조회
@@ -170,8 +170,7 @@ export default function HqStockPage() {
   const fetchStockTransactions = async (productId: number) => {
     setTxLoading(true);
     try {
-      const response = await stockAPI.getStockTxList({
-        productId,
+      const response = await productAPI.getInventoryTxList(productId, {
         page: 0,
         size: 100,
       });
@@ -217,12 +216,11 @@ export default function HqStockPage() {
 
     setStockInLoading(true);
     try {
-      const request: StockInRequest = {
-        productId: selectedProduct.productId,
+      const request: InventoryInRequest = {
         amount: amount,
       };
 
-      const response = await stockAPI.stockIn(request);
+      const response = await productAPI.inventoryIn(selectedProduct.productId, request);
 
       if (response.success) {
         message.success('입고 처리가 완료되었습니다.');
@@ -231,7 +229,9 @@ export default function HqStockPage() {
         // 제품 목록도 다시 조회 (재고량 업데이트를 위해)
         await fetchProducts(searchKeyword);
         // 선택된 제품의 재고량 업데이트
-        setSelectedProduct((prev) => (prev ? { ...prev, stockQty: prev.stockQty + amount } : null));
+        setSelectedProduct((prev) =>
+          prev ? { ...prev, inventoryQty: prev.inventoryQty + amount } : null,
+        );
       }
     } catch (error) {
       console.error('입고 처리 실패:', error);

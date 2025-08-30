@@ -31,7 +31,7 @@ export default function BranchProfileEditPage() {
   const handleSubmit = async (values: PharmacyUpdateRequest & { bizRegNo: string }) => {
     try {
       const { bizRegNo, ...payload } = values;
-      const res = await authAPI.updatePharmacy(profile.pharmacyId, payload);
+      const res = await authAPI.pharmacyUpdate(profile.pharmacyId, payload);
 
       if (res.success) {
         updateProfile(payload);

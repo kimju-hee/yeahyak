@@ -9,10 +9,10 @@ import {
   type DescriptionsProps,
 } from 'antd';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { noticeAPI } from '../../../api';
-import { API_BASE_URL } from '../../../api/client';
+import AttachmentLink from '../../../components/AttachmentLink';
 import { NoticeDetailSkeleton } from '../../../components/skeletons';
 import { DATE_FORMAT, NOTICE_TYPE_TEXT } from '../../../constants';
 import { useAuthStore } from '../../../stores/authStore';
@@ -28,13 +28,15 @@ export default function NoticeDetailPage() {
   const basePath = user.role === USER_ROLE.ADMIN ? '/hq' : '/branch';
   const returnTo = location.state?.returnTo;
 
+  const noticeId = useMemo(() => Number(id), [id]);
+
   const [notice, setNotice] = useState<NoticeDetail | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
   const fetchNotice = async () => {
     setLoading(true);
     try {
-      const res = await noticeAPI.getNotice(Number(id));
+      const res = await noticeAPI.getNotice(noticeId);
 
       if (res.success) {
         setNotice(res.data);
@@ -49,35 +51,13 @@ export default function NoticeDetailPage() {
   };
 
   useEffect(() => {
+    if (!id || Number.isNaN(noticeId)) {
+      messageApi.error('잘못된 접근입니다.');
+      navigate(`${basePath}/notices`);
+      return;
+    }
     fetchNotice();
-  }, [id]);
-
-  if (loading) return <NoticeDetailSkeleton userRole={user.role} />;
-  if (!notice) return <Typography.Text>해당 공지사항을 찾을 수 없습니다.</Typography.Text>;
-
-  const toAbsUrl = (url: string) => (url.startsWith('http') ? url : `${API_BASE_URL}${url}`);
-
-  const getFilenameFromCD = (cd: string | null | undefined) => {
-    if (!cd) return null;
-
-    // RFC 5987 형식 (filename*=UTF-8''encoded-filename)
-    const encodedMatch = cd.match(/filename\*\s*=\s*UTF-8''([^;,]+)/i);
-    if (encodedMatch) {
-      try {
-        return decodeURIComponent(encodedMatch[1]);
-      } catch {
-        // 디코딩 실패시 fallback
-      }
-    }
-
-    // 일반 형식 (filename="filename" 또는 filename=filename)
-    const plainMatch = cd.match(/filename\s*=\s*"?([^";,]+)"?/i);
-    if (plainMatch) {
-      return plainMatch[1].trim();
-    }
-
-    return null;
-  };
+  }, [noticeId]);
 
   const buildReturnUrl = () => {
     if (!returnTo) return `${basePath}/notices`;
@@ -91,63 +71,10 @@ export default function NoticeDetailPage() {
     return `${basePath}/notices?${params.toString()}`;
   };
 
-  const handleDownload = async (url: string, fallbackName?: string) => {
-    try {
-      const absUrl = toAbsUrl(url);
-
-      // 다운로드 시작 메시지
-      messageApi.loading('파일을 다운로드하고 있습니다...', 0);
-
-      const res = await fetch(absUrl, {
-        credentials: 'include',
-        headers: {
-          Accept: '*/*',
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: 파일 다운로드 실패`);
-      }
-
-      const blob = await res.blob();
-
-      // 빈 파일 체크
-      if (blob.size === 0) {
-        throw new Error('파일이 비어있습니다.');
-      }
-
-      const cd = res.headers.get('content-disposition');
-      const fromHeader = getFilenameFromCD(cd);
-      const fileName =
-        fromHeader || fallbackName || url.split('/').pop()?.split('?')[0] || 'download';
-
-      // Blob URL 생성 및 다운로드
-      const href = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = href;
-      link.download = fileName;
-      link.style.display = 'none';
-
-      document.body.appendChild(link);
-      link.click();
-
-      // 정리
-      document.body.removeChild(link);
-      URL.revokeObjectURL(href);
-
-      messageApi.destroy(); // loading 메시지 제거
-      messageApi.success(`파일이 다운로드되었습니다: ${fileName}`);
-    } catch (e: any) {
-      console.error('파일 다운로드 실패:', e);
-      messageApi.destroy(); // loading 메시지 제거
-      messageApi.error(e.message || '파일 다운로드 중 오류가 발생했습니다.');
-    }
-  };
-
   const handleDelete = async () => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
       try {
-        await noticeAPI.deleteNotice(Number(id));
+        await noticeAPI.deleteNotice(noticeId);
         messageApi.success('공지사항이 삭제되었습니다.');
         navigate(buildReturnUrl());
       } catch (e: any) {
@@ -158,27 +85,25 @@ export default function NoticeDetailPage() {
   };
 
   const descriptionsItems: DescriptionsProps['items'] = [
-    { key: 'title', label: '제목', children: notice.title },
-    { key: 'type', label: '카테고리', children: NOTICE_TYPE_TEXT[notice.type] },
+    { key: 'title', label: '제목', children: notice?.title },
+    { key: 'type', label: '카테고리', children: notice ? NOTICE_TYPE_TEXT[notice.type] : null },
     {
       key: 'createdAt',
       label: '작성 일시',
-      children: dayjs(notice.createdAt).format(DATE_FORMAT.KR_DEFAULT),
+      children: notice ? dayjs(notice.createdAt).format(DATE_FORMAT.KR_DEFAULT) : null,
     },
   ];
 
-  if (notice.attachmentUrl) {
-    const fileName = notice.attachmentUrl.split('/').pop() || '첨부파일';
+  if (notice?.fileName) {
     descriptionsItems.push({
-      key: 'attachmentUrl',
+      key: 'filename',
       label: '첨부파일',
       children: (
-        <Typography.Link
-          onClick={() => handleDownload(notice.attachmentUrl!, fileName)}
-          style={{ cursor: 'pointer' }}
-        >
-          {fileName}
-        </Typography.Link>
+        <AttachmentLink
+          noticeId={notice.noticeId}
+          fileName={notice.fileName}
+          messageApi={messageApi}
+        />
       ),
       span: 2,
     });
@@ -187,41 +112,49 @@ export default function NoticeDetailPage() {
   return (
     <>
       {contextHolder}
-      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
-        공지사항 상세
-      </Typography.Title>
+      {loading ? (
+        <NoticeDetailSkeleton userRole={user.role} />
+      ) : !notice ? (
+        <Typography.Text>해당 공지사항을 찾을 수 없습니다.</Typography.Text>
+      ) : (
+        <>
+          <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+            공지사항 상세
+          </Typography.Title>
 
-      <Descriptions
-        bordered
-        column={3}
-        items={descriptionsItems}
-        size="middle"
-        style={{ marginBottom: '24px' }}
-        styles={{ label: { textAlign: 'center' } }}
-      />
+          <Descriptions
+            bordered
+            column={3}
+            items={descriptionsItems}
+            size="middle"
+            style={{ marginBottom: '24px' }}
+            styles={{ label: { textAlign: 'center' } }}
+          />
 
-      <Card style={{ marginBottom: '24px', padding: '24px' }}>
-        <Typography>
-          <div dangerouslySetInnerHTML={{ __html: notice.content }} />
-        </Typography>
-      </Card>
+          <Card style={{ marginBottom: '24px', padding: '24px' }}>
+            <Typography>
+              <div dangerouslySetInnerHTML={{ __html: notice.content }} />
+            </Typography>
+          </Card>
 
-      <Flex wrap style={{ justifyContent: 'space-between' }}>
-        <Button type="default" onClick={() => navigate(buildReturnUrl())}>
-          목록
-        </Button>
-
-        {user.role === USER_ROLE.ADMIN && (
-          <Space wrap>
-            <Button type="text" danger onClick={handleDelete}>
-              삭제
+          <Flex wrap style={{ justifyContent: 'space-between' }}>
+            <Button type="default" onClick={() => navigate(buildReturnUrl())}>
+              목록
             </Button>
-            <Button type="primary" onClick={() => navigate(`${basePath}/notices/${id}/edit`)}>
-              수정
-            </Button>
-          </Space>
-        )}
-      </Flex>
+
+            {user.role === USER_ROLE.ADMIN && (
+              <Space wrap>
+                <Button type="text" danger onClick={handleDelete}>
+                  삭제
+                </Button>
+                <Button type="primary" onClick={() => navigate(`${basePath}/notices/${id}/edit`)}>
+                  수정
+                </Button>
+              </Space>
+            )}
+          </Flex>
+        </>
+      )}
     </>
   );
 }

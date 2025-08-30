@@ -145,7 +145,7 @@ export default function ProductDetailPage() {
                   </Button>
                 </Space>
               ) : (
-                <Tooltip title={`재고 수량: ${product.stockQty}개`}>
+                <Tooltip title={`재고 수량: ${product.inventoryQty}개`}>
                   <Button
                     type="primary"
                     onClick={() => {

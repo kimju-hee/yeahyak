@@ -24,7 +24,7 @@ export default function HqProfileEditPage() {
       const payload: AdminUpdateRequest = {
         ...values,
       };
-      const res = await authAPI.updateAdmin(profile.adminId, payload);
+      const res = await authAPI.adminUpdate(profile.adminId, payload);
 
       if (res.success) {
         updateProfile(payload);

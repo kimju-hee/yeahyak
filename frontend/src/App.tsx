@@ -22,7 +22,6 @@ import BranchManagementPage from './pages/HQ/BranchManagementPage';
 import HqDashboardPage from './pages/HQ/HqDashboardPage';
 import HqProfileEditPage from './pages/HQ/HqProfileEditPage';
 import HqStockPage from './pages/HQ/HqStockPage';
-import NoticeEditPage from './pages/HQ/NoticeEditPage';
 import NoticeRegisterPage from './pages/HQ/NoticeRegisterPage';
 import OrderManagementPage from './pages/HQ/OrderManagementPage';
 import ProductEditPage from './pages/HQ/ProductEditPage';
@@ -69,7 +68,7 @@ export default function App() {
         <Route path="notices" element={<NoticeListPage />} />
         <Route path="notices/:id" element={<NoticeDetailPage />} />
         <Route path="notices/new" element={<NoticeRegisterPage />} />
-        <Route path="notices/:id/edit" element={<NoticeEditPage />} />
+        {/* <Route path="notices/:id/edit" element={<NoticeEditPage />} /> */}
         <Route path="branches" element={<BranchManagementPage />} />
         {/* <Route path="credits" element={<CreditManagementPage />} /> */}
         <Route path="orders" element={<OrderManagementPage />} />
