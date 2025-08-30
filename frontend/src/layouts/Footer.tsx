@@ -1,14 +1,14 @@
 import { Divider, Layout, message, Typography } from 'antd';
 import DOMPurify from 'dompurify';
-import { useLocation } from 'react-router-dom';
 
 import privacyHtml from '../assets/privacy.html?raw';
 import termsHtml from '../assets/terms.html?raw';
 
-export default function Footer() {
-  const location = useLocation();
-  const isLoginPage = location.pathname === '/login';
+interface FooterProps {
+  color?: string;
+}
 
+export default function Footer({ color = '#ffffff' }: FooterProps) {
   const openHtmlInNewWindow = (html: string) => {
     const sanitizedHtml = DOMPurify.sanitize(html);
     const bom = '\uFEFF';
@@ -32,22 +32,22 @@ export default function Footer() {
     <Layout.Footer
       style={{
         textAlign: 'center',
-        backgroundColor: isLoginPage ? 'transparent' : undefined,
-        borderTop: isLoginPage ? 'none' : undefined,
+        backgroundColor: 'transparent',
+        borderTop: 'none',
       }}
     >
-      <Typography.Text style={{ color: '#000000E0' }}>© 2025 Team yeahyak</Typography.Text>
-      <Divider type="vertical" />
+      <Typography.Text style={{ color }}>© 2025 Team yeahyak</Typography.Text>
+      <Divider type="vertical" style={{ borderColor: color }} />
       <Typography.Link
         onClick={() => openHtmlInNewWindow(termsHtml)}
-        style={{ color: '#000000E0' }}
+        style={{ color, fontSize: 12 }}
       >
         이용약관
       </Typography.Link>
-      <Divider type="vertical" />
+      <Divider type="vertical" style={{ borderColor: color }} />
       <Typography.Link
         onClick={() => openHtmlInNewWindow(privacyHtml)}
-        style={{ color: '#000000E0' }}
+        style={{ color, fontSize: 12 }}
       >
         개인정보처리방침
       </Typography.Link>

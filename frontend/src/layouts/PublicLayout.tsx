@@ -1,39 +1,55 @@
 import { Layout } from 'antd';
-import { Outlet, useLocation } from 'react-router-dom';
+import { useMemo } from 'react';
+import { Outlet } from 'react-router-dom';
+import { background02, background03 } from '../assets';
 import Footer from './Footer';
 
 export default function PublicLayout() {
-  const location = useLocation();
-  const isLoginPage = location.pathname === '/login';
+  // 배경 이미지 후보 배열
+  const backgroundImages = [background02, background03];
+
+  // 랜덤하게 배경 이미지 선택 (컴포넌트 마운트 시 한 번만)
+  const randomBackground = useMemo(() => {
+    const randomIndex = Math.floor(Math.random() * backgroundImages.length);
+    return backgroundImages[randomIndex];
+  }, []);
 
   return (
     <Layout
       style={{
+        position: 'relative',
         minHeight: '100vh',
-        minWidth: '1024px',
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: isLoginPage ? 'transparent' : undefined,
-        transition: 'background-color 0.3s ease',
-        overflow: isLoginPage ? 'auto' : 'hidden',
+        minWidth: '100%',
+        backgroundImage: `url(${randomBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
       }}
     >
       <Layout.Content
         style={{
           flex: 1,
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: isLoginPage ? 'transparent' : undefined,
-          transition: 'background-color 0.3s ease',
-          padding: isLoginPage ? '0' : '48px 24px 24px 24px',
-          margin: isLoginPage ? '0' : '48px 24px 24px 24px',
+          padding: '70px 70px 140px 70px',
         }}
       >
         <Outlet />
       </Layout.Content>
-      <Footer />
+
+      {/* Footer를 배경 이미지 위에 올림 */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1,
+        }}
+      >
+        <Footer color="#ffffff" />
+      </div>
     </Layout>
   );
 }
