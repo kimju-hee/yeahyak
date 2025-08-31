@@ -14,10 +14,10 @@ import {
 } from 'antd';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { aiAPI, noticeAPI } from '../../api';
-import TiptapEditor from '../../components/TiptapEditor';
+import { TiptapEditor } from '../../components';
 import { NOTICE_TYPE_OPTIONS } from '../../constants';
-import { NOTICE_TYPE } from '../../types';
+import { useAiSummarize, useCreateNotice } from '../../hooks/useNotices';
+import { NOTICE_TYPE, type NoticeCreateRequestWithFile } from '../../types';
 import { validateAttachmentFile } from '../../utils';
 
 export default function NoticeRegisterPage() {
@@ -26,10 +26,12 @@ export default function NoticeRegisterPage() {
   const navigate = useNavigate();
 
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [aiLoading, setAiLoading] = useState(false);
 
   const watchedType = Form.useWatch('type', form);
   const watchedContent = Form.useWatch('content', form);
+
+  const createNoticeMutation = useCreateNotice();
+  const aiSummarizeMutation = useAiSummarize();
 
   const handleBeforeUpload = (file: File) => {
     const error = validateAttachmentFile(file, watchedType);
@@ -42,21 +44,20 @@ export default function NoticeRegisterPage() {
 
   const handleChange: UploadProps['onChange'] = ({ fileList }) => {
     setFileList(fileList);
-    form.setFieldsValue({ attachmentUrl: fileList[0].name || '' });
+    form.setFieldsValue({ fileName: fileList[0].name || '' });
   };
 
   const handleRemove = () => {
     setFileList([]);
-    form.setFieldsValue({ attachmentUrl: '' });
+    form.setFieldsValue({ fileName: '' });
   };
 
   const handleAiSummarize = async () => {
     if (fileList.length === 0 || !fileList[0].originFileObj) {
-      messageApi.warning('첨부파일이 없습니다.');
+      messageApi.warning('첨부 파일이 없습니다.');
       return;
     }
 
-    setAiLoading(true);
     try {
       const file = fileList[0].originFileObj as File;
 
@@ -67,38 +68,20 @@ export default function NoticeRegisterPage() {
         return;
       }
 
-      let res;
-      switch (watchedType) {
-        case NOTICE_TYPE.LAW:
-          res = await aiAPI.summarizeLaw({ file });
-          break;
-        case NOTICE_TYPE.EPIDEMIC:
-          res = await aiAPI.summarizeEpidemic({ file });
-          break;
-        case NOTICE_TYPE.NEW_PRODUCT:
-          res = await aiAPI.summarizeNewProduct({ file });
-          break;
-        default:
-          messageApi.warning('지원되지 않는 카테고리입니다.');
-          return;
-      }
-
+      const res = await aiSummarizeMutation.mutateAsync({ file, type: watchedType });
       if (res.success) {
         const raw = watchedType === NOTICE_TYPE.EPIDEMIC ? res.data.notice : res.data.summary;
         form.setFieldsValue({ content: raw });
         messageApi.success('AI가 문서를 요약했습니다!');
       }
-    } catch (e: any) {
-      console.error('AI 문서 요약 실패:', e);
-      messageApi.error(e.response?.data?.message || 'AI 문서 요약 중 오류가 발생했습니다.');
-    } finally {
-      setAiLoading(false);
+    } catch (error: any) {
+      messageApi.error(error.response?.data?.message || 'AI 문서 요약 중 오류가 발생했습니다.');
     }
   };
 
   const handleSubmit = async (values: any) => {
     try {
-      const payload = {
+      const payload: NoticeCreateRequestWithFile = {
         notice: {
           type: values.type,
           title: (values.title || '').trim(),
@@ -106,9 +89,7 @@ export default function NoticeRegisterPage() {
         },
         file: fileList[0]?.originFileObj || undefined,
       };
-
-      console.log('📢 공지사항 등록 요청:', payload);
-      const res = await noticeAPI.createNotice(payload);
+      const res = await createNoticeMutation.mutateAsync(payload);
 
       if (res.success) {
         const id = res.data.noticeId;
@@ -117,16 +98,15 @@ export default function NoticeRegisterPage() {
           navigate(`/hq/notices/${id}`);
         }
       }
-    } catch (e: any) {
-      console.error('공지사항 등록 실패:', e);
-      messageApi.error(e.response?.data?.message || '공지사항 등록 중 오류가 발생했습니다.');
+    } catch (error: any) {
+      messageApi.error(error.response?.data?.message || '공지사항 등록 중 오류가 발생했습니다.');
     }
   };
 
   return (
     <>
       {contextHolder}
-      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+      <Typography.Title level={3} style={{ marginBottom: 24 }}>
         공지사항 작성
       </Typography.Title>
 
@@ -156,8 +136,8 @@ export default function NoticeRegisterPage() {
           </Form.Item>
         </Flex>
 
-        <Flex gap={8} wrap align="start" style={{ marginBottom: '16px' }}>
-          <Form.Item name="attachmentUrl" noStyle>
+        <Flex gap={8} wrap align="start" style={{ marginBottom: 16 }}>
+          <Form.Item name="fileName" noStyle>
             <Input type="hidden" />
           </Form.Item>
 
@@ -193,7 +173,7 @@ export default function NoticeRegisterPage() {
                 !watchedType || watchedType === NOTICE_TYPE.GENERAL || fileList.length === 0
               }
               onClick={handleAiSummarize}
-              loading={aiLoading}
+              loading={aiSummarizeMutation.isPending}
             >
               AI 요약
             </Button>

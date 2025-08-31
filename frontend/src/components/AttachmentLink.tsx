@@ -8,7 +8,7 @@ type AttachmentLinkProps = {
   messageApi: ReturnType<typeof message.useMessage>[0];
 };
 
-export default function AttachmentLink({ noticeId, fileName, messageApi }: AttachmentLinkProps) {
+export function AttachmentLink({ noticeId, fileName, messageApi }: AttachmentLinkProps) {
   const [downloading, setDownloading] = useState(false);
 
   const handleDownload: MouseEventHandler<HTMLElement> = async (e) => {

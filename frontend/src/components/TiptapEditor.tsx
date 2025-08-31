@@ -68,7 +68,7 @@ interface TiptapEditorProps {
   onChange: (content: string) => void;
 }
 
-export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
+export function TiptapEditor({ value, onChange }: TiptapEditorProps) {
   const editor = useEditor({
     immediatelyRender: false,
     shouldRerenderOnTransaction: false,
