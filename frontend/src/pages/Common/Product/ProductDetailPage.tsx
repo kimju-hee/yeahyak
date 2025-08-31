@@ -15,14 +15,14 @@ import {
   type BreadcrumbProps,
   type DescriptionsProps,
 } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { productAPI } from '../../../api';
 import { ProductDetailSkeleton } from '../../../components';
 import { SUB_CATEGORY_TEXT } from '../../../constants';
+import { useDeleteProduct, useProduct } from '../../../hooks/useProducts';
 import { useAuthStore } from '../../../stores/authStore';
 import { useOrderCartStore } from '../../../stores/orderCartStore';
-import { USER_ROLE, type OrderCartItem, type ProductDetail, type User } from '../../../types';
+import { USER_ROLE, type OrderCartItem, type User } from '../../../types';
 import { getProductImgSrc, PLACEHOLDER } from '../../../utils';
 
 export default function ProductDetailPage() {
@@ -38,34 +38,22 @@ export default function ProductDetailPage() {
 
   const noticeId = useMemo(() => Number(id), [id]);
 
-  const [product, setProduct] = useState<ProductDetail>();
-  const [loading, setLoading] = useState(false);
+  const { data: product, isLoading: loading, error } = useProduct(noticeId);
 
-  const fetchProduct = async () => {
-    setLoading(true);
-    try {
-      const res = await productAPI.getProduct(noticeId);
+  const deleteProductMutation = useDeleteProduct();
 
-      if (res.success) {
-        setProduct(res.data);
-      }
-    } catch (e: any) {
-      console.error('제품 정보 로딩 실패:', e);
-      messageApi.error(e.response?.data?.message || '제품 정보 로딩 중 오류가 발생했습니다.');
-      setProduct(undefined);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 에러 처리
   useEffect(() => {
-    fetchProduct();
-  }, [id]);
+    if (error) {
+      console.error('제품 정보 로딩 실패:', error);
+      messageApi.error('제품 정보 로딩 중 오류가 발생했습니다.');
+    }
+  }, [error, messageApi]);
 
   const handleDelete = async () => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
       try {
-        await productAPI.deleteProduct(Number(id));
+        await deleteProductMutation.mutateAsync(Number(id));
         messageApi.success('제품이 삭제되었습니다.');
         if (returnTo) {
           const params = new URLSearchParams();
@@ -77,9 +65,8 @@ export default function ProductDetailPage() {
         } else {
           navigate(`${basePath}/products`);
         }
-      } catch (e: any) {
-        console.error('제품 삭제 실패:', e);
-        messageApi.error(e.response?.data?.message || '제품 삭제 중 오류가 발생했습니다.');
+      } catch (error: any) {
+        messageApi.error(error.response?.data?.message || '제품 삭제 중 오류가 발생했습니다.');
       }
     }
   };
@@ -163,7 +150,7 @@ export default function ProductDetailPage() {
                   items={descriptionsItems}
                   style={{ margin: '8px 0' }}
                   styles={{
-                    label: { width: '80px' },
+                    label: { width: 80 },
                     content: { textAlign: 'left' },
                   }}
                 />

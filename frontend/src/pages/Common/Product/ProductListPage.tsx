@@ -12,7 +12,6 @@ import {
 } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { productAPI } from '../../../api';
 import ProductCardGrid from '../../../components/ProductCardGrid';
 import { SearchBox } from '../../../components/SearchBox';
 import {
@@ -21,12 +20,12 @@ import {
   PAGE_SIZE,
   SUB_CATEGORY_TEXT,
 } from '../../../constants';
+import { useProducts } from '../../../hooks/useProducts';
 import { useAuthStore } from '../../../stores/authStore';
 import {
   PRODUCT_CATEGORIES,
   USER_ROLE,
   type MainCategory,
-  type ProductList,
   type SubCategoryWithAll,
   type User,
 } from '../../../types';
@@ -41,7 +40,6 @@ export default function ProductListPage() {
   const user = useAuthStore((state) => state.user) as User;
   const basePath = user.role === USER_ROLE.PHARMACY ? '/branch' : '/hq';
 
-  const [products, setProducts] = useState<ProductList[]>([]);
   const [activeMainCategory, setActiveMainCategory] = useState<MainCategory>(
     (searchParams.get('main') as MainCategory) || '전문의약품',
   );
@@ -52,39 +50,30 @@ export default function ProductListPage() {
   const [appliedKeyword, setAppliedKeyword] = useState(searchParams.get('keyword') || '');
 
   const [currentPage, setCurrentPage] = useState<number>(Number(searchParams.get('page')) || 1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const res = await productAPI.getProducts({
-        mainCategory: activeMainCategory,
-        subCategory: activeSubCategory === '전체' ? undefined : activeSubCategory,
-        keyword: appliedKeyword || undefined,
-        threshold: undefined,
-        page: currentPage - 1,
-        size: PAGE_SIZE,
-      });
+  const {
+    data: productsResponse,
+    isLoading: loading,
+    error,
+  } = useProducts({
+    mainCategory: activeMainCategory,
+    subCategory: activeSubCategory === '전체' ? undefined : activeSubCategory,
+    keyword: appliedKeyword || undefined,
+    threshold: undefined,
+    page: currentPage - 1,
+    size: PAGE_SIZE,
+  });
 
-      if (res.success) {
-        const { data, page } = res;
-        setProducts(data);
-        setTotal(page.totalElements);
-      }
-    } catch (e: any) {
-      console.error('제품 목록 로딩 실패:', e);
-      messageApi.error(e.response?.data?.message || '제품 목록 로딩 중 오류가 발생했습니다.');
-      setProducts([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const products = productsResponse?.data || [];
+  const total = productsResponse?.page?.totalElements || 0;
 
+  // 에러 처리
   useEffect(() => {
-    fetchProducts();
-  }, [activeMainCategory, activeSubCategory, currentPage, appliedKeyword]);
+    if (error) {
+      console.error('제품 목록 로딩 실패:', error);
+      messageApi.error('제품 목록 로딩 중 오류가 발생했습니다.');
+    }
+  }, [error, messageApi]);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -124,7 +113,7 @@ export default function ProductListPage() {
       children: (
         <>
           <Flex justify="space-between">
-            <Space wrap style={{ marginBottom: '16px' }}>
+            <Space wrap style={{ marginBottom: 16 }}>
               {subCategories.map((category) => (
                 <Button
                   key={category}
@@ -152,7 +141,7 @@ export default function ProductListPage() {
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                height: '240px',
+                height: 240,
               }}
             >
               <Spin size="large" />
@@ -169,7 +158,7 @@ export default function ProductListPage() {
     <>
       {contextHolder}
       <Flex justify="space-between">
-        <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+        <Typography.Title level={3} style={{ marginBottom: 24 }}>
           제품 목록
         </Typography.Title>
 
@@ -193,7 +182,7 @@ export default function ProductListPage() {
         current={currentPage}
         onChange={(page) => setCurrentPage(page)}
         showSizeChanger={false}
-        style={{ marginTop: '24px' }}
+        style={{ marginTop: 24 }}
       />
     </>
   );

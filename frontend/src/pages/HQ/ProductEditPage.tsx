@@ -21,9 +21,9 @@ import dayjs from 'dayjs';
 import DOMPurify from 'dompurify';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { aiAPI, productAPI } from '../../api';
 import { ProductEditSkeleton } from '../../components';
 import { DATE_FORMAT, getProductSubCategoryOptions, MAIN_CATEGORY_OPTIONS } from '../../constants';
+import { useAiProductSummarize, useProduct, useUpdateProduct } from '../../hooks/useProducts';
 import type { MainCategory, ProductUpdateRequest } from '../../types';
 
 const getBase64 = (file: File): Promise<string> =>
@@ -47,52 +47,48 @@ export default function ProductEditPage() {
 
   const [imgFileList, setImgFileList] = useState<UploadFile[]>([]);
   const [pdfFileList, setPdfFileList] = useState<UploadFile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [aiLoading, setAiLoading] = useState(false);
 
   const watchedMainCategory = Form.useWatch('mainCategory', form);
 
-  const fetchProduct = async () => {
-    setLoading(true);
-    try {
-      const res = await productAPI.getProduct(noticeId);
+  const { data: product, isLoading: loading, error } = useProduct(noticeId);
 
-      if (res.success) {
-        const product = res.data;
-        form.setFieldsValue({
-          ...product,
-          details: product.details || '',
-          productImgUrl: product.productImgUrl || '',
-        });
-
-        if (product.productImgUrl) {
-          const isBase64 = product.productImgUrl.startsWith('data:image/');
-          setImgFileList([
-            {
-              uid: '-1',
-              name: isBase64
-                ? '제품 이미지'
-                : product.productImgUrl.split('/').pop() || '제품 이미지',
-              status: 'done',
-              url: product.productImgUrl,
-              ...(isBase64 && { thumbUrl: product.productImgUrl }),
-            } as UploadFile,
-          ]);
-        } else {
-          setImgFileList([]);
-        }
-      }
-    } catch (e: any) {
-      console.error('제품 정보 로딩 실패:', e);
-      messageApi.error(e.response?.data?.message || '제품 정보 로딩 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const updateProductMutation = useUpdateProduct(noticeId);
+  const aiSummarizeMutation = useAiProductSummarize();
 
   useEffect(() => {
-    fetchProduct();
-  }, [id]);
+    if (product) {
+      form.setFieldsValue({
+        ...product,
+        details: product.details || '',
+        productImgUrl: product.productImgUrl || '',
+      });
+
+      if (product.productImgUrl) {
+        const isBase64 = product.productImgUrl.startsWith('data:image/');
+        setImgFileList([
+          {
+            uid: '-1',
+            name: isBase64
+              ? '제품 이미지'
+              : product.productImgUrl.split('/').pop() || '제품 이미지',
+            status: 'done',
+            url: product.productImgUrl,
+            ...(isBase64 && { thumbUrl: product.productImgUrl }),
+          } as UploadFile,
+        ]);
+      } else {
+        setImgFileList([]);
+      }
+    }
+  }, [product, form]);
+
+  // 에러 처리
+  useEffect(() => {
+    if (error) {
+      console.error('제품 정보 로딩 실패:', error);
+      messageApi.error('제품 정보 로딩 중 오류가 발생했습니다.');
+    }
+  }, [error, messageApi]);
 
   const handleImgChange: UploadProps['onChange'] = async ({ fileList }) => {
     setImgFileList(fileList);
@@ -125,21 +121,17 @@ export default function ProductEditPage() {
       return;
     }
 
-    setAiLoading(true);
     try {
       const file = pdfFileList[0].originFileObj as File;
-      const res = await aiAPI.summarizeNewProduct({ file });
+      const res = await aiSummarizeMutation.mutateAsync({ file });
 
       if (res.success) {
         form.setFieldsValue({ details: res.data.summary });
         messageApi.success('AI가 문서를 요약했습니다!');
       }
-    } catch (e: any) {
-      console.error('AI 문서 요약 실패:', e);
-      messageApi.error(e.response?.data?.message || 'AI 문서 요약 중 오류가 발생했습니다.');
+    } catch (error: any) {
+      messageApi.error(error.response?.data?.message || 'AI 문서 요약 중 오류가 발생했습니다.');
       form.setFieldsValue({ details: '' });
-    } finally {
-      setAiLoading(false);
     }
   };
 
@@ -156,13 +148,12 @@ export default function ProductEditPage() {
         details: values.details ? DOMPurify.sanitize(values.details) : '',
         productImgUrl: values.productImgUrl || '',
       };
-      await productAPI.updateProduct(noticeId, payload);
+      await updateProductMutation.mutateAsync(payload);
 
       messageApi.success('수정이 완료되었습니다.');
       navigate(`/hq/products/${id}`);
-    } catch (e: any) {
-      console.error('제품 정보 수정 실패:', e);
-      messageApi.error(e.response?.data?.message || '제품 정보 수정 중 오류가 발생했습니다.');
+    } catch (error: any) {
+      messageApi.error(error.response?.data?.message || '제품 정보 수정 중 오류가 발생했습니다.');
     }
   };
 
@@ -316,7 +307,7 @@ export default function ProductEditPage() {
                     type="primary"
                     disabled={pdfFileList.length === 0}
                     onClick={handleAiSummarize}
-                    loading={aiLoading}
+                    loading={aiSummarizeMutation.isPending}
                   >
                     AI 요약
                   </Button>

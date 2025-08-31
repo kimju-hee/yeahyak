@@ -20,8 +20,8 @@ import {
 import DOMPurify from 'dompurify';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { aiAPI, productAPI } from '../../api';
 import { getProductSubCategoryOptions, MAIN_CATEGORY_OPTIONS } from '../../constants';
+import { useAiProductSummarize, useCreateProduct } from '../../hooks/useProducts';
 import type { MainCategory, ProductCreateRequest } from '../../types';
 
 const getBase64 = (file: File): Promise<string> =>
@@ -42,9 +42,11 @@ export default function ProductRegisterPage() {
 
   const [imgFileList, setImgFileList] = useState<UploadFile[]>([]);
   const [pdfFileList, setPdfFileList] = useState<UploadFile[]>([]);
-  const [aiLoading, setAiLoading] = useState(false);
 
   const watchedMainCategory = Form.useWatch('mainCategory', form);
+
+  const createProductMutation = useCreateProduct();
+  const aiSummarizeMutation = useAiProductSummarize();
 
   const handleImgChange: UploadProps['onChange'] = async ({ fileList }) => {
     setImgFileList(fileList);
@@ -77,21 +79,17 @@ export default function ProductRegisterPage() {
       return;
     }
 
-    setAiLoading(true);
     try {
       const file = pdfFileList[0].originFileObj as File;
-      const res = await aiAPI.summarizeNewProduct({ file });
+      const res = await aiSummarizeMutation.mutateAsync({ file });
 
       if (res.success) {
         form.setFieldsValue({ details: res.data.summary });
         messageApi.success('AI가 문서를 요약했습니다!');
       }
-    } catch (e: any) {
-      console.error('AI 문서 요약 실패:', e);
-      messageApi.error(e.response?.data?.message || 'AI 문서 요약 중 오류가 발생했습니다.');
+    } catch (error: any) {
+      messageApi.error(error.response?.data?.message || 'AI 문서 요약 중 오류가 발생했습니다.');
       form.setFieldsValue({ details: '' });
-    } finally {
-      setAiLoading(false);
     }
   };
 
@@ -109,15 +107,15 @@ export default function ProductRegisterPage() {
         productImgUrl: values.productImgUrl || '',
         inventoryQty: values.inventoryQty,
       };
-      const res = await productAPI.createProduct(payload);
+      const res = await createProductMutation.mutateAsync(payload);
 
       if (res.success) {
         const id = res.data.productId;
+        messageApi.success('제품이 등록되었습니다.');
         navigate(`/hq/products/${id}`);
       }
-    } catch (e: any) {
-      console.error('제품 등록 실패:', e);
-      messageApi.error(e.response?.data?.message || '제품 등록 중 오류가 발생했습니다.');
+    } catch (error: any) {
+      messageApi.error(error.response?.data?.message || '제품 등록 중 오류가 발생했습니다.');
     }
   };
 
@@ -262,7 +260,7 @@ export default function ProductRegisterPage() {
                   type="primary"
                   disabled={pdfFileList.length === 0}
                   onClick={handleAiSummarize}
-                  loading={aiLoading}
+                  loading={aiSummarizeMutation.isPending}
                 >
                   AI 요약
                 </Button>
