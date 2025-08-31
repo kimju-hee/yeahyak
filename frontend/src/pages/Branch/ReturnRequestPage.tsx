@@ -28,6 +28,7 @@ import {
   RETURN_STATUS_OPTIONS,
   RETURN_STATUS_TEXT,
 } from '../../constants';
+import { useCreateReturn, useOrdersBranch, useReturnsBranch } from '../../hooks';
 import { useAuthStore } from '../../stores/authStore';
 import { useReturnCartStore } from '../../stores/returnCartStore';
 import {
@@ -65,20 +66,36 @@ export default function ReturnRequestPage() {
   const balance = profile.balance;
   const { items, addItem, removeItem, clearCart, getTotalPrice } = useReturnCartStore();
 
-  const [returns, setReturns] = useState<ReturnList[]>([]);
   const [statusFilter, setStatusFilter] = useState<ReturnStatus | undefined>(undefined);
   const [returnsCurrentPage, setReturnsCurrentPage] = useState<number>(1);
-  const [returnsTotal, setReturnsTotal] = useState<number>(0);
-  const [returnsLoading, setReturnsLoading] = useState<boolean>(false);
   const [expandedRowData, setExpandedRowData] = useState<Record<number, ReturnDetail>>({});
   const [expandedRowLoading, setExpandedRowLoading] = useState<Record<number, boolean>>({});
   const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
 
+  // TanStack Query로 반품 목록 조회
+  const { data: returnsResponse, isLoading: returnsLoading } = useReturnsBranch({
+    pharmacyId: pharmacyId,
+    status: statusFilter,
+    page: returnsCurrentPage - 1,
+    size: PAGE_SIZE,
+  });
+
+  const returns = returnsResponse?.data || [];
+  const returnsTotal = returnsResponse?.page?.totalElements || 0;
+
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
-  const [orders, setOrders] = useState<OrderList[]>([]);
   const [ordersCurrentPage, setOrdersCurrentPage] = useState<number>(1);
-  const [ordersTotal, setOrdersTotal] = useState<number>(0);
-  const [ordersLoading, setOrdersLoading] = useState<boolean>(false);
+
+  // TanStack Query로 주문 목록 조회 (완료된 주문만)
+  const { data: ordersResponse, isLoading: ordersLoading } = useOrdersBranch({
+    pharmacyId: pharmacyId,
+    status: ORDER_STATUS.COMPLETED,
+    page: ordersCurrentPage - 1,
+    size: PAGE_SIZE,
+  });
+
+  const orders = ordersResponse?.data || [];
+  const ordersTotal = ordersResponse?.page?.totalElements || 0;
 
   const [selectedOrder, setSelectedOrder] = useState<OrderList | undefined>(undefined);
   const [orderDetail, setOrderDetail] = useState<OrderDetail | undefined>(undefined);
@@ -86,35 +103,12 @@ export default function ReturnRequestPage() {
   const [orderItemsLoading, setOrderItemsLoading] = useState<boolean>(false);
   const [maxQuantity, setMaxQuantity] = useState<number>(0);
 
-  const [submitLoading, setSubmitLoading] = useState<boolean>(false);
+  // 반품 생성 mutation
+  const createReturnMutation = useCreateReturn();
 
   const totalPrice = getTotalPrice();
 
-  const fetchReturns = async (statusFilter: ReturnStatus | undefined) => {
-    setReturnsLoading(true);
-    try {
-      const res = await returnAPI.getReturnsBranch({
-        pharmacyId: pharmacyId,
-        status: statusFilter || undefined,
-        page: returnsCurrentPage - 1,
-        size: PAGE_SIZE,
-      });
-
-      if (res.success) {
-        const { data, page } = res;
-        setReturns(data);
-        setReturnsTotal(page.totalElements);
-      }
-    } catch (e: any) {
-      console.error('반품 목록 로딩 실패:', e);
-      messageApi.error(e.response?.data?.message || '반품 목록 로딩 중 오류가 발생했습니다.');
-      setReturns([]);
-      setReturnsTotal(0);
-    } finally {
-      setReturnsLoading(false);
-    }
-  };
-
+  // 반품 상세 조회 (확장된 행용)
   const fetchReturnDetail = async (returnId: number) => {
     setExpandedRowLoading((prev) => ({ ...prev, [returnId]: true }));
     try {
@@ -128,31 +122,6 @@ export default function ReturnRequestPage() {
       messageApi.error(e.response?.data?.message || '반품 상세 로딩 중 오류가 발생했습니다.');
     } finally {
       setExpandedRowLoading((prev) => ({ ...prev, [returnId]: false }));
-    }
-  };
-
-  const fetchOrders = async () => {
-    setOrdersLoading(true);
-    try {
-      const res = await orderAPI.getOrdersBranch({
-        pharmacyId: pharmacyId,
-        status: ORDER_STATUS.COMPLETED, // 완료된 주문만 조회
-        page: ordersCurrentPage - 1,
-        size: PAGE_SIZE,
-      });
-
-      if (res.success) {
-        const { data, page } = res;
-        setOrders(data);
-        setOrdersTotal(page.totalElements);
-      }
-    } catch (e: any) {
-      console.error('주문 목록 로딩 실패:', e);
-      messageApi.error(e.response?.data?.message || '주문 목록 로딩 중 오류가 발생했습니다.');
-      setOrders([]);
-      setOrdersTotal(0);
-    } finally {
-      setOrdersLoading(false);
     }
   };
 
@@ -177,14 +146,6 @@ export default function ReturnRequestPage() {
       setOrderItemsLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchReturns(statusFilter);
-  }, [returnsCurrentPage, statusFilter]);
-
-  useEffect(() => {
-    fetchOrders();
-  }, [isModalVisible, ordersCurrentPage]);
 
   useEffect(() => {
     if (!orderDetail) setOrderItems([]);
@@ -228,26 +189,22 @@ export default function ReturnRequestPage() {
       return;
     }
 
-    setSubmitLoading(true);
-    try {
-      const { reason } = values;
-      const reasonText = Array.isArray(reason) ? reason.join(', ') : reason;
-      const payload: ReturnCreateRequest = {
-        pharmacyId: pharmacyId,
-        orderId: selectedOrder.orderId,
-        reason: reasonText,
-        items: items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          subtotalPrice: item.unitPrice * item.quantity,
-        })),
-      };
-      const res = await returnAPI.createReturn(payload);
+    const { reason } = values;
+    const reasonText = Array.isArray(reason) ? reason.join(', ') : reason;
+    const payload: ReturnCreateRequest = {
+      pharmacyId: pharmacyId,
+      orderId: selectedOrder.orderId,
+      reason: reasonText,
+      items: items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        subtotalPrice: item.unitPrice * item.quantity,
+      })),
+    };
 
-      if (res.success) {
-        messageApi.success('반품 요청이 완료되었습니다.');
-        fetchReturns(statusFilter);
+    createReturnMutation.mutate(payload, {
+      onSuccess: () => {
         updateProfile({ balance: balance + totalPrice });
         clearCart();
         setSelectedOrder(undefined);
@@ -255,13 +212,8 @@ export default function ReturnRequestPage() {
         setOrderItems([]);
         setMaxQuantity(0);
         returnForm.resetFields(['reason']);
-      }
-    } catch (e: any) {
-      console.error('반품 요청 실패:', e);
-      messageApi.error(e.response?.data?.message || '반품 요청 중 오류가 발생했습니다.');
-    } finally {
-      setSubmitLoading(false);
-    }
+      },
+    });
   };
 
   const handleTableChange = (pagination: any, filters: any) => {
@@ -602,7 +554,7 @@ export default function ReturnRequestPage() {
             type="primary"
             htmlType="submit"
             disabled={items.length === 0}
-            loading={submitLoading}
+            loading={createReturnMutation.isPending}
           >
             반품 요청
           </Button>

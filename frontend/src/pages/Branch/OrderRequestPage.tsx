@@ -24,8 +24,8 @@ import {
   type UploadProps,
 } from 'antd';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
-import { orderAPI, productAPI } from '../../api';
+import { useState } from 'react';
+import { orderAPI } from '../../api';
 import { SearchBox } from '../../components';
 import {
   CREDIT_LIMIT,
@@ -36,6 +36,7 @@ import {
   PAGE_SIZE,
   SUB_CATEGORY_TEXT,
 } from '../../constants';
+import { useCreateOrder, useOrderForecast, useOrdersBranch, useProducts } from '../../hooks';
 import { useAuthStore } from '../../stores/authStore';
 import { useOrderCartStore } from '../../stores/orderCartStore';
 import type {
@@ -72,17 +73,24 @@ export default function OrderRequestPage() {
   const { items, addItem, removeItem, updateQuantity, clearCart, getTotalPrice } =
     useOrderCartStore();
 
-  const [orders, setOrders] = useState<OrderList[]>([]);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>(undefined);
   const [ordersCurrentPage, setOrdersCurrentPage] = useState<number>(1);
-  const [ordersTotal, setOrdersTotal] = useState<number>(0);
-  const [ordersLoading, setOrdersLoading] = useState<boolean>(false);
+  const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
   const [expandedRowData, setExpandedRowData] = useState<Record<number, OrderDetail>>({});
   const [expandedRowLoading, setExpandedRowLoading] = useState<Record<number, boolean>>({});
-  const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
+
+  // TanStack Query로 발주 목록 조회
+  const { data: ordersResponse, isLoading: ordersLoading } = useOrdersBranch({
+    pharmacyId: pharmacyId,
+    status: statusFilter,
+    page: ordersCurrentPage - 1,
+    size: PAGE_SIZE,
+  });
+
+  const orders = ordersResponse?.data || [];
+  const ordersTotal = ordersResponse?.page?.totalElements || 0;
 
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
-  const [products, setProducts] = useState<ProductList[]>([]);
   const [activeMainCategory, setActiveMainCategory] = useState<MainCategory>('전문의약품');
   const [activeSubCategory, setActiveSubCategory] = useState<SubCategoryWithAll>('전체');
   const [search, setSearch] = useState({
@@ -92,12 +100,27 @@ export default function OrderRequestPage() {
     appliedKeyword: undefined as string | undefined,
   });
   const [productsCurrentPage, setProductsCurrentPage] = useState<number>(1);
-  const [productsTotal, setProductsTotal] = useState<number>(0);
-  const [productsLoading, setProductsLoading] = useState<boolean>(false);
+
+  // TanStack Query로 제품 목록 조회
+  const { data: productsResponse, isLoading: productsLoading } = useProducts({
+    mainCategory: activeMainCategory,
+    subCategory: activeSubCategory === '전체' ? undefined : activeSubCategory,
+    keyword: search.appliedKeyword || undefined,
+    threshold: undefined,
+    page: productsCurrentPage - 1,
+    size: PAGE_SIZE,
+  });
+
+  const products = productsResponse?.data || [];
+  const productsTotal = productsResponse?.page?.totalElements || 0;
+
+  // 발주 생성 mutation
+  const createOrderMutation = useCreateOrder();
+
+  // AI 발주 예측 mutation
+  const orderForecastMutation = useOrderForecast();
 
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [aiLoading, setAiLoading] = useState<boolean>(false);
-  const [submitLoading, setSubmitLoading] = useState<boolean>(false);
 
   const totalPrice = getTotalPrice();
 
@@ -129,31 +152,7 @@ export default function OrderRequestPage() {
     }
   };
 
-  const fetchOrders = async (statusFilter: OrderStatus | undefined) => {
-    setOrdersLoading(true);
-    try {
-      const res = await orderAPI.getOrdersBranch({
-        pharmacyId: pharmacyId,
-        status: statusFilter || undefined,
-        page: ordersCurrentPage - 1,
-        size: PAGE_SIZE,
-      });
-
-      if (res.success) {
-        const { data, page } = res;
-        setOrders(data);
-        setOrdersTotal(page.totalElements);
-      }
-    } catch (e: any) {
-      console.error('주문 목록 로딩 실패:', e);
-      messageApi.error(e.response?.data?.message || '주문 목록 로딩 중 오류가 발생했습니다.');
-      setOrders([]);
-      setOrdersTotal(0);
-    } finally {
-      setOrdersLoading(false);
-    }
-  };
-
+  // 발주 상세 조회 (확장된 행용)
   const fetchOrderDetail = async (orderId: number) => {
     setExpandedRowLoading((prev) => ({ ...prev, [orderId]: true }));
     try {
@@ -170,48 +169,6 @@ export default function OrderRequestPage() {
     }
   };
 
-  const fetchProducts = async () => {
-    setProductsLoading(true);
-    try {
-      const res = await productAPI.getProducts({
-        mainCategory: activeMainCategory,
-        subCategory: activeSubCategory === '전체' ? undefined : activeSubCategory,
-        keyword: search.appliedKeyword || undefined,
-        threshold: undefined,
-        page: productsCurrentPage - 1,
-        size: PAGE_SIZE,
-      });
-
-      if (res.success) {
-        const { data, page } = res;
-        setProducts(data);
-        setProductsTotal(page.totalElements);
-      }
-    } catch (e: any) {
-      console.error('상품 목록 로딩 실패:', e);
-      messageApi.error(e.response?.data?.message || '상품 목록 로딩 중 오류가 발생했습니다.');
-      setProducts([]);
-      setProductsTotal(0);
-    } finally {
-      setProductsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchOrders(statusFilter);
-  }, [ordersCurrentPage, statusFilter]);
-
-  useEffect(() => {
-    fetchProducts();
-  }, [
-    isModalVisible,
-    productsCurrentPage,
-    activeMainCategory,
-    activeSubCategory,
-    search.appliedKeyword,
-    search.appliedField,
-  ]);
-
   const handleUploadChange: UploadProps['onChange'] = ({ fileList }) => {
     setFileList(fileList);
   };
@@ -221,13 +178,10 @@ export default function OrderRequestPage() {
       messageApi.warning('파일을 업로드해주세요');
       return;
     }
-    setAiLoading(true);
-    try {
-      const file = fileList[0].originFileObj as File;
-      const res = await orderAPI.forecastOrder({ file });
 
-      if (res.success) {
-        messageApi.success('AI 발주 추천이 완료되었습니다!');
+    const file = fileList[0].originFileObj as File;
+    orderForecastMutation.mutate(file, {
+      onSuccess: (res) => {
         const recommendedItems: OrderCartItem[] = res.data.map((item: any) => ({
           productId: item.productId,
           productName: item.productName,
@@ -239,13 +193,8 @@ export default function OrderRequestPage() {
           productImgUrl: item.productImgUrl || PLACEHOLDER,
         }));
         addItem(recommendedItems);
-      }
-    } catch (e: any) {
-      console.error('AI 발주 추천 실패:', e);
-      messageApi.error(e.response?.data?.message || 'AI 발주 추천 중 오류가 발생했습니다.');
-    } finally {
-      setAiLoading(false);
-    }
+      },
+    });
   };
 
   const handleSubmit = async () => {
@@ -254,31 +203,22 @@ export default function OrderRequestPage() {
       return;
     }
 
-    setSubmitLoading(true);
-    try {
-      const payload: OrderCreateRequest = {
-        pharmacyId: pharmacyId,
-        items: items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          subtotalPrice: item.subtotalPrice,
-        })),
-      };
-      const res = await orderAPI.createOrder(payload);
+    const payload: OrderCreateRequest = {
+      pharmacyId: pharmacyId,
+      items: items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        subtotalPrice: item.subtotalPrice,
+      })),
+    };
 
-      if (res.success) {
-        messageApi.success('발주 요청이 완료되었습니다.');
-        fetchOrders(statusFilter);
+    createOrderMutation.mutate(payload, {
+      onSuccess: () => {
         updateProfile({ balance: balance + totalPrice });
         clearCart();
-      }
-    } catch (e: any) {
-      console.error('발주 요청 실패:', e);
-      messageApi.error(e.response?.data?.message || '발주 요청 중 오류가 발생했습니다.');
-    } finally {
-      setSubmitLoading(false);
-    }
+      },
+    });
   };
 
   const handleTableChange = (pagination: any, filters: any) => {
@@ -626,7 +566,7 @@ export default function OrderRequestPage() {
                   color="cyan"
                   variant="outlined"
                   onClick={handleAiSuggest}
-                  loading={aiLoading}
+                  loading={orderForecastMutation.isPending}
                 >
                   AI 발주 추천
                 </Button>
@@ -646,7 +586,7 @@ export default function OrderRequestPage() {
                 danger
                 disabled={items.length === 0 || balance + totalPrice > CREDIT_LIMIT}
                 onClick={handleSubmit}
-                loading={submitLoading}
+                loading={createOrderMutation.isPending}
               >
                 발주 요청
               </Button>
