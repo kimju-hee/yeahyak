@@ -22,6 +22,7 @@ export interface ProductListParams {
   mainCategory: MainCategory;
   subCategory?: SubCategory;
   keyword?: string; // 제품명
+  threshold?: number; // 재고 임계값
   page?: number;
   size?: number;
 }

@@ -28,10 +28,15 @@ const ProductCard = memo(function ProductCard({
             preview={false}
             src={imageSrc}
             alt={product.productName || '제품 이미지'}
-            style={{ height: '160px', objectFit: 'contain' }}
+            style={{ height: '160px', objectFit: 'contain', width: '100%' }}
             fallback={PLACEHOLDER}
           />
         }
+        styles={{
+          cover: {
+            padding: '8px',
+          },
+        }}
       >
         <Card.Meta
           title={product.productName}
@@ -50,7 +55,7 @@ const ProductCard = memo(function ProductCard({
 export default function ProductCardGrid({ products }: ProductCardGridProps) {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user) as User;
-  const basePath = user.role === USER_ROLE.PHARMACY ? '/branch' : '/hq';
+  const basePath = user.role === USER_ROLE.ADMIN ? '/hq' : '/branch';
   const handleNavigate = useCallback(
     (productId: number) => navigate(`${basePath}/products/${productId}`),
     [navigate, basePath],

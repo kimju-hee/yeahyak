@@ -17,6 +17,7 @@ import {
   type UploadFile,
   type UploadProps,
 } from 'antd';
+import DOMPurify from 'dompurify';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { aiAPI, productAPI } from '../../api';
@@ -72,7 +73,7 @@ export default function ProductRegisterPage() {
 
   const handleAiSummarize = async () => {
     if (pdfFileList.length === 0 || !pdfFileList[0].originFileObj) {
-      messageApi.warning('PDF 파일을 먼저 업로드 해주세요');
+      messageApi.warning('PDF 파일을 먼저 업로드해주세요');
       return;
     }
 
@@ -104,7 +105,7 @@ export default function ProductRegisterPage() {
         manufacturer: values.manufacturer,
         unit: values.unit,
         unitPrice: values.unitPrice,
-        details: values.details || '',
+        details: values.details ? DOMPurify.sanitize(values.details) : '',
         productImgUrl: values.productImgUrl || '',
         inventoryQty: values.inventoryQty,
       };
@@ -123,17 +124,18 @@ export default function ProductRegisterPage() {
   return (
     <>
       {contextHolder}
-      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
-        제품 등록
+      <Typography.Title level={3} style={{ marginBottom: 24, textAlign: 'center', width: '100%' }}>
+        제품 정보 등록
       </Typography.Title>
 
-      <Card style={{ width: '80%', borderRadius: '12px', padding: '24px', margin: '0 auto' }}>
+      <Card style={{ width: '80%', padding: 16, margin: '0 auto', borderRadius: 24 }}>
         <Form
           form={form}
           name="product-register"
           layout="vertical"
           onFinish={handleSubmit}
           autoComplete="off"
+          validateMessages={{ required: '${label}을(를) 입력해주세요' }}
         >
           <Flex wrap justify="space-between" gap={36}>
             <Flex vertical flex={1} justify="center" align="center">
@@ -146,8 +148,9 @@ export default function ProductRegisterPage() {
                 onPreview={handlePreview}
                 onRemove={handleImgRemove}
                 maxCount={1}
+                style={{ padding: 16 }}
               >
-                {imgFileList.length >= 1 ? null : '이미지 업로드'}
+                {imgFileList.length >= 1 ? null : '제품 이미지 업로드'}
               </Upload>
               {previewImage && (
                 <Image
@@ -166,38 +169,30 @@ export default function ProductRegisterPage() {
             </Flex>
 
             <Flex vertical flex={1}>
-              <Form.Item
-                name="productName"
-                label="제품명"
-                rules={[{ required: true, message: '제품명을 입력하세요.' }]}
-              >
+              <Form.Item name="productName" label="제품명" rules={[{ required: true }]}>
                 <Input />
               </Form.Item>
-              <Form.Item
-                name="manufacturer"
-                label="제조사"
-                rules={[{ required: true, message: '제조사를 입력하세요.' }]}
-              >
+              <Form.Item name="manufacturer" label="제조사" rules={[{ required: true }]}>
                 <Input />
               </Form.Item>
             </Flex>
 
             <Flex vertical flex={1}>
-              <Form.Item
-                name="insuranceCode"
-                label="보험코드"
-                rules={[{ required: true, message: '보험코드를 입력하세요.' }]}
-              >
+              <Form.Item name="insuranceCode" label="보험코드" rules={[{ required: true }]}>
                 <Input />
               </Form.Item>
               <Form.Item
                 name="unitPrice"
                 label="판매가"
-                rules={[{ required: true, message: '판매가를 입력하세요.' }]}
+                rules={[
+                  { required: true },
+                  { type: 'number', min: 1, message: '판매가는 1 이상이어야 합니다' },
+                ]}
               >
                 <InputNumber
+                  min={1}
                   formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원'}
-                  parser={(value) => value?.replace(/[원,]/g, '') as unknown as number}
+                  parser={(value) => Number(value?.replace(/[원,]/g, '') || 0) as any}
                   style={{ width: '100%' }}
                 />
               </Form.Item>
@@ -208,18 +203,10 @@ export default function ProductRegisterPage() {
 
           <Flex wrap justify="space-between" gap={36}>
             <Flex vertical flex={1}>
-              <Form.Item
-                name="mainCategory"
-                label="대분류"
-                rules={[{ required: true, message: '대분류를 입력하세요.' }]}
-              >
+              <Form.Item name="mainCategory" label="대분류" rules={[{ required: true }]}>
                 <Select options={[...MAIN_CATEGORY_OPTIONS]} placeholder="선택" />
               </Form.Item>
-              <Form.Item
-                name="subCategory"
-                label="소분류"
-                rules={[{ required: true, message: '소분류를 입력하세요.' }]}
-              >
+              <Form.Item name="subCategory" label="소분류" rules={[{ required: true }]}>
                 <Select
                   options={
                     watchedMainCategory
@@ -233,26 +220,30 @@ export default function ProductRegisterPage() {
             </Flex>
 
             <Flex vertical flex={1}>
-              <Form.Item
-                name="unit"
-                label="단위"
-                rules={[{ required: true, message: '단위를 입력하세요.' }]}
-              >
+              <Form.Item name="unit" label="단위" rules={[{ required: true }]}>
                 <Input />
               </Form.Item>
               <Form.Item
                 name="inventoryQty"
-                label="재고"
-                rules={[{ required: true, message: '재고를 입력하세요.' }]}
+                label="초기 재고"
+                rules={[
+                  { required: true },
+                  { type: 'number', min: 1, message: '초기 재고는 1 이상이어야 합니다' },
+                ]}
               >
-                <InputNumber min={0} style={{ width: '100%' }} />
+                <InputNumber
+                  min={1}
+                  style={{ width: '100%' }}
+                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={(value) => Number(value?.replace(/,/g, '') || 0) as any}
+                />
               </Form.Item>
             </Flex>
           </Flex>
 
           <Divider />
 
-          <Flex wrap justify="space-between" gap={24}>
+          <Flex wrap justify="space-between" gap={36}>
             <Typography.Title level={4}>제품 상세 정보</Typography.Title>
             <Space wrap>
               <Upload
@@ -266,7 +257,7 @@ export default function ProductRegisterPage() {
               >
                 {pdfFileList.length >= 1 ? null : <Button icon={<UploadOutlined />}>업로드</Button>}
               </Upload>
-              <Tooltip title={pdfFileList.length === 0 ? 'PDF 파일을 업로드 해주세요' : ''}>
+              <Tooltip title={pdfFileList.length === 0 ? 'PDF 파일을 업로드해주세요' : ''}>
                 <Button
                   type="primary"
                   disabled={pdfFileList.length === 0}
@@ -279,8 +270,8 @@ export default function ProductRegisterPage() {
             </Space>
           </Flex>
 
-          <Form.Item name="details" style={{ marginTop: '16px' }}>
-            <Input.TextArea rows={8} />
+          <Form.Item name="details" style={{ marginTop: 16 }}>
+            <Input.TextArea rows={16} />
           </Form.Item>
 
           <Flex justify="center">

@@ -62,6 +62,7 @@ export default function ProductListPage() {
         mainCategory: activeMainCategory,
         subCategory: activeSubCategory === '전체' ? undefined : activeSubCategory,
         keyword: appliedKeyword || undefined,
+        threshold: undefined,
         page: currentPage - 1,
         size: PAGE_SIZE,
       });
