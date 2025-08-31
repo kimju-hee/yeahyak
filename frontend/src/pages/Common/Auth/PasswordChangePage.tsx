@@ -58,9 +58,7 @@ export default function PasswordChangePage() {
           labelWrap
           wrapperCol={{ span: 15, offset: -3 }}
           autoComplete="off"
-          validateMessages={{
-            required: '${label}을(를) 입력해주세요',
-          }}
+          validateMessages={{ required: '${label}을(를) 입력해주세요' }}
         >
           <Flex vertical gap={4}>
             <Form.Item name="email" label="이메일">

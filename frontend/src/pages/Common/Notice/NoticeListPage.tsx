@@ -11,9 +11,9 @@ import {
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { SearchBox } from '../../../components/SearchBox';
+import { SearchBox } from '../../../components';
 import { DATE_FORMAT, PAGE_SIZE } from '../../../constants';
-import { useNotices } from '../../../hooks/useNotices';
+import { useNotices } from '../../../hooks';
 import { useAuthStore } from '../../../stores/authStore';
 import { USER_ROLE, type NoticeList, type NoticeType, type User } from '../../../types';
 

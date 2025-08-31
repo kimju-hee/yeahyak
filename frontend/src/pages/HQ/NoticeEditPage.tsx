@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { NoticeEditSkeleton, TiptapEditor } from '../../components';
 import { NOTICE_TYPE_OPTIONS } from '../../constants';
-import { useAiSummarize, useNotice, useUpdateNotice } from '../../hooks/useNotices';
+import { useAiSummarize, useNotice, useUpdateNotice } from '../../hooks';
 import { NOTICE_TYPE, type NoticeUpdateRequestWithFile } from '../../types';
 import { validateAttachmentFile } from '../../utils';
 

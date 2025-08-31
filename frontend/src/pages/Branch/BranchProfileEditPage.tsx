@@ -56,9 +56,7 @@ export default function BranchProfileEditPage() {
           labelCol={{ span: 6 }}
           labelWrap
           wrapperCol={{ span: 15, offset: -3 }}
-          validateMessages={{
-            required: '${label}을(를) 입력해주세요',
-          }}
+          validateMessages={{ required: '${label}을(를) 입력해주세요' }}
         >
           <Flex vertical gap={4}>
             <Form.Item name="pharmacyName" label="약국명" rules={[{ required: true }]}>

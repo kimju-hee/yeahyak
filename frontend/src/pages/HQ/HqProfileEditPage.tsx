@@ -49,9 +49,7 @@ export default function HqProfileEditPage() {
           labelCol={{ span: 6 }}
           labelWrap
           wrapperCol={{ span: 15, offset: -3 }}
-          validateMessages={{
-            required: '${label}을(를) 입력해주세요',
-          }}
+          validateMessages={{ required: '${label}을(를) 입력해주세요' }}
         >
           <Form.Item
             name="adminName"

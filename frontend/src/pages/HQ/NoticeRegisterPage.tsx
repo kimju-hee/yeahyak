@@ -16,7 +16,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TiptapEditor } from '../../components';
 import { NOTICE_TYPE_OPTIONS } from '../../constants';
-import { useAiSummarize, useCreateNotice } from '../../hooks/useNotices';
+import { useAiSummarize, useCreateNotice } from '../../hooks';
 import { NOTICE_TYPE, type NoticeCreateRequestWithFile } from '../../types';
 import { validateAttachmentFile } from '../../utils';
 

@@ -13,7 +13,7 @@ import { useMemo } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AttachmentLink, NoticeDetailSkeleton } from '../../../components';
 import { DATE_FORMAT, NOTICE_TYPE_TEXT } from '../../../constants';
-import { useDeleteNotice, useNotice } from '../../../hooks/useNotices';
+import { useDeleteNotice, useNotice } from '../../../hooks';
 import { useAuthStore } from '../../../stores/authStore';
 import { USER_ROLE, type User } from '../../../types';
 
@@ -140,11 +140,11 @@ export default function NoticeDetailPage() {
 
             {user.role === USER_ROLE.ADMIN && (
               <Space wrap>
-                <Button type="text" danger onClick={handleDelete}>
-                  삭제
-                </Button>
                 <Button type="primary" onClick={() => navigate(`${basePath}/notices/${id}/edit`)}>
                   수정
+                </Button>
+                <Button type="text" danger onClick={handleDelete}>
+                  삭제
                 </Button>
               </Space>
             )}
