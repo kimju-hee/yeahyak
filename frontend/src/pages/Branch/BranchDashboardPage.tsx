@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import {
   Card,
   Col,
@@ -15,9 +14,8 @@ import {
 } from 'antd';
 import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
-import { orderAPI } from '../../api';
 import { NOTICE_TYPE_TEXT } from '../../constants';
-import { useLatestNotices } from '../../hooks/useNotices';
+import { useLatestNotices, useOrder, useOrdersBranch } from '../../hooks';
 import { useAuthStore } from '../../stores/authStore';
 import type { Pharmacy } from '../../types';
 import { calculateCreditInfo } from '../../utils';
@@ -35,44 +33,43 @@ export default function BranchDashboardPage() {
     isLoading: noticesLoading,
   } = useLatestNotices();
 
-  // 최근 발주 1건 상세 조회
+  // 최근 발주 1건 조회 (목록에서)
   const {
-    data: recentOrderData,
-    error: orderError,
-    isLoading: orderLoading,
-  } = useQuery({
-    queryKey: ['recentOrder', pharmacyId],
-    queryFn: async () => {
-      const list = await orderAPI.getOrdersBranch({
-        pharmacyId,
-        page: 0,
-        size: 1,
-      });
-
-      if (list.success && list.data.length > 0) {
-        const order = list.data[0];
-        const detail = await orderAPI.getOrder(order.orderId);
-        if (detail.success) {
-          return {
-            order: detail.data,
-            items: detail.data.items ?? [],
-          };
-        }
-        throw new Error('발주 상세 정보를 불러올 수 없습니다.');
-      }
-
-      return { order: undefined, items: [] };
-    },
-    enabled: !!pharmacyId,
-    staleTime: 5 * 60 * 1000, // 5분간 캐시 유지
+    data: ordersResponse,
+    error: ordersListError,
+    isLoading: ordersListLoading,
+  } = useOrdersBranch({
+    pharmacyId,
+    page: 0,
+    size: 1,
   });
+
+  const recentOrderId =
+    ordersResponse?.success && ordersResponse.data.length > 0
+      ? ordersResponse.data[0].orderId
+      : null;
+
+  // 최근 발주 상세 조회
+  const {
+    data: orderDetailResponse,
+    error: orderDetailError,
+    isLoading: orderDetailLoading,
+  } = useOrder(recentOrderId!, !!recentOrderId);
+
+  const recentOrderData = {
+    order: orderDetailResponse?.success ? orderDetailResponse.data : undefined,
+    items: orderDetailResponse?.success ? orderDetailResponse.data.items || [] : [],
+  };
+
+  // 로딩 상태 통합
+  const orderLoading = ordersListLoading || orderDetailLoading;
 
   // 에러 처리
   if (noticesError) {
     messageApi.error('최근 공지사항 로딩 중 오류가 발생했습니다.');
   }
 
-  if (orderError) {
+  if (ordersListError || orderDetailError) {
     messageApi.error('최근 발주 상세 로딩 중 오류가 발생했습니다.');
   }
 

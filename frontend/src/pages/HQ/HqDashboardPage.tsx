@@ -1,12 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
 import { Card, Col, Flex, List, message, Row, Table, type TableProps } from 'antd';
 import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
-import { orderAPI } from '../../api';
 import { DATE_FORMAT, NOTICE_TYPE_TEXT } from '../../constants';
-import { useLatestNotices } from '../../hooks/useNotices';
-import { useAuthStore } from '../../stores/authStore';
-import { type Admin } from '../../types';
+import { useLatestNotices, useOrdersHq } from '../../hooks';
 
 // FIXME: 베스트셀러 하드코딩 해놓음
 const bestSeller = [
@@ -19,9 +15,6 @@ const bestSeller = [
 export default function HqDashboardPage() {
   const [messageApi, contextHolder] = message.useMessage();
 
-  const profile = useAuthStore((state) => state.profile) as Admin;
-  const adminId = profile.adminId;
-
   // 최근 공지사항 5개 조회
   const {
     data: latestNotices = [],
@@ -31,26 +24,16 @@ export default function HqDashboardPage() {
 
   // 최근 발주 요청 5건 조회
   const {
-    data: requestedOrders = [],
+    data: ordersResponse,
     error: ordersError,
     isLoading: ordersLoading,
-  } = useQuery({
-    queryKey: ['requestedOrders', adminId],
-    queryFn: async () => {
-      const response = await orderAPI.getOrdersHq({
-        status: 'REQUESTED',
-        page: 0,
-        size: 5,
-      });
-
-      if (response.success) {
-        return response.data;
-      }
-      throw new Error('발주 요청을 불러올 수 없습니다.');
-    },
-    enabled: !!adminId,
-    staleTime: 3 * 60 * 1000, // 3분간 캐시 유지
+  } = useOrdersHq({
+    status: 'REQUESTED',
+    page: 0,
+    size: 5,
   });
+
+  const requestedOrders = ordersResponse?.success ? ordersResponse.data : [];
 
   // 에러 처리
   if (noticesError) {
