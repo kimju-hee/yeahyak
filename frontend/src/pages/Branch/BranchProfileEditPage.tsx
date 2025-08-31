@@ -1,7 +1,7 @@
 import { Button, Card, Flex, Form, Input, message, Typography } from 'antd';
 import { useEffect } from 'react';
 import { authAPI } from '../../api';
-import AddressInput from '../../components/AddressInput';
+import { AddressInput } from '../../components';
 import { useAuthStore } from '../../stores/authStore';
 import type { Pharmacy, PharmacyUpdateRequest } from '../../types';
 import { formatBizRegNo, formatContact, handleNumberOnlyKeyDown } from '../../utils';
@@ -12,8 +12,6 @@ export default function BranchProfileEditPage() {
 
   const profile = useAuthStore((state) => state.profile) as Pharmacy;
   const updateProfile = useAuthStore((state) => state.updateProfile);
-
-  Form.useWatch([], form);
 
   useEffect(() => {
     form.setFieldsValue({
@@ -46,14 +44,11 @@ export default function BranchProfileEditPage() {
   return (
     <>
       {contextHolder}
-      <Typography.Title
-        level={3}
-        style={{ marginBottom: '24px', textAlign: 'center', width: '100%' }}
-      >
+      <Typography.Title level={3} style={{ marginBottom: 24, textAlign: 'center', width: '100%' }}>
         약국 정보 수정
       </Typography.Title>
 
-      <Card style={{ width: '80%', padding: '8px', margin: '0 auto' }}>
+      <Card style={{ width: '80%', padding: 16, margin: '0 auto', borderRadius: 24 }}>
         <Form
           form={form}
           name="pharmacy-edit"
@@ -61,54 +56,45 @@ export default function BranchProfileEditPage() {
           labelCol={{ span: 6 }}
           labelWrap
           wrapperCol={{ span: 15, offset: -3 }}
+          validateMessages={{
+            required: '${label}을(를) 입력해주세요',
+          }}
         >
-          <Form.Item
-            name="pharmacyName"
-            label="약국명"
-            rules={[{ required: true, message: '약국명을 입력해주세요.' }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item name="bizRegNo" label="사업자등록번호">
-            <Input disabled />
-          </Form.Item>
-          <Form.Item
-            name="representativeName"
-            label="대표자명"
-            rules={[{ required: true, message: '대표자명을 입력해주세요.' }]}
-          >
-            <Input />
-          </Form.Item>
-          <AddressInput
-            postcodeName="postcode"
-            addressName="address"
-            detailAddressName="detailAddress"
-            regionName="region"
-            label="주소"
-          />
-          <Form.Item
-            name="contact"
-            label="연락처"
-            rules={[{ required: true, message: '연락처를 입력해주세요.' }]}
-            normalize={(value) => {
-              if (!value) return '';
-              return value.replace(/\D/g, '');
-            }}
-          >
-            <Input
-              maxLength={13}
-              onChange={(e) => {
-                const formattedValue = formatContact(e.target.value);
-                form.setFieldValue('contact', formattedValue);
+          <Flex vertical gap={4}>
+            <Form.Item name="pharmacyName" label="약국명" rules={[{ required: true }]}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="bizRegNo" label="사업자등록번호">
+              <Input disabled />
+            </Form.Item>
+            <Form.Item name="representativeName" label="대표자명" rules={[{ required: true }]}>
+              <Input />
+            </Form.Item>
+            <AddressInput />
+            <Form.Item
+              name="contact"
+              label="연락처"
+              rules={[{ required: true }]}
+              normalize={(value) => {
+                if (!value) return '';
+                return value.replace(/\D/g, ''); // 하이픈 제거 후 숫자만 저장
               }}
-              onKeyDown={handleNumberOnlyKeyDown}
-            />
-          </Form.Item>
+            >
+              <Input
+                maxLength={13}
+                onChange={(e) => {
+                  const formattedValue = formatContact(e.target.value);
+                  form.setFieldValue('contact', formattedValue);
+                }}
+                onKeyDown={handleNumberOnlyKeyDown}
+              />
+            </Form.Item>
 
-          <Flex justify="center">
-            <Button type="primary" htmlType="submit">
-              수정
-            </Button>
+            <Flex justify="center">
+              <Button type="primary" htmlType="submit">
+                수정
+              </Button>
+            </Flex>
           </Flex>
         </Form>
       </Card>
