@@ -1,15 +1,11 @@
-import {
-  CloseOutlined,
-  MedicineBoxOutlined,
-  MessageOutlined,
-  QuestionCircleOutlined,
-  RobotOutlined,
-} from '@ant-design/icons';
+import { CloseOutlined, MessageOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { Bubble, Sender } from '@ant-design/x';
 import { Button, Card, Flex, FloatButton, type GetProp } from 'antd';
 import DOMPurify from 'dompurify';
 import MarkdownIt from 'markdown-it';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { RiRobot3Fill } from 'react-icons/ri';
+import { TbPillFilled } from 'react-icons/tb';
 import { Rnd } from 'react-rnd';
 import { aiAPI } from '../api';
 import { useAuthStore } from '../stores/authStore';
@@ -21,7 +17,6 @@ import {
   type ChatType,
   type User,
 } from '../types';
-
 interface ChatbotProps {
   boundsRef: RefObject<HTMLDivElement | null>;
 }
@@ -42,12 +37,15 @@ const roles: GetProp<typeof Bubble.List, 'roles'> = {
   AI: {
     placement: 'start',
     shape: 'corner',
-    avatar: { icon: <RobotOutlined />, style: { color: '#1677ff', backgroundColor: '#e6f4ff' } },
+    avatar: {
+      icon: <RiRobot3Fill />,
+      style: { color: '#1677ff', backgroundColor: '#e6f4ff' },
+    },
     messageRender: renderMarkdown,
   },
 };
 
-export default function Chatbot({ boundsRef }: ChatbotProps) {
+export function Chatbot({ boundsRef }: ChatbotProps) {
   const user = useAuthStore((state) => state.user) as User;
 
   const [chatType, setChatType] = useState<ChatType>();
@@ -69,7 +67,7 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
       const parentHeight = boundsRef.current.clientHeight;
 
       setInitialPosition({
-        x: parentWidth - 360 - 48,
+        x: parentWidth - 380 - 72,
         y: parentHeight - 480,
       });
     }
@@ -193,7 +191,7 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
       <FloatButton.Group
         trigger="click"
         type="primary"
-        style={{ insetInlineEnd: '24px' }}
+        style={{ insetInlineEnd: 36 }}
         icon={<MessageOutlined />}
         tooltip={{ title: '도움이 필요하신가요?', placement: 'left' }}
       >
@@ -203,7 +201,7 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
           tooltip={{ title: '운영에 대해 궁금한 점을 물어보세요!', placement: 'left' }}
         />
         <FloatButton
-          icon={<MedicineBoxOutlined />}
+          icon={<TbPillFilled />}
           onClick={() => handleSelect(CHAT_TYPE.QNA)}
           tooltip={{ title: '의약품에 대해 궁금한 점을 물어보세요!', placement: 'left' }}
         />
@@ -213,8 +211,8 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
       {chatType && (
         <Rnd
           key={resizeKey}
-          default={{ x: initialPosition.x, y: initialPosition.y, width: 360, height: 480 }}
-          minWidth={320}
+          default={{ x: initialPosition.x, y: initialPosition.y, width: 380, height: 480 }}
+          minWidth={360}
           minHeight={400}
           bounds={boundsRef?.current ?? undefined}
         >
@@ -232,16 +230,20 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
             style={{
               width: '100%',
               height: '100%',
+              borderRadius: 12,
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '0px 9px 28px 0px rgba(0, 0, 0, 0.05)',
+              boxShadow: '0px 5px 12px 4px rgba(0, 0, 0, 0.09)',
             }}
             styles={{
+              header: {
+                borderBottom: 'none',
+              },
               body: {
                 display: 'flex',
                 flexDirection: 'column',
                 flex: 1,
-                padding: '16px',
+                padding: 8,
                 overflow: 'hidden',
               },
             }}
@@ -256,7 +258,7 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
                   loading: m.loading,
                   key: m.key,
                 }))}
-                style={{ flex: 'auto', paddingInline: '8px' }}
+                style={{ flex: 'auto', paddingInline: 8 }}
               />
 
               <Sender
@@ -275,7 +277,7 @@ export default function Chatbot({ boundsRef }: ChatbotProps) {
                 onSubmit={handleSend}
                 submitType="enter"
                 autoSize={{ maxRows: 4 }}
-                style={{ flex: 'none', marginTop: '8px' }}
+                style={{ flex: 'none', marginTop: 8 }}
               />
             </Flex>
           </Card>
