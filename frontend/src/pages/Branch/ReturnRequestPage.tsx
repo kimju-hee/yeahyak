@@ -8,6 +8,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Pagination,
   Select,
   Spin,
   Table,
@@ -94,7 +95,7 @@ export default function ReturnRequestPage() {
     try {
       const res = await returnAPI.getReturnsBranch({
         pharmacyId: pharmacyId,
-        status: statusFilter,
+        status: statusFilter || undefined,
         page: returnsCurrentPage - 1,
         size: PAGE_SIZE,
       });
@@ -288,26 +289,39 @@ export default function ReturnRequestPage() {
       title: '제품 이미지',
       dataIndex: 'productImgUrl',
       key: 'productImgUrl',
-      render: (url) => (
-        <img src={url || PLACEHOLDER} alt="제품 이미지" style={{ width: '60px', height: '60px' }} />
-      ),
+      render: (url) => <img src={url || PLACEHOLDER} alt="제품 이미지" style={{ width: '100%' }} />,
       align: 'center',
+      width: '15%',
     },
-    { title: '제품명', dataIndex: 'productName', key: 'productName', align: 'center' },
-    { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer', align: 'center' },
     {
-      title: '단가',
+      title: '제품명',
+      dataIndex: 'productName',
+      key: 'productName',
+      align: 'center',
+      width: '20%',
+    },
+    {
+      title: '제조사',
+      dataIndex: 'manufacturer',
+      key: 'manufacturer',
+      align: 'center',
+      width: '15%',
+    },
+    {
+      title: <div style={{ textAlign: 'center' }}>단가</div>,
       dataIndex: 'unitPrice',
-      render: (value) => `${value.toLocaleString()}원`,
-      align: 'center',
+      render: (value) => `${Number(value ?? 0).toLocaleString()}원`,
+      align: 'right',
+      width: '15%',
     },
-    { title: '수량', dataIndex: 'quantity', key: 'quantity', align: 'center' },
+    { title: '수량', dataIndex: 'quantity', key: 'quantity', align: 'center', width: '10%' },
     {
-      title: '소계',
+      title: <div style={{ textAlign: 'center' }}>소계</div>,
       dataIndex: 'subtotalPrice',
       key: 'subtotalPrice',
       render: (value) => `${value.toLocaleString()}원`,
-      align: 'center',
+      align: 'right',
+      width: '15%',
     },
     {
       key: 'actions',
@@ -316,32 +330,37 @@ export default function ReturnRequestPage() {
           삭제
         </Button>
       ),
+      align: 'center',
+      width: '10%',
     },
   ];
 
   // 반품내역 테이블
   const returnsColumns: TableProps<ReturnList>['columns'] = [
-    { title: '번호', dataIndex: 'returnId', key: 'returnId', align: 'center' },
+    { title: '번호', dataIndex: 'returnId', key: 'returnId', align: 'center', width: '10%' },
     {
       title: '일시',
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (value) => dayjs(value).format(DATE_FORMAT.DEFAULT),
       align: 'center',
+      width: '20%',
     },
     {
       title: '요약',
       dataIndex: 'summary',
       key: 'summary',
       align: 'center',
+      width: '20%',
     },
-    { title: '사유', dataIndex: 'reason', key: 'reason', align: 'center' },
+    { title: '사유', dataIndex: 'reason', key: 'reason', align: 'center', width: '20%' },
     {
-      title: '합계',
+      title: <div style={{ textAlign: 'center' }}>합계</div>,
       dataIndex: 'totalPrice',
       key: 'totalPrice',
       render: (value) => `${value.toLocaleString()}원`,
-      align: 'center',
+      align: 'right',
+      width: '15%',
     },
     {
       title: '상태',
@@ -354,6 +373,7 @@ export default function ReturnRequestPage() {
       })),
       filterMultiple: false,
       align: 'center',
+      width: '15%',
     },
   ];
 
@@ -369,22 +389,56 @@ export default function ReturnRequestPage() {
           bordered={true}
           dataSource={detail.items}
           columns={[
-            { title: '제품명', dataIndex: 'productName', key: 'productName' },
-            { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer' },
-            { title: '대분류', dataIndex: 'mainCategory', key: 'mainCategory' },
-            { title: '소분류', dataIndex: 'subCategory', key: 'subCategory' },
-            { title: '수량', dataIndex: 'quantity', key: 'quantity' },
             {
-              title: '단가',
+              title: '제품명',
+              dataIndex: 'productName',
+              key: 'productName',
+              align: 'center',
+              width: '20%',
+            },
+            {
+              title: '제조사',
+              dataIndex: 'manufacturer',
+              key: 'manufacturer',
+              align: 'center',
+              width: '15%',
+            },
+            {
+              title: '대분류',
+              dataIndex: 'mainCategory',
+              key: 'mainCategory',
+              align: 'center',
+              width: '15%',
+            },
+            {
+              title: '소분류',
+              dataIndex: 'subCategory',
+              key: 'subCategory',
+              align: 'center',
+              width: '15%',
+            },
+            {
+              title: '수량',
+              dataIndex: 'quantity',
+              key: 'quantity',
+              align: 'center',
+              width: '10%',
+            },
+            {
+              title: <div style={{ textAlign: 'center' }}>단가</div>,
               dataIndex: 'unitPrice',
               key: 'unitPrice',
               render: (value) => `${value.toLocaleString()}원`,
+              align: 'right',
+              width: '10%',
             },
             {
-              title: '소계',
+              title: <div style={{ textAlign: 'center' }}>소계</div>,
               dataIndex: 'subtotalPrice',
               key: 'subtotalPrice',
               render: (value) => `${value.toLocaleString()}원`,
+              align: 'right',
+              width: '15%',
             },
           ]}
           pagination={false}
@@ -394,15 +448,18 @@ export default function ReturnRequestPage() {
             <Table.Summary fixed>
               <Table.Summary.Row>
                 <Table.Summary.Cell index={0} colSpan={5} />
-                <Table.Summary.Cell index={1}>합계</Table.Summary.Cell>
-                <Table.Summary.Cell index={2}>
-                  {detail.totalPrice.toLocaleString()}원
+                <Table.Summary.Cell index={1} align="right">
+                  합계
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={2} align="right">
+                  {record.totalPrice.toLocaleString()}원
                 </Table.Summary.Cell>
               </Table.Summary.Row>
             </Table.Summary>
           )}
+          style={{ marginBottom: 8 }}
         />
-        <Typography.Text>
+        <Typography.Text type="secondary">
           최근 상태 업데이트:{' '}
           {detail.updatedAt
             ? dayjs(detail.updatedAt).format(DATE_FORMAT.DEFAULT)
@@ -415,34 +472,32 @@ export default function ReturnRequestPage() {
   return (
     <>
       {contextHolder}
-      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+      <Typography.Title level={3} style={{ marginBottom: 24 }}>
         반품 요청
       </Typography.Title>
 
       <Form form={form} layout="vertical" onFinish={handleAddItem}>
         <Flex vertical>
-          <Flex wrap>
-            <Form.Item
-              name="orderId"
-              label="주문번호"
-              rules={[{ required: true, message: '주문번호를 선택해주세요.' }]}
-              style={{ minWidth: '180px' }}
-            >
-              <Input
-                readOnly
-                onClick={() => setIsModalVisible(true)}
-                placeholder="주문번호 선택"
-                style={{ cursor: 'pointer' }}
-              />
-            </Form.Item>
-          </Flex>
+          <Form.Item
+            name="orderId"
+            label="주문번호"
+            rules={[{ required: true, message: '주문번호를 선택해주세요.' }]}
+            style={{ width: '15%' }}
+          >
+            <Input
+              readOnly
+              onClick={() => setIsModalVisible(true)}
+              placeholder="주문번호 선택"
+              style={{ cursor: 'pointer' }}
+            />
+          </Form.Item>
 
-          <Flex wrap gap={8} align="end">
+          <Flex wrap gap={8} align="end" style={{ width: '100%' }}>
             <Form.Item
               name="productId"
               label="제품명"
               rules={[{ required: true, message: '제품을 선택해주세요.' }]}
-              style={{ minWidth: '180px' }}
+              style={{ width: '20%' }}
             >
               <Select
                 placeholder="제품 선택"
@@ -480,7 +535,7 @@ export default function ReturnRequestPage() {
                   },
                 }),
               ]}
-              style={{ width: '180px' }}
+              style={{ width: '15%' }}
             >
               <InputNumber
                 min={1}
@@ -489,10 +544,10 @@ export default function ReturnRequestPage() {
                 placeholder={`주문 수량: ${maxQuantity}개`}
               />
             </Form.Item>
-            <Form.Item name="unit" label="단위" style={{ width: '180px' }}>
+            <Form.Item name="unit" label="단위" style={{ width: '15%' }}>
               <Input readOnly />
             </Form.Item>
-            <Form.Item name="unitPrice" label="단가" style={{ width: '180px' }}>
+            <Form.Item name="unitPrice" label="단가" style={{ width: '15%' }}>
               <Input readOnly suffix="원" />
             </Form.Item>
             <Form.Item>
@@ -504,80 +559,6 @@ export default function ReturnRequestPage() {
         </Flex>
       </Form>
 
-      <Modal
-        title="발주 내역 선택"
-        open={isModalVisible}
-        onCancel={() => {
-          setIsModalVisible(false);
-          setOrdersCurrentPage(1);
-        }}
-        footer={null}
-        width={'400px'}
-        centered
-      >
-        <Spin spinning={ordersLoading}>
-          {orders.length > 0 ? (
-            <>
-              {orders.map((order) => (
-                <Card
-                  hoverable
-                  key={order.orderId}
-                  onClick={() => {
-                    setSelectedOrder(order);
-                    fetchOrderDetail(order.orderId);
-                    clearCart();
-                    setIsModalVisible(false);
-                    form.setFieldsValue({
-                      orderId: order.orderId,
-                    });
-                  }}
-                >
-                  <Descriptions
-                    title={dayjs(order.createdAt).format(DATE_FORMAT.DATE)}
-                    column={1}
-                    size="small"
-                  >
-                    <Descriptions.Item label="주문번호">{order.orderId}</Descriptions.Item>
-                    <Descriptions.Item label="요약">{order.summary}</Descriptions.Item>
-                    <Descriptions.Item label="합계">
-                      {order.totalPrice.toLocaleString()}원
-                    </Descriptions.Item>
-                  </Descriptions>
-                </Card>
-              ))}
-              {ordersTotal > PAGE_SIZE && (
-                <Flex justify="space-between" style={{ marginTop: '8px' }}>
-                  <Button
-                    disabled={ordersCurrentPage <= 1}
-                    onClick={() => setOrdersCurrentPage((p) => Math.max(1, p - 1))}
-                  >
-                    이전
-                  </Button>
-                  <Typography.Text type="secondary">
-                    {ordersCurrentPage} / {Math.ceil(ordersTotal / PAGE_SIZE)} 페이지
-                  </Typography.Text>
-                  <Button
-                    disabled={ordersCurrentPage >= Math.ceil(ordersTotal / PAGE_SIZE)}
-                    onClick={() =>
-                      setOrdersCurrentPage((p) =>
-                        Math.min(Math.ceil(ordersTotal / PAGE_SIZE), p + 1),
-                      )
-                    }
-                  >
-                    다음
-                  </Button>
-                </Flex>
-              )}
-            </>
-          ) : (
-            <Typography.Text>발주 내역이 없습니다.</Typography.Text>
-          )}
-        </Spin>
-      </Modal>
-
-      <Typography.Title level={4} style={{ marginBottom: '16px' }}>
-        상세 내역
-      </Typography.Title>
       <Table
         columns={cartColumns}
         dataSource={items.map((item) => ({
@@ -589,13 +570,18 @@ export default function ReturnRequestPage() {
         summary={() => (
           <Table.Summary fixed>
             <Table.Summary.Row>
-              <Table.Summary.Cell index={0} colSpan={5} />
-              <Table.Summary.Cell index={1}>합계</Table.Summary.Cell>
-              <Table.Summary.Cell index={2}>{totalPrice.toLocaleString()}원</Table.Summary.Cell>
+              <Table.Summary.Cell index={0} colSpan={4} />
+              <Table.Summary.Cell index={1} align="center">
+                합계
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={2} align="center">
+                {totalPrice.toLocaleString()}원
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={3} />
             </Table.Summary.Row>
           </Table.Summary>
         )}
-        style={{ marginBottom: '16px' }}
+        style={{ marginBottom: 16 }}
       />
       <Form form={returnForm} onFinish={handleSubmit}>
         <Flex wrap gap={8} align="start">
@@ -625,9 +611,10 @@ export default function ReturnRequestPage() {
 
       <Divider />
 
-      <Typography.Title level={4} style={{ marginBottom: '24px' }}>
+      <Typography.Title level={3} style={{ marginBottom: 24 }}>
         반품 내역
       </Typography.Title>
+
       <Table
         columns={returnsColumns}
         dataSource={returns}
@@ -647,9 +634,66 @@ export default function ReturnRequestPage() {
           onExpand: handleExpand,
           expandedRowKeys,
           expandRowByClick: true,
-          expandIcon: () => null,
         }}
       />
+
+      <Modal
+        title="발주 내역 선택"
+        open={isModalVisible}
+        onCancel={() => {
+          setIsModalVisible(false);
+          setOrdersCurrentPage(1);
+        }}
+        footer={null}
+        width={480}
+      >
+        <Spin spinning={ordersLoading}>
+          {orders.length > 0 ? (
+            <>
+              {orders.map((order) => (
+                <Card
+                  hoverable
+                  key={order.orderId}
+                  onClick={() => {
+                    setSelectedOrder(order);
+                    fetchOrderDetail(order.orderId);
+                    clearCart();
+                    setIsModalVisible(false);
+                    form.setFieldsValue({
+                      orderId: order.orderId,
+                    });
+                  }}
+                >
+                  <Descriptions
+                    title={dayjs(order.createdAt).format(DATE_FORMAT.KR_DATE)}
+                    column={1}
+                    size="small"
+                  >
+                    <Descriptions.Item label="번호">{order.orderId}</Descriptions.Item>
+                    <Descriptions.Item label="요약">{order.summary}</Descriptions.Item>
+                    <Descriptions.Item label="합계">
+                      {order.totalPrice.toLocaleString()}원
+                    </Descriptions.Item>
+                  </Descriptions>
+                </Card>
+              ))}
+              {ordersTotal > PAGE_SIZE && (
+                <Flex justify="center" style={{ marginTop: 8 }}>
+                  <Pagination
+                    simple
+                    current={ordersCurrentPage}
+                    total={ordersTotal}
+                    pageSize={PAGE_SIZE}
+                    onChange={(page) => setOrdersCurrentPage(page)}
+                  />
+                </Flex>
+              )}
+            </>
+          ) : (
+            <Typography.Text>발주 내역이 없습니다.</Typography.Text>
+          )}
+        </Spin>
+      </Modal>
     </>
   );
 }
