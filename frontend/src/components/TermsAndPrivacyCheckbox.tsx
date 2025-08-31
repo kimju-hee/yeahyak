@@ -60,7 +60,7 @@ export function TermsAndPrivacyCheckbox() {
         footer={null}
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
-        width={640}
+        width={800}
         styles={{
           body: {
             maxHeight: '70vh',

@@ -46,22 +46,29 @@ export function AddressInput() {
       <Flex vertical gap={8}>
         <Flex gap={8}>
           <Form.Item
-            name="우편번호"
+            name="postcode"
+            label="우편번호"
             rules={[{ required: true }]}
             validateTrigger="onSubmit"
             noStyle
           >
             <Input readOnly placeholder="우편번호" style={{ cursor: 'default' }} />
           </Form.Item>
-          <Form.Item name="지역" noStyle>
+          <Form.Item name="region" label="지역" noStyle>
             <Input readOnly placeholder="지역" style={{ cursor: 'default' }} />
           </Form.Item>
           <Button onClick={handleSearchAddress}>주소 검색</Button>
         </Flex>
-        <Form.Item name="기본 주소" rules={[{ required: true }]} validateTrigger="onSubmit" noStyle>
+        <Form.Item
+          name="address"
+          label="기본 주소"
+          rules={[{ required: true }]}
+          validateTrigger="onSubmit"
+          noStyle
+        >
           <Input readOnly placeholder="기본 주소" style={{ cursor: 'default' }} />
         </Form.Item>
-        <Form.Item name="상세 주소" noStyle>
+        <Form.Item name="detailAddress" label="상세 주소" noStyle>
           <Input placeholder="(선택) 상세 주소" />
         </Form.Item>
       </Flex>

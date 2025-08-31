@@ -11,18 +11,20 @@ interface LoginFormProps {
 
 export function LoginForm({ form, role, handleSubmit }: LoginFormProps) {
   return (
-    <Form
-      form={form}
-      name="login"
-      onFinish={handleSubmit}
-      size="large"
-      validateMessages={{ required: '${label}을(를) 입력해주세요' }}
-    >
+    <Form form={form} name="login" onFinish={handleSubmit} size="large">
       <Flex vertical justify="center" gap={8}>
-        <Form.Item name="이메일" rules={[{ required: true }]} validateTrigger="onSubmit">
+        <Form.Item
+          name="email"
+          rules={[{ required: true, message: '이메일을 입력해주세요' }]}
+          validateTrigger="onSubmit"
+        >
           <Input prefix={<UserOutlined style={{ margin: '0 8px' }} />} placeholder="이메일" />
         </Form.Item>
-        <Form.Item name="비밀번호" rules={[{ required: true }]} validateTrigger="onSubmit">
+        <Form.Item
+          name="password"
+          rules={[{ required: true, message: '비밀번호를 입력해주세요' }]}
+          validateTrigger="onSubmit"
+        >
           <Input
             prefix={<LockOutlined style={{ margin: '0 8px' }} />}
             type="password"
