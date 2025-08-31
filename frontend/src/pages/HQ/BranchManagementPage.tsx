@@ -1,7 +1,11 @@
 import {
   Button,
+  Cascader,
   Descriptions,
   Flex,
+  Form,
+  Input,
+  Select,
   Space,
   Spin,
   Table,
@@ -11,19 +15,26 @@ import {
   type TableProps,
 } from 'antd';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { pharmacyRequestAPI } from '../../api';
-import { SearchBox } from '../../components/SearchBox';
 import {
   DATE_FORMAT,
   PAGE_SIZE,
   PHARMACY_REQUEST_STATUS_COLORS,
+  PHARMACY_REQUEST_STATUS_OPTIONS,
   PHARMACY_REQUEST_STATUS_TEXT,
+  REGION_CASCADER_OPTIONS,
 } from '../../constants';
+import {
+  useApprovePharmacyRequest,
+  usePharmacyRequests,
+  useRejectPharmacyRequest,
+} from '../../hooks';
 import type {
   PharmacyRequestDetail,
   PharmacyRequestList,
   PharmacyRequestStatus,
+  Region,
 } from '../../types';
 
 const getStatusTag = (status: PharmacyRequestStatus) => {
@@ -38,51 +49,36 @@ const getStatusTag = (status: PharmacyRequestStatus) => {
 
 export default function BranchManagementPage() {
   const [messageApi, contextHolder] = message.useMessage();
-
-  const [requests, setRequests] = useState<PharmacyRequestList[]>([]);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [total, setTotal] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [form] = Form.useForm();
 
   const [expandedRowData, setExpandedRowData] = useState<Record<number, PharmacyRequestDetail>>({});
   const [expandedRowLoading, setExpandedRowLoading] = useState<Record<number, boolean>>({});
   const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
-
-  const [search, setSearch] = useState({
-    field: 'pharmacyName',
-    keyword: undefined as string | undefined,
-    appliedField: 'pharmacyName',
-    appliedKeyword: undefined as string | undefined,
+  const [filters, setFilters] = useState({
+    status: undefined as PharmacyRequestStatus | undefined,
+    region: undefined as Region | undefined,
+    pharmacyName: undefined as string | undefined,
   });
 
-  const fetchRequests = async () => {
-    setLoading(true);
-    try {
-      const res = await pharmacyRequestAPI.getPharmacyRequests({
-        //  status: status,
-        //  region: region,
-        keyword: search.appliedKeyword || undefined,
-        page: currentPage - 1,
-        size: PAGE_SIZE,
-      });
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
-      if (res.success) {
-        const { data, page } = res;
-        setRequests(data);
-        setTotal(page.totalElements);
-      }
-    } catch (e: any) {
-      console.error('약국 등록 요청 목록 로딩 실패:', e);
-      messageApi.error(
-        e.response?.data?.message || '약국 등록 요청 목록 로딩 중 오류가 발생했습니다.',
-      );
-      setRequests([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // TanStack Query로 약국 등록 요청 목록 조회
+  const { data: requestsResponse, isLoading: loading } = usePharmacyRequests({
+    status: filters.status,
+    region: filters.region,
+    keyword: filters.pharmacyName,
+    page: currentPage - 1,
+    size: PAGE_SIZE,
+  });
 
+  const requests = requestsResponse?.data || [];
+  const total = requestsResponse?.page?.totalElements || 0;
+
+  // Mutations
+  const approveMutation = useApprovePharmacyRequest();
+  const rejectMutation = useRejectPharmacyRequest();
+
+  // 상세 조회 (확장된 행용)
   const fetchRequestDetail = async (pharmacyRequestId: number) => {
     setExpandedRowLoading((prev) => ({ ...prev, [pharmacyRequestId]: true }));
     try {
@@ -101,30 +97,30 @@ export default function BranchManagementPage() {
     }
   };
 
-  useEffect(() => {
-    fetchRequests();
-  }, [currentPage, search.appliedKeyword, search.appliedField]);
-
-  const handleApprove = async (pharmacyId: number) => {
-    try {
-      await pharmacyRequestAPI.approve(pharmacyId);
-      messageApi.success('요청이 승인 처리되었습니다.');
-      fetchRequests();
-    } catch (e: any) {
-      console.error('요청 승인 처리 실패:', e);
-      messageApi.error(e.response?.data?.message || '요청 승인 처리 중 오류가 발생했습니다.');
-    }
+  const handleSearch = () => {
+    const formValues = form.getFieldsValue();
+    setFilters({
+      region: Array.isArray(formValues.region)
+        ? formValues.region[formValues.region.length - 1]
+        : formValues.region,
+      status: formValues.status,
+      pharmacyName: formValues.pharmacyName,
+    });
+    setCurrentPage(1);
   };
 
-  const handleReject = async (pharmacyId: number) => {
-    try {
-      await pharmacyRequestAPI.reject(pharmacyId);
-      messageApi.success('요청이 거절 처리되었습니다.');
-      fetchRequests();
-    } catch (e: any) {
-      console.error('요청 거절 처리 실패:', e);
-      messageApi.error(e.response?.data?.message || '요청 거절 처리 중 오류가 발생했습니다.');
-    }
+  const handleReset = () => {
+    form.resetFields();
+    setFilters({ region: undefined, status: undefined, pharmacyName: undefined });
+    setCurrentPage(1);
+  };
+
+  const handleApprove = (pharmacyId: number) => {
+    approveMutation.mutate(pharmacyId);
+  };
+
+  const handleReject = (pharmacyId: number) => {
+    rejectMutation.mutate(pharmacyId);
   };
 
   const handleExpand = (expanded: boolean, record: PharmacyRequestList) => {
@@ -199,6 +195,7 @@ export default function BranchManagementPage() {
                   <Button
                     type="primary"
                     size="small"
+                    loading={approveMutation.isPending}
                     onClick={() => handleApprove(record.pharmacyRequestId)}
                   >
                     승인
@@ -206,6 +203,7 @@ export default function BranchManagementPage() {
                   <Button
                     danger
                     size="small"
+                    loading={rejectMutation.isPending}
                     onClick={() => handleReject(record.pharmacyRequestId)}
                   >
                     거절
@@ -222,24 +220,38 @@ export default function BranchManagementPage() {
   return (
     <>
       {contextHolder}
-      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+      <Typography.Title level={3} style={{ marginBottom: 24 }}>
         가맹점 관리
       </Typography.Title>
 
-      <SearchBox
-        searchField={search.field}
-        searchOptions={[{ value: 'pharmacyName', label: '약국명' }]}
-        searchKeyword={search.keyword || ''}
-        onSearchKeywordChange={(value) => setSearch((prev) => ({ ...prev, keyword: value }))}
-        onSearch={() => {
-          setSearch((prev) => ({
-            ...prev,
-            appliedField: prev.field,
-            appliedKeyword: prev.keyword,
-          }));
-          setCurrentPage(1);
-        }}
-      />
+      <Form layout="vertical" form={form} onFinish={handleSearch}>
+        <Space wrap align="end">
+          <Form.Item label="지역" name="region">
+            <Cascader options={REGION_CASCADER_OPTIONS} placeholder="지역 선택" />
+          </Form.Item>
+          <Form.Item label="상태" name="status">
+            <Select
+              allowClear
+              options={[...PHARMACY_REQUEST_STATUS_OPTIONS]}
+              placeholder="상태 선택"
+            />
+          </Form.Item>
+          <Form.Item label="약국명" name="pharmacyName">
+            <Input placeholder="약국명 검색" allowClear style={{ width: 200 }} />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit">
+              조회
+            </Button>
+          </Form.Item>
+          <Form.Item>
+            <Button type="default" onClick={handleReset}>
+              초기화
+            </Button>
+          </Form.Item>
+        </Space>
+      </Form>
+
       <Table
         columns={tableColumns}
         dataSource={requests}
@@ -258,9 +270,8 @@ export default function BranchManagementPage() {
           onExpand: handleExpand,
           expandedRowKeys,
           expandRowByClick: true,
-          expandIcon: () => null,
         }}
-        style={{ marginTop: '24px' }}
+        style={{ marginTop: 24 }}
       />
     </>
   );
