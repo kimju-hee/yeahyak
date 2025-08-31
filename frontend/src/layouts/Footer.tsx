@@ -36,18 +36,18 @@ export default function Footer({ color = '#ffffff' }: FooterProps) {
         borderTop: 'none',
       }}
     >
-      <Typography.Text style={{ color }}>© 2025 Team yeahyak</Typography.Text>
+      <Typography.Text style={{ color, fontSize: 14 }}>© 2025 Team yeahyak</Typography.Text>
       <Divider type="vertical" style={{ borderColor: color }} />
       <Typography.Link
         onClick={() => openHtmlInNewWindow(termsHtml)}
-        style={{ color, fontSize: 12 }}
+        style={{ color, fontSize: 14 }}
       >
         이용약관
       </Typography.Link>
       <Divider type="vertical" style={{ borderColor: color }} />
       <Typography.Link
         onClick={() => openHtmlInNewWindow(privacyHtml)}
-        style={{ color, fontSize: 12 }}
+        style={{ color, fontSize: 14 }}
       >
         개인정보처리방침
       </Typography.Link>

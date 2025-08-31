@@ -1,70 +1,85 @@
 import {
   ApartmentOutlined,
+  BarcodeOutlined,
   BellOutlined,
   EditOutlined,
   KeyOutlined,
   LogoutOutlined,
-  MinusSquareFilled,
-  NotificationFilled,
-  PlusSquareFilled,
-  ProductFilled,
-  TagsFilled,
+  MinusSquareOutlined,
+  MoneyCollectOutlined,
+  NotificationOutlined,
+  PlusSquareOutlined,
+  ProductOutlined,
+  SafetyCertificateOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Dropdown, Flex, Layout, Menu, Typography } from 'antd';
-import { useRef } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Dropdown, Flex, Layout, Menu, Typography, type MenuProps } from 'antd';
+import { useRef, useState } from 'react';
+import { Link, Outlet } from 'react-router-dom';
 import { logo } from '../assets';
-import Chatbot from '../components/Chatbot';
+import { Chatbot } from '../components';
 import { useAuthStore } from '../stores/authStore';
 import { USER_ROLE, type Admin, type User } from '../types';
 import Footer from './Footer';
 const { Sider, Header, Content } = Layout;
 
 // 사이드 메뉴 아이템
-const siderMenuItems = [
+const siderMenuItems: MenuProps['items'] = [
   {
     key: 'notices',
     label: <Link to="/hq/notices">공지사항</Link>,
-    icon: <NotificationFilled />,
+    icon: <NotificationOutlined />,
   },
   {
     key: 'branches',
-    label: <Link to="/hq/branches">가맹점 관리</Link>,
+    label: '가맹점 관리',
     icon: <ApartmentOutlined />,
+    children: [
+      {
+        key: 'requests',
+        label: <Link to="/hq/branches">등록 요청 관리</Link>,
+        icon: <SafetyCertificateOutlined />,
+      },
+      {
+        key: 'credits',
+        label: <Link to="/hq/credits">정산 관리</Link>,
+        icon: <MoneyCollectOutlined />,
+      },
+    ],
   },
-  // {
-  //   key: 'credits',
-  //   label: <Link to="/hq/credits">정산 관리</Link>,
-  //   icon: <MoneyCollectOutlined />,
-  // },
   {
     key: 'orders',
     label: <Link to="/hq/orders">발주 요청 관리</Link>,
-    icon: <PlusSquareFilled />,
+    icon: <PlusSquareOutlined />,
   },
   {
     key: 'returns',
     label: <Link to="/hq/returns">반품 요청 관리</Link>,
-    icon: <MinusSquareFilled />,
+    icon: <MinusSquareOutlined />,
   },
   {
     key: 'products',
     label: <Link to="/hq/products">제품 목록</Link>,
-    icon: <TagsFilled />,
+    icon: <ProductOutlined />,
   },
   {
     key: 'stock',
     label: <Link to="/hq/stock">재고 관리</Link>,
-    icon: <ProductFilled />,
+    icon: <BarcodeOutlined />,
   },
 ];
 
 export default function HqLayout() {
-  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+
   const user = useAuthStore((state) => state.user) as User;
   const profile = useAuthStore((state) => state.profile);
   const admin = user.role === USER_ROLE.ADMIN ? (profile as Admin) : null;
+
+  const handleLogoClick = () => {
+    setSelectedKeys([]); // 로고 클릭 시 선택 해제
+  };
 
   // 아바타 메뉴 아이템
   const avatarMenuItems = {
@@ -88,21 +103,6 @@ export default function HqLayout() {
     ],
   };
 
-  const getSelectedKeys = () => {
-    const path = location.pathname;
-    for (let item of siderMenuItems) {
-      if (item.label && item.label.props && item.label.props.to) {
-        const itemPath = item.label.props.to;
-        if (path === itemPath || path.startsWith(`${itemPath}/`)) {
-          return [item.key];
-        }
-      }
-    }
-    return [];
-  };
-
-  const selectedKeys = getSelectedKeys();
-
   const contentRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -110,6 +110,7 @@ export default function HqLayout() {
       <Header
         style={{
           position: 'sticky',
+          top: 0,
           zIndex: 1,
           display: 'flex',
           flexDirection: 'row',
@@ -117,57 +118,66 @@ export default function HqLayout() {
           justifyContent: 'space-between',
         }}
       >
-        <Link to="/hq">
-          <img src={logo} alt="로고" style={{ height: '32px' }} />
+        <Link to="/hq" onClick={handleLogoClick}>
+          <img src={logo} alt="로고" style={{ height: 28, marginLeft: 18 }} />
         </Link>
-        <Flex align="center" gap={'24px'}>
+        <Flex align="center" gap={24}>
           <Typography.Text style={{ color: '#ffffff' }}>
             {admin?.adminName.slice(0, -1) + '*'}
           </Typography.Text>
-          <BellOutlined style={{ fontSize: '24px', color: '#ffffff' }} />
+          <BellOutlined style={{ fontSize: 24, color: '#ffffff' }} />
           <Dropdown
             trigger={['click']}
             menu={avatarMenuItems}
             placement="bottomRight"
             arrow={{ pointAtCenter: true }}
           >
-            <UserOutlined style={{ fontSize: '24px', color: '#ffffff' }} />
+            <UserOutlined style={{ fontSize: 24, color: '#ffffff' }} />
           </Dropdown>
         </Flex>
       </Header>
+
       <Layout>
         <Sider
+          collapsible
+          collapsed={collapsed}
+          onCollapse={(value) => setCollapsed(value)}
           style={{
+            height: 'calc(100vh - 64px)',
             position: 'sticky',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
+            top: 64,
           }}
+          width={232}
         >
           <Menu
             theme="dark"
-            style={{ width: '100%' }}
+            mode="inline"
             items={siderMenuItems}
             selectedKeys={selectedKeys}
-          ></Menu>
+            onSelect={({ selectedKeys }) => setSelectedKeys(selectedKeys)}
+          />
         </Sider>
         <Layout>
-          <div
-            ref={contentRef}
-            style={{
-              position: 'relative',
-              flex: 1,
-              minHeight: 0,
-              padding: '24px',
-              margin: '24px',
-            }}
-          >
-            <Content>
-              <Outlet />
-            </Content>
-            <Chatbot boundsRef={contentRef} />
-          </div>
-          <Footer color="#262626" />
+          <Layout>
+            <div
+              ref={contentRef}
+              style={{
+                position: 'relative',
+                flex: 1,
+                minHeight: 0,
+                padding: 24,
+                margin: 24,
+              }}
+            >
+              <Content>
+                <Outlet />
+              </Content>
+
+              <Chatbot boundsRef={contentRef} />
+            </div>
+
+            <Footer color="#262626" />
+          </Layout>
         </Layout>
       </Layout>
     </Layout>
