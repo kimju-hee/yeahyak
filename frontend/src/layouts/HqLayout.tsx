@@ -1,5 +1,6 @@
 import {
   ApartmentOutlined,
+  BarcodeOutlined,
   BellOutlined,
   EditOutlined,
   KeyOutlined,
@@ -61,11 +62,11 @@ const siderMenuItems: MenuProps['items'] = [
     label: <Link to="/hq/products">제품 목록</Link>,
     icon: <ProductOutlined />,
   },
-  // {
-  //   key: 'inventory',
-  //   label: <Link to="/hq/inventory">재고 관리</Link>,
-  //   icon: <BarcodeOutlined />,
-  // },
+  {
+    key: 'inventory',
+    label: <Link to="/hq/inventory">재고 관리</Link>,
+    icon: <BarcodeOutlined />,
+  },
 ];
 
 export default function HqLayout() {

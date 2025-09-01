@@ -25,6 +25,7 @@ import BranchManagementPage from './pages/HQ/BranchManagementPage';
 import CreditManagementPage from './pages/HQ/CreditManagementPage';
 import HqDashboardPage from './pages/HQ/HqDashboardPage';
 import HqProfileEditPage from './pages/HQ/HqProfileEditPage';
+import InventoryPage from './pages/HQ/InventoryPage';
 import NoticeEditPage from './pages/HQ/NoticeEditPage';
 import NoticeRegisterPage from './pages/HQ/NoticeRegisterPage';
 import OrderManagementPage from './pages/HQ/OrderManagementPage';
@@ -126,7 +127,7 @@ export default function App() {
           <Route path="products/:id" element={<ProductDetailPage />} />
           <Route path="products/new" element={<ProductRegisterPage />} />
           <Route path="products/:id/edit" element={<ProductEditPage />} />
-          {/* <Route path="inventory" element={<HqInventoryPage />} /> */}
+          <Route path="inventory" element={<InventoryPage />} />
         </Route>
       </Routes>
     </ConfigProvider>
