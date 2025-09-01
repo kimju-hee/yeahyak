@@ -20,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -48,7 +49,7 @@ public class NoticeController {
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ApiResponse<NoticeCreateResponse>> createNotice(
       @RequestPart(value = "notice") @Valid NoticeCreateRequest req,
-      @RequestPart(value = "files", required = false) MultipartFile file
+      @RequestPart(value = "file", required = false) MultipartFile file
   ) {
     NoticeCreateResponse res = noticeService.createNotice(req, file);
     URI location = URI.create("/api/notices/" + res.getNoticeId());
@@ -94,9 +95,23 @@ public class NoticeController {
    */
   @GetMapping("/{noticeId}")
   public ResponseEntity<ApiResponse<NoticeDetailResponse>> getDetail(
-      @PathVariable Long noticeId
+      @PathVariable Long noticeId,
+      Authentication authentication
   ) {
-    NoticeDetailResponse detail = noticeService.getNoticeById(noticeId);
+    NoticeDetailResponse detail;
+
+    // 인증 정보에서 역할 확인
+    boolean isAdmin = authentication.getAuthorities().stream()
+        .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+    if (isAdmin) {
+      // 관리자는 조회수 증가 없이 조회
+      detail = noticeService.getNoticeById(noticeId);
+    } else {
+      // 일반 사용자(약국)는 조회수 증가하여 조회
+      detail = noticeService.getNoticeByIdAndIncrease(noticeId);
+    }
+
     return ResponseEntity.ok(ApiResponse.ok(detail)); // 200 OK
   }
 

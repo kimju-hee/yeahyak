@@ -19,12 +19,20 @@ public class ApiResponse<T> {
 
   private boolean success;
   private T data;
+  private String message;
   private PageInfo page;
 
   public static <T> ApiResponse<T> ok(T data) {
     return ApiResponse.<T>builder()
         .success(true)
         .data(data)
+        .build();
+  }
+
+  public static ApiResponse<String> error(String message) {
+    return ApiResponse.<String>builder()
+        .success(false)
+        .message(message)
         .build();
   }
 

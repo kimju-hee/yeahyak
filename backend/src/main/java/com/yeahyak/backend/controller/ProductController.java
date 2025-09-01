@@ -73,7 +73,7 @@ public class ProductController {
       @RequestParam MainCategory mainCategory,
       @RequestParam(required = false) SubCategory subCategory,
       @RequestParam(required = false) String keyword,
-      @RequestParam(defaultValue = "100") int threshold,
+      @RequestParam(required = false) Integer threshold,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size
   ) {

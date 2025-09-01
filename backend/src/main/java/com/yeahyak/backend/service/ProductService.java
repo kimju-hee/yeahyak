@@ -62,7 +62,7 @@ public class ProductService {
    */
   @Transactional(readOnly = true)
   public Page<ProductListResponse> getProducts(
-      MainCategory mainCategory, SubCategory subCategory, String keyword, int threshold,
+      MainCategory mainCategory, SubCategory subCategory, String keyword, Integer threshold,
       int page, int size
   ) {
     Pageable pageable = PageRequest.of(page, size);

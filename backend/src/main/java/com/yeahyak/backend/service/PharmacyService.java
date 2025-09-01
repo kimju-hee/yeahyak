@@ -6,10 +6,9 @@ import com.yeahyak.backend.entity.enums.BalanceTxType;
 import com.yeahyak.backend.entity.enums.Region;
 import com.yeahyak.backend.repository.PharmacyRepository;
 import java.time.LocalDateTime;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -33,14 +32,15 @@ public class PharmacyService {
     );
 
     List<Long> pharmacyIds = pharmacies.stream().map(Pharmacy::getPharmacyId).toList();
-    final Map<Long, LocalDateTime> latestSettlementMap = pharmacyIds.isEmpty()
-        ? Collections.emptyMap()
-        : pharmacyRepository.findLatestSettlementDatesByPharmacyIds(
-            pharmacyIds, BalanceTxType.SETTLEMENT
-        ).stream().collect(Collectors.toMap(
-            PharmacyRepository.PharmacyLatestSettlementProjection::getPharmacyId,
-            PharmacyRepository.PharmacyLatestSettlementProjection::getLatestSettlementAt
-        ));
+    final Map<Long, LocalDateTime> latestSettlementMap = new HashMap<>();
+    if (!pharmacyIds.isEmpty()) {
+      List<PharmacyRepository.PharmacyLatestSettlementProjection> projections =
+          pharmacyRepository.findLatestSettlementDatesByPharmacyIds(pharmacyIds,
+              BalanceTxType.SETTLEMENT);
+      for (PharmacyRepository.PharmacyLatestSettlementProjection projection : projections) {
+        latestSettlementMap.put(projection.getPharmacyId(), projection.getLatestSettlementAt());
+      }
+    }
 
     return pharmacies.map(pharmacy -> PharmacyListResponse.builder()
         .pharmacyId(pharmacy.getPharmacyId())

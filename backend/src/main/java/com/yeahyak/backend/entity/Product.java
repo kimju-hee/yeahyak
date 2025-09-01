@@ -60,9 +60,8 @@ public class Product {
   @Column(name = "unit_price", nullable = false, precision = 10, scale = 2)
   private BigDecimal unitPrice;
 
-  @Lob
-  @Column(columnDefinition = "TEXT")
-  private String details;
+  @Column(length = 5000)
+  private String details; // TEXT → VARCHAR 수정
 
   @Lob
   @Column(name = "product_img_url", columnDefinition = "LONGTEXT")

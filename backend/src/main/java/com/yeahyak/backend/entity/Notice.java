@@ -8,7 +8,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
@@ -43,8 +42,7 @@ public class Notice {
   @Column(nullable = false, length = 100)
   private String title;
 
-  @Lob
-  @Column(nullable = false, columnDefinition = "TEXT")
+  @Column(nullable = false, length = 5000) // TEXT → VARCHAR 수정
   private String content;
 
   @Column(name = "blob_key", length = 512)
@@ -52,7 +50,7 @@ public class Notice {
 
   @Column(name = "file_name", length = 255)
   private String fileName;
-  
+
   @CreationTimestamp // 생성 시각 자동 저장
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
