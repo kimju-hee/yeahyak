@@ -22,9 +22,10 @@ import NoticeListPage from './pages/Common/Notice/NoticeListPage';
 import ProductDetailPage from './pages/Common/Product/ProductDetailPage';
 import ProductListPage from './pages/Common/Product/ProductListPage';
 import BranchManagementPage from './pages/HQ/BranchManagementPage';
+import CreditManagementPage from './pages/HQ/CreditManagementPage';
 import HqDashboardPage from './pages/HQ/HqDashboardPage';
 import HqProfileEditPage from './pages/HQ/HqProfileEditPage';
-import HqStockPage from './pages/HQ/HqStockPage';
+import NoticeEditPage from './pages/HQ/NoticeEditPage';
 import NoticeRegisterPage from './pages/HQ/NoticeRegisterPage';
 import OrderManagementPage from './pages/HQ/OrderManagementPage';
 import ProductEditPage from './pages/HQ/ProductEditPage';
@@ -40,19 +41,40 @@ export default function App() {
           fontSizeHeading1: 36, // 기본보다 작게
           fontSizeHeading2: 30, // 기본
           fontSizeHeading3: 26, // 기본보다 크게
+          fontSizeHeading4: 24, // 기본보다 크게
         },
         components: {
-          Menu: {
-            itemHeight: 38, // 메뉴 아이템 높이 (default 40)
-            itemMarginBlock: 24, // 메뉴 아이템 margin-block (default 4)
-            itemMarginInline: 4, // 메뉴 아이템 수평 margin (default 4)
-            itemPaddingInline: 16, // 메뉴 아이템 padding-inline (default 16)
-          },
           Layout: {
-            headerPadding: '0 48px', // 헤더 padding (default 0 50px)
+            headerPadding: '0 36px', // 헤더 padding (default 0 50px)
+          },
+          Menu: {
+            itemHeight: 48,
+            itemBorderRadius: 16, // 메뉴 아이템 모서리 둥글게
           },
           Dropdown: {
             paddingBlock: 8, // 드롭다운 수직 padding (default 5)
+          },
+          Input: {
+            inputFontSize: 16,
+            inputFontSizeLG: 18,
+            inputFontSizeSM: 14,
+          },
+          InputNumber: {
+            inputFontSize: 16,
+            inputFontSizeLG: 18,
+            inputFontSizeSM: 14,
+          },
+          Select: {
+            optionFontSize: 16,
+          },
+          Button: {
+            contentFontSize: 16,
+            contentFontSizeLG: 18,
+            contentFontSizeSM: 14,
+          },
+          Result: {
+            titleFontSize: 30,
+            subtitleFontSize: 18,
           },
         },
       }}
@@ -95,16 +117,16 @@ export default function App() {
           <Route path="notices" element={<NoticeListPage />} />
           <Route path="notices/:id" element={<NoticeDetailPage />} />
           <Route path="notices/new" element={<NoticeRegisterPage />} />
-          {/* <Route path="notices/:id/edit" element={<NoticeEditPage />} /> */}
+          <Route path="notices/:id/edit" element={<NoticeEditPage />} />
           <Route path="branches" element={<BranchManagementPage />} />
-          {/* <Route path="credits" element={<CreditManagementPage />} /> */}
+          <Route path="credits" element={<CreditManagementPage />} />
           <Route path="orders" element={<OrderManagementPage />} />
           <Route path="returns" element={<ReturnManagementPage />} />
           <Route path="products" element={<ProductListPage />} />
           <Route path="products/:id" element={<ProductDetailPage />} />
           <Route path="products/new" element={<ProductRegisterPage />} />
           <Route path="products/:id/edit" element={<ProductEditPage />} />
-          <Route path="stock" element={<HqStockPage />} />
+          {/* <Route path="inventory" element={<HqInventoryPage />} /> */}
         </Route>
       </Routes>
     </ConfigProvider>
