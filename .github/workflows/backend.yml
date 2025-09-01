@@ -88,7 +88,7 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           script_stop: true
-          envs: TZ,SPRING_PROFILES_ACTIVE,SERVER_PORT,AI_SERVICE_URL,DB_URL,DB_USERNAME,DB_PASSWORD,BLOB_ENDPOINT,BLOB_CONTAINER,BLOB_CONN_STR
+          envs: TZ,SPRING_PROFILES_ACTIVE,SERVER_PORT,AI_SERVICE_URL,DB_URL,DB_USERNAME,DB_PASSWORD,BLOB_ENDPOINT,BLOB_CONTAINER,BLOB_CONN_STR,JWT_SECRET
           script: |
             set -eu
 
@@ -99,7 +99,7 @@ jobs:
             HOST_IP="127.0.0.1"
             PORT="8080"
 
-            for v in TZ SPRING_PROFILES_ACTIVE SERVER_PORT AI_SERVICE_URL DB_URL DB_USERNAME DB_PASSWORD BLOB_ENDPOINT BLOB_CONTAINER BLOB_CONN_STR; do
+            for v in TZ SPRING_PROFILES_ACTIVE SERVER_PORT AI_SERVICE_URL DB_URL DB_USERNAME DB_PASSWORD BLOB_ENDPOINT BLOB_CONTAINER BLOB_CONN_STR JWT_SECRET; do
               eval "val=\${$v-}"
               [ -n "$val" ] || { echo "missing env: $v"; exit 1; }
             done
@@ -126,6 +126,7 @@ jobs:
               -e AZURE_STORAGE_BLOB_ENDPOINT="$BLOB_ENDPOINT" \
               -e AZURE_STORAGE_CONTAINER_NAME="$BLOB_CONTAINER" \
               -e AZURE_STORAGE_CONNECTION_STRING="$BLOB_CONN_STR" \
+              -e JWT_SECRET="$JWT_SECRET" \
               "$IMAGE"
 
             docker image prune -f >/dev/null 2>&1 || true
