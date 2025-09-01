@@ -205,7 +205,7 @@ export default function OrderManagementPage() {
   };
 
   const tableColumns: TableProps<OrderList>['columns'] = [
-    { title: '번호', dataIndex: 'orderId', key: 'orderId', align: 'center', width: '10%' },
+    { title: '발주코드', dataIndex: 'orderId', key: 'orderId', align: 'center', width: '10%' },
     {
       title: '약국명',
       dataIndex: 'pharmacyName',
@@ -214,14 +214,14 @@ export default function OrderManagementPage() {
       width: '15%',
     },
     {
-      title: '주문 요약',
+      title: '요약',
       dataIndex: 'summary',
       key: 'summary',
       align: 'center',
       width: '20%',
     },
     {
-      title: <div style={{ textAlign: 'right' }}>주문 금액</div>,
+      title: <div style={{ textAlign: 'center' }}>금액</div>,
       dataIndex: 'totalPrice',
       key: 'totalPrice',
       render: (value) => `${value.toLocaleString()}원`,

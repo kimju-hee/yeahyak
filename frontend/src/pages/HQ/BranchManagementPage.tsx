@@ -135,36 +135,41 @@ export default function BranchManagementPage() {
 
   const tableColumns: TableProps<PharmacyRequestList>['columns'] = [
     {
-      title: '번호',
+      title: '요청코드',
       dataIndex: 'pharmacyRequestId',
       key: 'pharmacyRequestId',
       align: 'center',
+      width: '10%',
     },
     {
       title: '이메일',
       dataIndex: 'email',
       key: 'email',
       align: 'center',
+      width: '20%',
     },
     {
       title: '약국명',
       dataIndex: 'pharmacyName',
       key: 'pharmacyName',
       align: 'center',
+      width: '15%',
     },
     {
       title: '사업자등록번호',
       dataIndex: 'bizRegNo',
       key: 'bizRegNo',
       align: 'center',
+      width: '20%',
     },
-    { title: '연락처', dataIndex: 'contact', key: 'contact', align: 'center' },
+    { title: '연락처', dataIndex: 'contact', key: 'contact', align: 'center', width: '20%' },
     {
       title: '상태',
       dataIndex: 'status',
       key: 'status',
       render: (_, record) => getStatusTag(record.status),
       align: 'center',
+      width: '15%',
     },
   ];
 
@@ -221,7 +226,7 @@ export default function BranchManagementPage() {
     <>
       {contextHolder}
       <Typography.Title level={3} style={{ marginBottom: 24 }}>
-        가맹점 관리
+        등록 요청 관리
       </Typography.Title>
 
       <Form layout="vertical" form={form} onFinish={handleSearch}>

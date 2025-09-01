@@ -197,7 +197,7 @@ export default function ReturnManagementPage() {
   };
 
   const tableColumns: TableProps<ReturnList>['columns'] = [
-    { title: '반품 번호', dataIndex: 'returnId', key: 'returnId', align: 'center', width: '10%' },
+    { title: '반품코드', dataIndex: 'returnId', key: 'returnId', align: 'center', width: '10%' },
     {
       title: '약국명',
       dataIndex: 'pharmacyName',
@@ -206,14 +206,14 @@ export default function ReturnManagementPage() {
       width: '15%',
     },
     {
-      title: '반품 요약',
+      title: '요약',
       dataIndex: 'summary',
       key: 'summary',
       align: 'center',
       width: '20%',
     },
     {
-      title: <div style={{ textAlign: 'right' }}>반품 금액</div>,
+      title: <div style={{ textAlign: 'center' }}>금액</div>,
       dataIndex: 'totalPrice',
       key: 'totalPrice',
       render: (value) => `${value.toLocaleString()}원`,
