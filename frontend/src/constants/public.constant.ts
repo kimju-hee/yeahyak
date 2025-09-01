@@ -68,3 +68,6 @@ export const REGION_CASCADER_OPTIONS = [
   },
   { value: '제주특별자치도', label: '제주특별자치도' },
 ];
+
+// 외상 한도 상수 및 객체 추가
+export const CREDIT_LIMIT = 10_000_000;

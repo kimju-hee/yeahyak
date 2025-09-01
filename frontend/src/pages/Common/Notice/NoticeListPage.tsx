@@ -11,9 +11,9 @@ import {
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { noticeAPI } from '../../../api';
-import { SearchBox } from '../../../components/SearchBox';
+import { SearchBox } from '../../../components';
 import { DATE_FORMAT, PAGE_SIZE } from '../../../constants';
+import { useNotices } from '../../../hooks';
 import { useAuthStore } from '../../../stores/authStore';
 import { USER_ROLE, type NoticeList, type NoticeType, type User } from '../../../types';
 
@@ -25,7 +25,6 @@ export default function NoticeListPage() {
   const user = useAuthStore((state) => state.user) as User;
   const basePath = user.role === USER_ROLE.ADMIN ? '/hq' : '/branch';
 
-  const [notices, setNotices] = useState<NoticeList[]>([]);
   const [activeTab, setActiveTab] = useState<NoticeType>(
     (searchParams.get('type') as NoticeType) || 'GENERAL',
   );
@@ -39,45 +38,38 @@ export default function NoticeListPage() {
   );
 
   const [currentPage, setCurrentPage] = useState<number>(Number(searchParams.get('page')) || 1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
 
-  const fetchNotices = async () => {
-    setLoading(true);
-    try {
-      const res = await noticeAPI.getNotices({
-        type: activeTab,
-        keyword: appliedKeyword || undefined,
-        scope: appliedScope,
-        page: currentPage - 1,
-        size: PAGE_SIZE,
-      });
+  const {
+    data: noticesResponse,
+    isLoading: loading,
+    error,
+  } = useNotices({
+    type: activeTab,
+    keyword: appliedKeyword || undefined,
+    scope: appliedScope,
+    page: currentPage - 1,
+    size: PAGE_SIZE,
+  });
 
-      if (res.success) {
-        const { data, page } = res;
-        setNotices(data);
-        setTotal(page.totalElements);
-      }
-    } catch (e: any) {
-      console.error('공지사항 목록 로딩 실패:', e);
-      messageApi.error(e.response?.data?.message || '공지사항 목록 로딩 중 오류가 발생했습니다.');
-      setNotices([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const notices = noticesResponse?.data || [];
+  const total = noticesResponse?.page?.totalElements || 0;
 
+  // 에러 처리
   useEffect(() => {
-    fetchNotices();
-  }, [activeTab, currentPage, appliedKeyword, appliedScope]);
+    if (error) {
+      console.error('공지사항 목록 로딩 실패:', error);
+      messageApi.error('공지사항 목록 로딩 중 오류가 발생했습니다.');
+    }
+  }, [error, messageApi]);
 
   useEffect(() => {
     const params = new URLSearchParams();
     params.set('type', activeTab);
     if (currentPage > 1) params.set('page', currentPage.toString());
-    if (appliedKeyword) params.set('keyword', appliedKeyword);
-    if (appliedScope) params.set('scope', appliedScope);
+    if (appliedKeyword) {
+      params.set('keyword', appliedKeyword);
+      params.set('scope', appliedScope); // 검색어가 있을 때만 scope 추가
+    }
     setSearchParams(params);
   }, [activeTab, currentPage, appliedKeyword, appliedScope]);
 
@@ -102,16 +94,26 @@ export default function NoticeListPage() {
   };
 
   const tableColumns: TableProps<NoticeList>['columns'] = [
-    { title: '번호', dataIndex: 'noticeId', key: 'noticeId', width: '80px', align: 'center' },
-    { title: '제목', dataIndex: 'title', key: 'title', ellipsis: true, align: 'left' },
+    { title: '번호', dataIndex: 'noticeId', key: 'noticeId', align: 'center', width: 80 },
+    {
+      title: '제목',
+      dataIndex: 'title',
+      key: 'title',
+      ellipsis: true,
+      align: 'left',
+      width: '60%',
+      minWidth: 240,
+    },
     {
       title: '작성 일시',
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (date: string) => dayjs(date).format(DATE_FORMAT.DEFAULT),
-      width: '240px',
+      width: '25%',
+      minWidth: 160,
       align: 'left',
     },
+    { title: '조회수', dataIndex: 'viewCount', key: 'viewCount', align: 'center', width: 100 },
   ];
 
   const renderTable = () => {
@@ -159,13 +161,13 @@ export default function NoticeListPage() {
   return (
     <>
       {contextHolder}
-      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
-        공지사항 목록
+      <Typography.Title level={3} style={{ marginBottom: 24 }}>
+        공지사항
       </Typography.Title>
 
       <Tabs activeKey={activeTab} onChange={handleTabChange} items={tabsItems} centered />
 
-      <Flex wrap style={{ justifyContent: 'space-between', marginTop: '16px' }}>
+      <Flex wrap style={{ justifyContent: 'space-between', marginTop: 24 }}>
         <SearchBox
           searchField={scope}
           searchOptions={[

@@ -8,11 +8,7 @@ interface ProductDetailSkeletonProps {
 export function ProductDetailSkeleton({ userRole }: ProductDetailSkeletonProps) {
   return (
     <>
-      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
-        제품 상세
-      </Typography.Title>
-
-      <Card style={{ width: '80%', borderRadius: '12px', padding: '24px', margin: '0 auto' }}>
+      <Card style={{ width: '80%', padding: 16, margin: '0 auto', borderRadius: 24 }}>
         <Flex wrap justify="space-between" gap={36}>
           <div style={{ flex: 1 }}>
             <Skeleton.Image active />
@@ -20,7 +16,7 @@ export function ProductDetailSkeleton({ userRole }: ProductDetailSkeletonProps) 
 
           <Flex vertical flex={1}>
             <Space direction="vertical">
-              <Skeleton paragraph={{ rows: 5 }} />
+              <Skeleton paragraph={{ rows: 6 }} />
 
               <Flex justify="flex-end">
                 {userRole === USER_ROLE.ADMIN ? (
@@ -39,7 +35,7 @@ export function ProductDetailSkeleton({ userRole }: ProductDetailSkeletonProps) 
         <Divider />
 
         <Typography.Title level={4}>제품 상세 정보</Typography.Title>
-        <Skeleton paragraph={{ rows: 6 }} />
+        <Skeleton paragraph={{ rows: 16 }} />
       </Card>
     </>
   );

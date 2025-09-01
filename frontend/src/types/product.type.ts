@@ -1,34 +1,4 @@
-import type { ApiResponse, PaginatedResponse } from './api.type';
-
-export const PRODUCT_CATEGORIES = {
-  전문의약품: [
-    '항생제',
-    '고혈압_치료제',
-    '당뇨병_치료제',
-    '진통소염제',
-    '정신신경용제',
-    '항암제',
-    '기타_전문의약품',
-  ],
-  일반의약품: ['감기약', '소화제', '해열진통제', '지사제', '외용제', '멀미약', '기타_일반의약품'],
-  의약외품: [
-    '마스크',
-    '손소독제',
-    '밴드_반창고',
-    '체온계',
-    '구강청결제',
-    '방역용품',
-    '기타_의약외품',
-  ],
-} as const;
-
-export type MainCategory = keyof typeof PRODUCT_CATEGORIES;
-export type MainCategoryTextMap = { [key in MainCategory]: string };
-
-export type SubCategory = (typeof PRODUCT_CATEGORIES)[MainCategory][number];
-export type SubCategoryTextMap = { [key in SubCategory]: string };
-
-export type SubCategoryWithAll = '전체' | SubCategory;
+import type { ApiResponse, InventoryTxType, MainCategory, PaginatedResponse, SubCategory } from '.';
 
 export interface ProductCreateRequest {
   productName: string;
@@ -40,12 +10,32 @@ export interface ProductCreateRequest {
   unitPrice: number;
   details?: string;
   productImgUrl?: string;
-  stockQty: number;
+  inventoryQty: number;
 }
 
 export interface ProductCreate {
   productId: number;
-  stockTxId: number;
+  inventoryTxId: number;
+}
+
+export interface ProductListParams {
+  mainCategory: MainCategory;
+  subCategory?: SubCategory;
+  keyword?: string; // 제품명
+  threshold?: number; // 재고 임계값
+  page?: number;
+  size?: number;
+}
+
+export interface ProductList {
+  productId: number;
+  productName: string;
+  manufacturer: string;
+  unit: string;
+  unitPrice: number;
+  productImgUrl?: string;
+  inventoryQty: number;
+  latestInventoryInAt: string;
 }
 
 export interface ProductDetail {
@@ -60,26 +50,7 @@ export interface ProductDetail {
   details?: string;
   productImgUrl?: string;
   createdAt: string;
-  stockQty: number;
-}
-
-export interface ProductListParams {
-  page?: number;
-  size?: number;
-  mainCategory?: MainCategory;
-  subCategory?: SubCategory;
-  keyword?: string;
-}
-
-export interface ProductList {
-  productId: number;
-  productName: string;
-  manufacturer: string;
-  unit: string;
-  unitPrice: number;
-  productImgUrl?: string;
-  stockQty: number;
-  latestStockInAt: string;
+  inventoryQty: number;
 }
 
 export interface ProductUpdateRequest {
@@ -97,3 +68,34 @@ export interface ProductUpdateRequest {
 export type ProductCreateResponse = ApiResponse<ProductCreate>;
 export type ProductListResponse = PaginatedResponse<ProductList>;
 export type ProductDetailResponse = ApiResponse<ProductDetail>;
+
+export interface InventoryInRequest {
+  amount: number;
+}
+
+export interface InventoryIn {
+  inventoryTxId: number;
+  productId: number;
+  amount: number;
+  inventoryBefore: number;
+  inventoryAfter: number;
+  createdAt: string;
+}
+
+export interface InventoryTxParams {
+  page?: number;
+  size?: number;
+}
+
+export interface InventoryTx {
+  inventoryTxId: number;
+  productId: number;
+  productName: string;
+  type: InventoryTxType;
+  amount: number;
+  inventoryAfter: number;
+  createdAt: string;
+}
+
+export type InventoryInResponse = ApiResponse<InventoryIn>;
+export type InventoryTxResponse = PaginatedResponse<InventoryTx>;

@@ -1,29 +1,20 @@
 import { Checkbox, Form, Modal, Typography } from 'antd';
 import DOMPurify from 'dompurify';
 import { useState } from 'react';
-
-// HTML 파일들을 텍스트로 import
 import privacyHtml from '../assets/privacy.html?raw';
 import termsHtml from '../assets/terms.html?raw';
 
-export default function TermsAndPrivacyCheckbox() {
+export function TermsAndPrivacyCheckbox() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalTitle, setModalTitle] = useState('');
   const [modalContent, setModalContent] = useState('');
 
   const showModal = (title: 'terms' | 'privacy') => {
     if (title === 'terms') {
-      setModalTitle('서비스 이용약관');
       setModalContent(termsHtml);
     } else {
-      setModalTitle('개인정보 수집 및 이용');
       setModalContent(privacyHtml);
     }
     setIsModalOpen(true);
-  };
-
-  const handleModalClose = () => {
-    setIsModalOpen(false);
   };
 
   return (
@@ -33,12 +24,8 @@ export default function TermsAndPrivacyCheckbox() {
         valuePropName="checked"
         rules={[
           {
-            validator: (_, value) =>
-              value
-                ? Promise.resolve()
-                : Promise.reject(
-                    new Error('서비스 이용약관 및 개인정보 수집 이용에 동의해주세요.'),
-                  ),
+            required: true,
+            message: '서비스 이용약관 및 개인정보 수집 이용에 동의해주세요',
           },
         ]}
         validateTrigger="onSubmit"
@@ -69,26 +56,23 @@ export default function TermsAndPrivacyCheckbox() {
       </Form.Item>
 
       <Modal
-        title={modalTitle}
-        open={isModalOpen}
-        onCancel={handleModalClose}
+        title={null}
         footer={null}
+        open={isModalOpen}
+        onCancel={() => setIsModalOpen(false)}
         width={800}
         styles={{
           body: {
-            maxHeight: '60vh',
+            maxHeight: '70vh',
             overflowY: 'auto',
             scrollbarWidth: 'thin',
           },
         }}
-        destroyOnHidden
+        centered={true}
+        closable={false}
+        destroyOnHidden={true}
       >
-        <div
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(modalContent) }}
-          style={{
-            lineHeight: '1.8',
-          }}
-        />
+        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(modalContent) }} />
       </Modal>
     </>
   );

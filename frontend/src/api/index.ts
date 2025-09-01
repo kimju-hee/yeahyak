@@ -8,4 +8,3 @@ export * as pharmacyAPI from './pharmacy.api';
 export * as pharmacyRequestAPI from './pharmacyRequest.api';
 export * as productAPI from './product.api';
 export * as returnAPI from './return.api';
-export * as stockAPI from './stock.api';

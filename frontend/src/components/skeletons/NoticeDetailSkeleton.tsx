@@ -8,13 +8,13 @@ interface NoticeDetailSkeletonProps {
 export function NoticeDetailSkeleton({ userRole }: NoticeDetailSkeletonProps) {
   return (
     <>
-      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
-        공지사항 상세
+      <Typography.Title level={3} style={{ marginBottom: 24 }}>
+        공지사항
       </Typography.Title>
 
-      <Skeleton.Input style={{ marginBottom: '24px' }} active block />
+      <Skeleton.Input style={{ marginBottom: 24 }} active block />
 
-      <Card style={{ marginBottom: '24px', padding: '24px' }}>
+      <Card style={{ marginBottom: 24, padding: 24 }}>
         <Skeleton paragraph={{ rows: 6 }} active />
       </Card>
 

@@ -21,32 +21,27 @@ export default function HqProfileEditPage() {
 
   const handleSubmit = async (values: AdminUpdateRequest) => {
     try {
-      const payload: AdminUpdateRequest = {
-        ...values,
-      };
-      const res = await authAPI.updateAdmin(profile.adminId, payload);
+      const payload: AdminUpdateRequest = { ...values };
+      const res = await authAPI.adminUpdate(profile.adminId, payload);
 
       if (res.success) {
         updateProfile(payload);
-        messageApi.success('개인 정보가 수정되었습니다!');
+        messageApi.success('관리자 정보가 수정되었습니다!');
       }
     } catch (e: any) {
-      console.error('개인 정보 수정 실패:', e);
-      messageApi.error(e.response?.data?.message || '개인 정보 수정 중 오류가 발생했습니다.');
+      console.error('관리자 정보 수정 실패:', e);
+      messageApi.error(e.response?.data?.message || '관리자 정보 수정 중 오류가 발생했습니다.');
     }
   };
 
   return (
     <>
       {contextHolder}
-      <Typography.Title
-        level={3}
-        style={{ marginBottom: '24px', textAlign: 'center', width: '100%' }}
-      >
+      <Typography.Title level={3} style={{ marginBottom: 24, textAlign: 'center', width: '100%' }}>
         내 정보 수정
       </Typography.Title>
 
-      <Card style={{ width: '80%', padding: '8px', margin: '0 auto' }}>
+      <Card style={{ width: '80%', padding: 16, margin: '0 auto', borderRadius: 24 }}>
         <Form
           form={form}
           name="admin-edit"
@@ -54,6 +49,7 @@ export default function HqProfileEditPage() {
           labelCol={{ span: 6 }}
           labelWrap
           wrapperCol={{ span: 15, offset: -3 }}
+          validateMessages={{ required: '${label}을(를) 입력해주세요' }}
         >
           <Form.Item
             name="adminName"

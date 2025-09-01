@@ -1,71 +1,59 @@
 import {
   BellOutlined,
-  FrownFilled,
   KeyOutlined,
   LogoutOutlined,
-  NotificationFilled,
+  NotificationOutlined,
+  ProductOutlined,
+  RollbackOutlined,
   ShopOutlined,
-  ShoppingFilled,
-  TagsFilled,
+  ShoppingCartOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { ConfigProvider, Dropdown, Flex, Layout, Menu, Typography } from 'antd';
-import { useRef } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Dropdown, Flex, Layout, Menu, Typography, type MenuProps } from 'antd';
+import { useRef, useState } from 'react';
+import { Link, Outlet } from 'react-router-dom';
 import { logo } from '../assets';
-import Chatbot from '../components/Chatbot';
+import { Chatbot } from '../components';
 import { useAuthStore } from '../stores/authStore';
 import { USER_ROLE, type Pharmacy, type User } from '../types';
 import Footer from './Footer';
 const { Sider, Header, Content } = Layout;
 
-// Design Token
-const theme = {
-  components: {
-    Menu: {
-      itemHeight: 38, // 메뉴 아이템 높이 (default 40)
-      itemMarginBlock: 24, // 메뉴 아이템 margin-block (default 4)
-      itemMarginInline: 4, // 메뉴 아이템 수평 margin (default 4)
-      itemPaddingInline: 16, // 메뉴 아이템 padding-inline (default 16)
-    },
-    Layout: {
-      headerPadding: '0 48px', // 헤더 padding (default 0 50px)
-    },
-    Dropdown: {
-      paddingBlock: 8, // 드롭다운 수직 padding (default 5)
-    },
-  },
-};
-
 // 사이드 메뉴 아이템
-const siderMenuItems = [
+const siderMenuItems: MenuProps['items'] = [
   {
-    key: 'notices',
     label: <Link to="/branch/notices">공지사항</Link>,
-    icon: <NotificationFilled />,
+    key: 'notices',
+    icon: <NotificationOutlined />,
   },
   {
-    key: 'products',
     label: <Link to="/branch/products">제품 목록</Link>,
-    icon: <TagsFilled />,
+    key: 'products',
+    icon: <ProductOutlined />,
   },
   {
-    key: 'order-request',
     label: <Link to="/branch/orders">발주 요청</Link>,
-    icon: <ShoppingFilled />,
+    key: 'orders',
+    icon: <ShoppingCartOutlined />,
   },
   {
-    key: 'return-request',
     label: <Link to="/branch/returns">반품 요청</Link>,
-    icon: <FrownFilled />,
+    key: 'returns',
+    icon: <RollbackOutlined />,
   },
 ];
 
 export default function BranchLayout() {
-  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+
   const user = useAuthStore((state) => state.user) as User;
   const profile = useAuthStore((state) => state.profile);
   const pharmacy = user.role === USER_ROLE.PHARMACY ? (profile as Pharmacy) : null;
+
+  const handleLogoClick = () => {
+    setSelectedKeys([]); // 로고 클릭 시 선택 해제
+  };
 
   // 아바타 메뉴 아이템
   const avatarMenuItems = {
@@ -89,88 +77,81 @@ export default function BranchLayout() {
     ],
   };
 
-  const getSelectedKeys = () => {
-    const path = location.pathname;
-    for (let item of siderMenuItems) {
-      if (item.label && item.label.props && item.label.props.to) {
-        const itemPath = item.label.props.to;
-        if (path === itemPath || path.startsWith(`${itemPath}/`)) {
-          return [item.key];
-        }
-      }
-    }
-    return [];
-  };
-
-  const selectedKeys = getSelectedKeys();
-
   const contentRef = useRef<HTMLDivElement>(null);
 
   return (
-    <ConfigProvider theme={theme}>
-      <Layout style={{ minHeight: '100vh' }}>
-        <Header
+    <Layout style={{ minHeight: '100vh' }}>
+      <Header
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 1,
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <Link to="/branch" onClick={handleLogoClick}>
+          <img src={logo} alt="로고" style={{ height: 28, marginLeft: 18 }} />
+        </Link>
+        <Flex align="center" gap={24}>
+          <Typography.Text style={{ color: '#ffffff' }}>{pharmacy?.pharmacyName}</Typography.Text>
+          <BellOutlined style={{ fontSize: 24, color: '#ffffff' }} />
+          <Dropdown
+            trigger={['click']}
+            menu={avatarMenuItems}
+            placement="bottomRight"
+            arrow={{ pointAtCenter: true }}
+          >
+            <UserOutlined style={{ fontSize: 24, color: '#ffffff' }} />
+          </Dropdown>
+        </Flex>
+      </Header>
+
+      <Layout>
+        <Sider
+          collapsible
+          collapsed={collapsed}
+          onCollapse={(value) => setCollapsed(value)}
           style={{
+            height: 'calc(100vh - 64px)',
             position: 'sticky',
-            zIndex: 1,
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            top: 64,
           }}
+          width={232}
         >
-          <Link to="/branch">
-            <img src={logo} alt="로고" style={{ height: '32px' }} />
-          </Link>
-          <Flex align="center" gap={'24px'}>
-            <Typography.Text style={{ color: '#ffffff' }}>{pharmacy?.pharmacyName}</Typography.Text>
-            <BellOutlined style={{ fontSize: '24px', color: '#ffffff' }} />
-            <Dropdown
-              trigger={['click']}
-              menu={avatarMenuItems}
-              placement="bottomRight"
-              arrow={{ pointAtCenter: true }}
-            >
-              <UserOutlined style={{ fontSize: '24px', color: '#ffffff' }} />
-            </Dropdown>
-          </Flex>
-        </Header>
+          <Menu
+            theme="dark"
+            mode="inline"
+            items={siderMenuItems}
+            selectedKeys={selectedKeys}
+            onSelect={({ selectedKeys }) => setSelectedKeys(selectedKeys)}
+            style={{ margin: '16px 0' }}
+          />
+        </Sider>
+
         <Layout>
-          <Sider
+          <div
+            ref={contentRef}
             style={{
-              position: 'sticky',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
+              position: 'relative',
+              flex: 1,
+              minHeight: 0,
+              padding: 24,
+              margin: 24,
             }}
           >
-            <Menu
-              theme="dark"
-              style={{ width: '100%' }}
-              items={siderMenuItems}
-              selectedKeys={selectedKeys}
-            ></Menu>
-          </Sider>
-          <Layout>
-            <div
-              ref={contentRef}
-              style={{
-                position: 'relative',
-                flex: 1,
-                minHeight: 0,
-                padding: '24px',
-                margin: '24px',
-              }}
-            >
-              <Content>
-                <Outlet />
-              </Content>
-              <Chatbot boundsRef={contentRef} />
-            </div>
-            <Footer />
-          </Layout>
+            <Content>
+              <Outlet />
+            </Content>
+
+            <Chatbot boundsRef={contentRef} />
+          </div>
+
+          <Footer color="#262626" />
         </Layout>
       </Layout>
-    </ConfigProvider>
+    </Layout>
   );
 }

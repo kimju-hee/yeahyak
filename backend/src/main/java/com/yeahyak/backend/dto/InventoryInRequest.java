@@ -14,9 +14,6 @@ import lombok.Setter;
 public class InventoryInRequest {
 
   @NotNull
-  private Long productId;
-
-  @NotNull
   @Positive
   private Integer amount;
 }

@@ -70,7 +70,7 @@ public class ProductController {
    */
   @GetMapping
   public ResponseEntity<ApiResponse<List<ProductListResponse>>> getProducts(
-      @RequestParam(required = false) MainCategory mainCategory,
+      @RequestParam MainCategory mainCategory,
       @RequestParam(required = false) SubCategory subCategory,
       @RequestParam(required = false) String keyword,
       @RequestParam(defaultValue = "100") int threshold,
@@ -122,21 +122,22 @@ public class ProductController {
    */
   @PostMapping("{productId}/in")
   public ResponseEntity<ApiResponse<InventoryInResponse>> inventoryIn(
+      @PathVariable Long productId,
       @RequestBody @Valid InventoryInRequest request
   ) {
-    Product product = productRepository.findById(request.getProductId())
+    Product product = productRepository.findById(productId)
         .orElseThrow(() -> new RuntimeException("제품 정보를 찾을 수 없습니다."));
     int before = product.getInventoryQty();
 
     Long inventoryTxId = inventoryTxService.createInventoryTx(
-        request.getProductId(), InventoryTxType.IN, request.getAmount());
+        productId, InventoryTxType.IN, request.getAmount());
 
     InventoryTx inventoryTx = inventoryTxRepository.findById(inventoryTxId)
         .orElseThrow(() -> new RuntimeException("재고 거래 내역을 찾을 수 없습니다."));
 
     InventoryInResponse res = InventoryInResponse.builder()
         .inventoryTxId(inventoryTxId)
-        .productId(request.getProductId())
+        .productId(productId)
         .amount(request.getAmount())
         .inventoryBefore(before)
         .inventoryAfter(inventoryTx.getInventoryAfter())
@@ -151,7 +152,7 @@ public class ProductController {
    */
   @GetMapping("/{productId}/inventory-txs")
   public ResponseEntity<ApiResponse<List<InventoryTxResponse>>> getInventoryTxsByProduct(
-      @RequestParam Long productId,
+      @PathVariable Long productId,
       @RequestParam(required = false) InventoryTxType type,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,

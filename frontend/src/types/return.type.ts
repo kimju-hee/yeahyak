@@ -1,15 +1,11 @@
-import type { ApiResponse, MainCategory, PaginatedResponse, Region, SubCategory } from '.';
-
-export const RETURN_STATUS = {
-  REQUESTED: 'REQUESTED',
-  APPROVED: 'APPROVED',
-  RECEIVED: 'RECEIVED',
-  COMPLETED: 'COMPLETED',
-  CANCELED: 'CANCELED',
-} as const;
-export type ReturnStatus = keyof typeof RETURN_STATUS;
-export type ReturnStatusColorMap = { [key in ReturnStatus]: string };
-export type ReturnStatusTextMap = { [key in ReturnStatus]: string };
+import type {
+  ApiResponse,
+  MainCategory,
+  PaginatedResponse,
+  Region,
+  ReturnStatus,
+  SubCategory,
+} from '.';
 
 export interface ReturnCartItem {
   productId: number;
@@ -39,8 +35,33 @@ export interface ReturnCreate {
   returnId: number;
 }
 
-export interface ReturnUpdateRequest {
+// CHECK: 파라미터 확인
+export interface ReturnListHqParams {
+  status?: ReturnStatus;
+  region?: Region;
+  start?: string;
+  end?: string;
+  page?: number;
+  size?: number;
+}
+
+// CHECK: 파라미터 확인
+export interface ReturnListBranchParams {
+  pharmacyId: number;
+  status?: ReturnStatus;
+  page?: number;
+  size?: number;
+}
+
+export interface ReturnList {
+  returnId: number;
+  pharmacyId: number;
+  pharmacyName: string;
   status: ReturnStatus;
+  summary: string;
+  reason: string;
+  totalPrice: number;
+  createdAt: string;
 }
 
 export interface ReturnDetail {
@@ -62,38 +83,15 @@ export interface ReturnDetailItem {
   mainCategory: MainCategory;
   subCategory: SubCategory;
   manufacturer: string;
-  productImgUrl: string;
+  productImgUrl?: string;
   quantity: number;
   unit: string;
   unitPrice: number;
   subtotalPrice: number;
 }
 
-export interface ReturnList {
-  returnId: number;
-  pharmacyId: number;
-  pharmacyName: string;
+export interface ReturnUpdateRequest {
   status: ReturnStatus;
-  summary: string;
-  reason: string;
-  totalPrice: number;
-  createdAt: string;
-}
-
-export interface ReturnListHqParams {
-  status?: ReturnStatus;
-  region?: Region;
-  start?: string;
-  end?: string;
-  page?: number;
-  size?: number;
-}
-
-export interface ReturnListBranchParams {
-  pharmacyId: number;
-  status?: ReturnStatus;
-  page?: number;
-  size?: number;
 }
 
 export type ReturnCreateResponse = ApiResponse<ReturnCreate>;

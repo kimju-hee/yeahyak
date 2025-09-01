@@ -18,7 +18,7 @@ import {
   type TableProps,
 } from 'antd';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { orderAPI } from '../../api';
 import {
   DATE_FORMAT,
@@ -28,6 +28,7 @@ import {
   PAGE_SIZE,
   REGION_CASCADER_OPTIONS,
 } from '../../constants';
+import { useOrdersHq, useOrdersStatistics, useUpdateOrder } from '../../hooks';
 import {
   ORDER_STATUS,
   type OrderDetail,
@@ -54,7 +55,6 @@ export default function OrderManagementPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
 
-  const [orders, setOrders] = useState<OrderList[]>([]);
   const [expandedRowData, setExpandedRowData] = useState<Record<number, OrderDetail>>({});
   const [expandedRowLoading, setExpandedRowLoading] = useState<Record<number, boolean>>({});
   const [filters, setFilters] = useState({
@@ -63,97 +63,48 @@ export default function OrderManagementPage() {
     start: undefined as dayjs.Dayjs | undefined,
     end: undefined as dayjs.Dayjs | undefined,
   });
-  const [statistics, setStatistics] = useState({
-    totalOrders: 0,
-    totalPreparing: 0,
-    totalShipping: 0,
-    totalAmount: 0,
-  });
 
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [total, setTotal] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(false);
 
-  const fetchStatistics = async () => {
-    try {
-      // 현재 월의 시작과 끝 날짜 계산
-      const now = dayjs();
-      const startOfMonth = now.startOf('month');
-      const endOfMonth = now.endOf('month');
+  // TanStack Query로 발주 목록 조회
+  const queryParams = Object.fromEntries(
+    Object.entries({
+      status: filters.status,
+      region: filters.region,
+      start: filters.start?.startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+      end: filters.end?.endOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+      page: currentPage - 1,
+      size: PAGE_SIZE,
+    }).filter(([_, value]) => value !== undefined),
+  );
 
-      const res = await orderAPI.getOrdersHq({
-        start: startOfMonth.format('YYYY-MM-DD'),
-        end: endOfMonth.format('YYYY-MM-DD'),
-        page: 0,
-        size: 9999,
-      });
+  const { data: ordersResponse, isLoading: loading } = useOrdersHq(queryParams);
+  const orders = ordersResponse?.data || [];
+  const total = ordersResponse?.page?.totalElements || 0;
 
-      if (res.success) {
-        const totalOrders = res.data.length;
-        const calculatedStatistics = res.data.reduce(
-          (acc: any, order: OrderList) => {
-            if (order.status === ORDER_STATUS.PREPARING) {
-              acc.totalPreparing += 1;
-            } else if (order.status === ORDER_STATUS.SHIPPING) {
-              acc.totalShipping += 1;
-            }
-            if (order.status !== ORDER_STATUS.CANCELED) {
-              acc.totalAmount += order.totalPrice || 0;
-            }
-            return acc;
-          },
-          { totalOrders: 0, totalPreparing: 0, totalShipping: 0, totalAmount: 0 },
-        );
-        setStatistics({ ...calculatedStatistics, totalOrders: totalOrders });
-      }
-    } catch (e: any) {
-      console.error('월간 발주 요청 통계 로딩 실패:', e);
-      messageApi.error(
-        e.response?.data?.message || '월간 발주 요청 통계 로딩 중 오류가 발생했습니다.',
-      );
-    }
-  };
+  // 발주 상태 업데이트 mutation
+  const updateOrderMutation = useUpdateOrder();
 
-  const fetchOrders = async () => {
-    setLoading(true);
-    try {
-      const res = await orderAPI.getOrdersHq({
-        status: filters.status,
-        region: filters.region,
-        start: filters.start?.format('YYYY-MM-DD'),
-        end: filters.end?.format('YYYY-MM-DD'),
-        page: currentPage - 1,
-        size: PAGE_SIZE,
-      });
-
-      if (res.success) {
-        const { data, page } = res;
-        setOrders(data);
-        setTotal(page.totalElements);
-      }
-    } catch (e: any) {
-      console.error('발주 요청 목록 로딩 실패:', e);
-      messageApi.error(e.response?.data?.message || '발주 요청 목록 로딩 중 오류가 발생했습니다.');
-      setOrders([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStatistics();
-  }, []);
-
-  useEffect(() => {
-    fetchOrders();
-  }, [currentPage, filters]);
+  // 발주 통계 조회
+  const {
+    data: statistics = { totalOrders: 0, totalPreparing: 0, totalShipping: 0, totalAmount: 0 },
+  } = useOrdersStatistics();
 
   const handleSearch = () => {
     const formValues = form.getFieldsValue();
     const [startDate, endDate] = formValues.date || [undefined, undefined];
+    const newRegion = Array.isArray(formValues.region)
+      ? formValues.region[formValues.region.length - 1]
+      : formValues.region;
+
+    console.log('🔍 발주 검색 필터:', {
+      region: newRegion,
+      status: formValues.status,
+      dates: [startDate, endDate],
+    });
+
     setFilters({
-      region: formValues.region,
+      region: newRegion,
       status: formValues.status,
       start: startDate,
       end: endDate,
@@ -168,35 +119,28 @@ export default function OrderManagementPage() {
   };
 
   const handleUpdate = async (orderId: number, action: string) => {
-    try {
-      let res: any;
-      switch (action) {
-        case 'APPROVE':
-          res = await orderAPI.updateOrder(orderId, { status: ORDER_STATUS.APPROVED });
-          break;
-        case 'REJECT':
-          res = await orderAPI.updateOrder(orderId, { status: ORDER_STATUS.CANCELED });
-          break;
-        case 'PREPARE':
-          res = await orderAPI.updateOrder(orderId, { status: ORDER_STATUS.PREPARING });
-          break;
-        case 'SHIP':
-          res = await orderAPI.updateOrder(orderId, { status: ORDER_STATUS.SHIPPING });
-          break;
-        case 'COMPLETE':
-          res = await orderAPI.updateOrder(orderId, { status: ORDER_STATUS.COMPLETED });
-          break;
-      }
-
-      if (res.success) {
-        messageApi.success('주문 상태가 변경되었습니다.');
-        fetchStatistics();
-        fetchOrders();
-      }
-    } catch (e: any) {
-      console.error('주문 상태 변경 실패:', e);
-      messageApi.error(e.response?.data?.message || '주문 상태 변경 중 오류가 발생했습니다.');
+    let status: OrderStatus;
+    switch (action) {
+      case 'APPROVE':
+        status = ORDER_STATUS.APPROVED;
+        break;
+      case 'REJECT':
+        status = ORDER_STATUS.CANCELED;
+        break;
+      case 'PREPARE':
+        status = ORDER_STATUS.PREPARING;
+        break;
+      case 'SHIP':
+        status = ORDER_STATUS.SHIPPING;
+        break;
+      case 'COMPLETE':
+        status = ORDER_STATUS.COMPLETED;
+        break;
+      default:
+        return;
     }
+
+    updateOrderMutation.mutate({ orderId, data: { status } });
   };
 
   const renderStatusTagWithActions = (record: OrderList) => {
@@ -261,20 +205,28 @@ export default function OrderManagementPage() {
   };
 
   const tableColumns: TableProps<OrderList>['columns'] = [
-    { title: '주문 번호', dataIndex: 'orderId', key: 'orderId', align: 'center' },
-    { title: '약국명', dataIndex: 'pharmacyName', key: 'pharmacyName', align: 'center' },
+    { title: '발주코드', dataIndex: 'orderId', key: 'orderId', align: 'center', width: '10%' },
     {
-      title: '주문 요약',
+      title: '약국명',
+      dataIndex: 'pharmacyName',
+      key: 'pharmacyName',
+      align: 'center',
+      width: '15%',
+    },
+    {
+      title: '요약',
       dataIndex: 'summary',
       key: 'summary',
       align: 'center',
+      width: '20%',
     },
     {
-      title: '주문 금액',
+      title: <div style={{ textAlign: 'center' }}>금액</div>,
       dataIndex: 'totalPrice',
       key: 'totalPrice',
       render: (value) => `${value.toLocaleString()}원`,
-      align: 'center',
+      align: 'right',
+      width: '15%',
     },
     {
       title: '요청 일시',
@@ -282,6 +234,7 @@ export default function OrderManagementPage() {
       key: 'createdAt',
       render: (value) => dayjs(value).format(DATE_FORMAT.DEFAULT),
       align: 'center',
+      width: '25%',
     },
     {
       title: '상태',
@@ -289,6 +242,7 @@ export default function OrderManagementPage() {
       key: 'status',
       render: (_, record) => renderStatusTagWithActions(record),
       align: 'center',
+      width: '15%',
     },
   ];
 
@@ -323,7 +277,7 @@ export default function OrderManagementPage() {
 
     if (!detail) {
       return (
-        <Typography.Text style={{ padding: '16px', textAlign: 'center' }}>
+        <Typography.Text style={{ padding: 16, textAlign: 'center' }}>
           상세 정보를 불러올 수 없습니다.
         </Typography.Text>
       );
@@ -334,23 +288,51 @@ export default function OrderManagementPage() {
         bordered={true}
         dataSource={detail.items}
         columns={[
-          { title: '제품명', dataIndex: 'productName', key: 'productName' },
-          { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer' },
-          { title: '대분류', dataIndex: 'mainCategory', key: 'mainCategory' },
-          { title: '소분류', dataIndex: 'subCategory', key: 'subCategory' },
-          { title: '수량', dataIndex: 'quantity', key: 'quantity' },
-          { title: '단위', dataIndex: 'unit', key: 'unit' },
           {
-            title: '단가',
+            title: '제품명',
+            dataIndex: 'productName',
+            key: 'productName',
+            align: 'center',
+            width: '15%',
+          },
+          {
+            title: '제조사',
+            dataIndex: 'manufacturer',
+            key: 'manufacturer',
+            align: 'center',
+            width: '12%',
+          },
+          {
+            title: '대분류',
+            dataIndex: 'mainCategory',
+            key: 'mainCategory',
+            align: 'center',
+            width: '12%',
+          },
+          {
+            title: '소분류',
+            dataIndex: 'subCategory',
+            key: 'subCategory',
+            align: 'center',
+            width: '12%',
+          },
+          { title: '수량', dataIndex: 'quantity', key: 'quantity', align: 'center', width: '10%' },
+          { title: '단위', dataIndex: 'unit', key: 'unit', align: 'center', width: '12%' },
+          {
+            title: <div style={{ textAlign: 'center' }}>단가</div>,
             dataIndex: 'unitPrice',
             key: 'unitPrice',
             render: (value) => `${value.toLocaleString()}원`,
+            align: 'right',
+            width: '12%',
           },
           {
-            title: '소계',
+            title: <div style={{ textAlign: 'center' }}>소계</div>,
             dataIndex: 'subtotalPrice',
             key: 'subtotalPrice',
             render: (value) => `${value.toLocaleString()}원`,
+            align: 'right',
+            width: '15%',
           },
         ]}
         pagination={false}
@@ -360,8 +342,10 @@ export default function OrderManagementPage() {
           <Table.Summary fixed>
             <Table.Summary.Row>
               <Table.Summary.Cell index={0} colSpan={6} />
-              <Table.Summary.Cell index={1}>합계</Table.Summary.Cell>
-              <Table.Summary.Cell index={2}>
+              <Table.Summary.Cell index={1} align="center">
+                합계
+              </Table.Summary.Cell>
+              <Table.Summary.Cell index={2} align="right">
                 {detail.totalPrice.toLocaleString()}원
               </Table.Summary.Cell>
             </Table.Summary.Row>
@@ -374,11 +358,11 @@ export default function OrderManagementPage() {
   return (
     <>
       {contextHolder}
-      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+      <Typography.Title level={3} style={{ marginBottom: 24 }}>
         발주 요청 관리
       </Typography.Title>
 
-      <Row gutter={16} style={{ marginBottom: '24px' }}>
+      <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
           <Card>
             <Statistic title="당월 발주 요청" value={statistics.totalOrders} />
@@ -440,7 +424,6 @@ export default function OrderManagementPage() {
           expandedRowRender,
           onExpand: handleExpand,
           expandRowByClick: true,
-          expandIcon: () => null,
         }}
       />
     </>

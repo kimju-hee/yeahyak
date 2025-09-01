@@ -7,21 +7,7 @@ declare global {
   }
 }
 
-interface AddressInputProps {
-  postcodeName: string;
-  addressName: string;
-  detailAddressName: string;
-  regionName: string;
-  label?: string;
-}
-
-export default function AddressInput({
-  postcodeName = '',
-  addressName = '',
-  detailAddressName = '',
-  regionName = '',
-  label = '주소',
-}: AddressInputProps) {
+export function AddressInput() {
   const form = Form.useFormInstance();
 
   useEffect(() => {
@@ -43,47 +29,49 @@ export default function AddressInput({
           const region = data.sido;
 
           form.setFieldsValue({
-            [postcodeName]: postcode,
-            [addressName]: address,
-            [detailAddressName]: '',
-            [regionName]: region,
+            postcode: postcode,
+            address: address,
+            detailAddress: '',
+            region: region,
           });
         } catch (error) {
-          console.error('주소 설정 중 오류가 발생했습니다:', error);
+          console.error('주소 설정 중 오류가 발생했습니다: ', error);
         }
       },
     }).open();
   };
 
   return (
-    <Form.Item label={label}>
+    <Form.Item label="주소" required>
       <Flex vertical gap={8}>
         <Flex gap={8}>
           <Form.Item
-            name={postcodeName}
-            noStyle
-            rules={[{ required: true, message: '우편번호를 입력해주세요.' }]}
+            name="postcode"
+            label="우편번호"
+            rules={[{ required: true }]}
             validateTrigger="onSubmit"
+            noStyle
           >
-            <Input readOnly placeholder="우편번호" />
+            <Input readOnly placeholder="우편번호" style={{ cursor: 'default' }} />
           </Form.Item>
-          <Form.Item name={regionName} noStyle>
-            <Input readOnly placeholder="지역" />
+          <Form.Item name="region" label="지역" noStyle>
+            <Input readOnly placeholder="지역" style={{ cursor: 'default' }} />
           </Form.Item>
           <Button onClick={handleSearchAddress}>주소 검색</Button>
         </Flex>
+        <Form.Item
+          name="address"
+          label="기본 주소"
+          rules={[{ required: true }]}
+          validateTrigger="onSubmit"
+          noStyle
+        >
+          <Input readOnly placeholder="기본 주소" style={{ cursor: 'default' }} />
+        </Form.Item>
+        <Form.Item name="detailAddress" label="상세 주소" noStyle>
+          <Input placeholder="(선택) 상세 주소" />
+        </Form.Item>
       </Flex>
-      <Form.Item
-        name={addressName}
-        noStyle
-        rules={[{ required: true, message: '주소를 입력해주세요.' }]}
-        validateTrigger="onSubmit"
-      >
-        <Input readOnly placeholder="기본 주소" style={{ marginTop: 8 }} />
-      </Form.Item>
-      <Form.Item name={detailAddressName} noStyle>
-        <Input placeholder="상세 주소" style={{ marginTop: 8 }} />
-      </Form.Item>
     </Form.Item>
   );
 }

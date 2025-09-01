@@ -2,7 +2,6 @@ import { Button, Card, Flex, Form, Input, message, Typography } from 'antd';
 import { useEffect } from 'react';
 import { authAPI } from '../../../api';
 import { useAuthStore } from '../../../stores/authStore';
-
 import type { PasswordChangeRequest, User } from '../../../types';
 import {
   passwordConfirmRule,
@@ -46,14 +45,11 @@ export default function PasswordChangePage() {
   return (
     <>
       {contextHolder}
-      <Typography.Title
-        level={3}
-        style={{ marginBottom: '24px', textAlign: 'center', width: '100%' }}
-      >
+      <Typography.Title level={3} style={{ marginBottom: 24, textAlign: 'center', width: '100%' }}>
         비밀번호 변경
       </Typography.Title>
 
-      <Card style={{ width: '80%', padding: '8px', margin: '0 auto' }}>
+      <Card style={{ width: '80%', padding: 16, margin: '0 auto', borderRadius: 24 }}>
         <Form
           form={form}
           name="password-change"
@@ -61,47 +57,44 @@ export default function PasswordChangePage() {
           labelCol={{ span: 6 }}
           labelWrap
           wrapperCol={{ span: 15, offset: -3 }}
+          autoComplete="off"
+          validateMessages={{ required: '${label}을(를) 입력해주세요' }}
         >
-          <Form.Item name="email" label="이메일">
-            <Input disabled />
-          </Form.Item>
-          <Form.Item
-            name="currentPassword"
-            label="현재 비밀번호"
-            rules={[{ required: true, message: '현재 비밀번호를 입력해주세요.' }]}
-          >
-            <Input.Password />
-          </Form.Item>
-          <Form.Item
-            name="newPassword"
-            label="새 비밀번호"
-            rules={[
-              { required: true, message: '새 비밀번호를 입력해주세요.' },
-              passwordValidationRule,
-              passwordNotSameAsIdRule(form.getFieldValue, 'email'),
-              passwordNotSameAsCurrentRule(form.getFieldValue, 'currentPassword'),
-            ]}
-            hasFeedback
-          >
-            <Input.Password placeholder="영문, 숫자, 특수문자 조합 (8자리 이상)" />
-          </Form.Item>
-          <Form.Item
-            name="confirmNewPassword"
-            label="새 비밀번호 확인"
-            dependencies={['newPassword']}
-            rules={[
-              { required: true, message: '새 비밀번호 확인을 입력해주세요.' },
-              passwordConfirmRule(form.getFieldValue, 'newPassword'),
-            ]}
-            hasFeedback
-          >
-            <Input.Password />
-          </Form.Item>
+          <Flex vertical gap={4}>
+            <Form.Item name="email" label="이메일">
+              <Input disabled />
+            </Form.Item>
+            <Form.Item name="currentPassword" label="현재 비밀번호" rules={[{ required: true }]}>
+              <Input.Password />
+            </Form.Item>
+            <Form.Item
+              name="newPassword"
+              label="새 비밀번호"
+              rules={[
+                { required: true },
+                passwordValidationRule,
+                passwordNotSameAsIdRule(form.getFieldValue, 'email'),
+                passwordNotSameAsCurrentRule(form.getFieldValue, 'currentPassword'),
+              ]}
+              hasFeedback
+            >
+              <Input.Password placeholder="영문, 숫자, 특수문자 조합 (8자리 이상)" />
+            </Form.Item>
+            <Form.Item
+              name="confirmNewPassword"
+              label="새 비밀번호 확인"
+              dependencies={['newPassword']}
+              rules={[{ required: true }, passwordConfirmRule(form.getFieldValue, 'newPassword')]}
+              hasFeedback
+            >
+              <Input.Password />
+            </Form.Item>
 
-          <Flex justify="center">
-            <Button type="primary" htmlType="submit">
-              수정
-            </Button>
+            <Flex justify="center">
+              <Button type="primary" htmlType="submit">
+                수정
+              </Button>
+            </Flex>
           </Flex>
         </Form>
       </Card>

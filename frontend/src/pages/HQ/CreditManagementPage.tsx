@@ -1,371 +1,396 @@
-// import {
-//   Button,
-//   DatePicker,
-//   Flex,
-//   Popconfirm,
-//   Select,
-//   Spin,
-//   Table,
-//   Tag,
-//   Typography,
-//   message,
-//   type TableProps,
-// } from 'antd';
-// import dayjs, { type Dayjs } from 'dayjs';
-// import { useEffect, useState } from 'react';
-// import { pharmacyAPI } from '../../api';
-// import { SearchBox } from '../../components/SearchBox';
-// import {
-//   BALANCE_TX_TYPE_COLORS,
-//   BALANCE_TX_TYPE_OPTIONS,
-//   BALANCE_TX_TYPE_TEXT,
-//   DATE_FORMAT,
-//   PAGE_SIZE,
-//   REGION_TEXT,
-// } from '../../constants';
-// import type { BalanceTxList, BalanceTxType, PharmacyList, Region } from '../../types';
-// import { calculateCreditInfo } from '../../utils/credit.util';
+import { ReloadOutlined } from '@ant-design/icons';
+import {
+  Badge,
+  Button,
+  Cascader,
+  Drawer,
+  Flex,
+  Form,
+  Input,
+  Popconfirm,
+  Radio,
+  Space,
+  Spin,
+  Switch,
+  Table,
+  Tag,
+  Typography,
+  message,
+  type TableProps,
+} from 'antd';
+import dayjs from 'dayjs';
+import { useState } from 'react';
+import {
+  BALANCE_TX_TYPE_COLORS,
+  BALANCE_TX_TYPE_OPTIONS,
+  BALANCE_TX_TYPE_TEXT,
+  DATE_FORMAT,
+  PAGE_SIZE,
+  REGION_CASCADER_OPTIONS,
+  REGION_TEXT,
+} from '../../constants';
+import { useBalanceTxs, usePharmacies, useSettlement } from '../../hooks';
+import type { BalanceTxType, PharmacyList, Region } from '../../types';
+import { calculateCreditInfo } from '../../utils';
 
-// // 외상 잔액에 따른 상태 태그 생성
-// const getBalanceStatusTag = (outstandingBalance: number) => {
-//   const creditInfo = calculateCreditInfo(outstandingBalance);
+// 외상 잔액에 따른 상태 뱃지 생성
+const getBalanceStatusBadge = (balance: number) => {
+  const creditInfo = calculateCreditInfo(balance);
 
-//   let color: string;
-//   let text: string;
+  let status: 'success' | 'warning' | 'error';
 
-//   if (creditInfo.usagePercent <= 50) {
-//     color = 'success';
-//     text = '안전';
-//   } else if (creditInfo.usagePercent <= 80) {
-//     color = 'warning';
-//     text = '주의';
-//   } else {
-//     color = 'error';
-//     text = '위험';
-//   }
+  if (creditInfo.usagePercent <= 50) {
+    status = 'success';
+  } else if (creditInfo.usagePercent <= 80) {
+    status = 'warning';
+  } else {
+    status = 'error';
+  }
 
-//   return (
-//     <Tag color={color} style={{ cursor: 'default' }}>
-//       {text} ({creditInfo.usagePercent.toFixed(1)}%)
-//     </Tag>
-//   );
-// };
+  return (
+    <Badge
+      status={status}
+      text={`${balance.toLocaleString()}원 (${creditInfo.usagePercent.toFixed(1)}%)`}
+    />
+  );
+};
 
-// export default function CreditManagementPage() {
-//   const [messageApi, contextHolder] = message.useMessage();
+export default function CreditManagementPage() {
+  const [messageApi, contextHolder] = message.useMessage();
+  const [form] = Form.useForm();
 
-//   const [pharmacies, setPharmacies] = useState<PharmacyList[]>([]);
-//   const [search, setSearch] = useState({
-//     field: 'pharmacyName' as 'pharmacyName',
-//     keyword: undefined as string | undefined,
-//     appliedField: 'pharmacyName' as 'pharmacyName',
-//     appliedKeyword: undefined as string | undefined,
-//     region: undefined as Region | undefined,
-//     appliedRegion: undefined as Region | undefined,
-//   });
+  const [filters, setFilters] = useState({
+    unsettled: undefined as boolean | undefined,
+    region: undefined as Region | undefined,
+    pharmacyName: undefined as string | undefined,
+  });
 
-//   const [currentPage, setCurrentPage] = useState<number>(1);
-//   const [total, setTotal] = useState<number>(0);
-//   const [loading, setLoading] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
-//   // 확장된 행 관련 상태
-//   const [expandedRowData, setExpandedRowData] = useState<Record<number, BalanceTxList[]>>({});
-//   const [expandedRowLoading, setExpandedRowLoading] = useState<Record<number, boolean>>({});
-//   const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
+  // 약국 목록 조회
+  const {
+    data: pharmaciesResponse,
+    error: pharmaciesError,
+    isLoading: pharmaciesLoading,
+  } = usePharmacies({
+    unsettled: filters.unsettled || undefined,
+    page: currentPage - 1,
+    size: PAGE_SIZE,
+    keyword: filters.pharmacyName || undefined,
+    region: filters.region || undefined,
+  });
 
-//   // 거래내역 필터 상태
-//   const [balanceFilter, setBalanceFilter] = useState<{
-//     type?: BalanceTxType;
-//     startDate?: Dayjs;
-//     endDate?: Dayjs;
-//   }>({});
+  const pharmacies = pharmaciesResponse?.success ? pharmaciesResponse.data : [];
+  const total = pharmaciesResponse?.success ? pharmaciesResponse.page.totalElements : 0;
 
-//   const fetchPharmacies = async () => {
-//     setLoading(true);
-//     try {
-//       const res = await pharmacyAPI.getPharmacies({
-//         unsettled: false,
-//         page: currentPage - 1,
-//         size: PAGE_SIZE,
-//         keyword: search.appliedKeyword || undefined,
-//         region: search.appliedRegion || undefined,
-//       });
+  // 사이드바 관련 상태
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  const [selectedPharmacy, setSelectedPharmacy] = useState<PharmacyList | null>(null);
 
-//       if (res.success) {
-//         const { data, page } = res;
-//         setPharmacies(data);
-//         setTotal(page.totalElements);
-//       }
-//     } catch (e: any) {
-//       console.error('약국 목록 로딩 실패:', e);
-//       messageApi.error('약국 목록을 불러오는데 실패했습니다.');
-//       setPharmacies([]);
-//       setTotal(0);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
+  // 거래내역 필터 상태 (타입만 사용)
+  const [balanceFilter, setBalanceFilter] = useState<{
+    type?: BalanceTxType;
+  }>({});
 
-//   useEffect(() => {
-//     fetchPharmacies();
-//   }, [currentPage, search.appliedKeyword, search.appliedRegion]);
+  // 거래내역 조회
+  const {
+    data: balanceTxsResponse,
+    error: balanceTxsError,
+    isLoading: balanceTxsLoading,
+  } = useBalanceTxs(
+    selectedPharmacy?.pharmacyId || 0,
+    {
+      type: balanceFilter.type,
+      start: undefined,
+      end: undefined,
+    },
+    !!selectedPharmacy,
+  );
 
-//   // 약국별 거래내역 조회
-//   const fetchBalanceTransactions = async (pharmacyId: number) => {
-//     setExpandedRowLoading((prev) => ({ ...prev, [pharmacyId]: true }));
-//     try {
-//       const res = await pharmacyAPI.getBalanceTxs({
-//         pharmacyId,
-//         type: balanceFilter.type,
-//         start: balanceFilter.startDate?.format('YYYY-MM-DD'),
-//         end: balanceFilter.endDate?.format('YYYY-MM-DD'),
-//         page: 0,
-//         size: 50,
-//       });
+  const sidebarTransactions = balanceTxsResponse?.success ? balanceTxsResponse.data : [];
 
-//       if (res.success) {
-//         setExpandedRowData((prev) => ({ ...prev, [pharmacyId]: res.data }));
-//       }
-//     } catch (e: any) {
-//       console.error('거래내역 조회 실패:', e);
-//       messageApi.error(e.response?.data?.message || '거래내역 조회 중 오류가 발생했습니다.');
-//     } finally {
-//       setExpandedRowLoading((prev) => ({ ...prev, [pharmacyId]: false }));
-//     }
-//   };
+  // 정산 처리 mutation
+  const settlementMutation = useSettlement();
 
-//   // 행 확장 처리
-//   const handleExpand = (expanded: boolean, record: PharmacyList) => {
-//     const pharmacyId = record.pharmacyId;
-//     if (expanded) fetchBalanceTransactions(pharmacyId);
-//     setExpandedRowKeys(
-//       expanded
-//         ? [...expandedRowKeys, pharmacyId]
-//         : expandedRowKeys.filter((key) => key !== pharmacyId),
-//     );
-//   };
+  // 에러 처리
+  if (pharmaciesError) {
+    messageApi.error('약국 목록을 불러오는데 실패했습니다.');
+  }
 
-//   const handleSettlement = async (pharmacyId: number, pharmacyName: string) => {
-//     try {
-//       const res = await pharmacyAPI.settlement(pharmacyId);
+  if (balanceTxsError) {
+    messageApi.error('거래내역 조회 중 오류가 발생했습니다.');
+  }
 
-//       if (res.success) {
-//         messageApi.success(`${pharmacyName} 정산 처리가 완료되었습니다.`);
-//         fetchPharmacies(); // 목록 새로고침
-//       }
-//     } catch (e: any) {
-//       console.error('정산 처리 실패:', e);
-//       messageApi.error(e.response?.data?.message || '정산 처리 중 오류가 발생했습니다.');
-//     }
-//   };
+  // 약국별 거래내역 조회 (사이드바용)
+  const handleShowTransactions = (pharmacy: PharmacyList) => {
+    setSelectedPharmacy(pharmacy);
+    setSidebarOpen(true);
+  };
 
-//   // 확장된 행 렌더링 (거래내역 테이블)
-//   const expandedRowRender = (record: PharmacyList) => {
-//     const transactions = expandedRowData[record.pharmacyId] || [];
-//     const isLoading = expandedRowLoading[record.pharmacyId];
+  // 사이드바 닫기
+  const handleCloseSidebar = () => {
+    setSidebarOpen(false);
+    setSelectedPharmacy(null);
+    setBalanceFilter({});
+  };
 
-//     if (isLoading) return <Spin />;
+  const handleSearch = () => {
+    const formValues = form.getFieldsValue();
+    setFilters({
+      region: Array.isArray(formValues.region)
+        ? formValues.region[formValues.region.length - 1]
+        : formValues.region,
+      unsettled: formValues.unsettled,
+      pharmacyName: formValues.pharmacyName,
+    });
+    setCurrentPage(1);
+  };
 
-//     const balanceTxColumns: TableProps<BalanceTxList>['columns'] = [
-//       {
-//         title: '날짜',
-//         dataIndex: 'createdAt',
-//         key: 'createdAt',
-//         render: (value) => dayjs(value).format(DATE_FORMAT.KR_DEFAULT),
-//         width: 180,
-//       },
-//       {
-//         title: '거래유형',
-//         dataIndex: 'type',
-//         key: 'type',
-//         render: (type: BalanceTxType) => (
-//           <Tag color={BALANCE_TX_TYPE_COLORS[type]}>{BALANCE_TX_TYPE_TEXT[type]}</Tag>
-//         ),
-//         width: 100,
-//       },
-//       {
-//         title: '금액',
-//         dataIndex: 'amount',
-//         key: 'amount',
-//         render: (value, record) => {
-//           const isPositive = record.type === 'RETURN' || record.type === 'ORDER_CANCEL';
-//           return (
-//             <span style={{ color: isPositive ? '#52c41a' : '#f5222d' }}>
-//               {isPositive ? '+' : '-'}
-//               {Math.abs(value).toLocaleString()}원
-//             </span>
-//           );
-//         },
-//         align: 'right',
-//         width: 120,
-//       },
-//       {
-//         title: '잔액',
-//         dataIndex: 'balanceAfter',
-//         key: 'balanceAfter',
-//         render: (value) => <span style={{ fontWeight: 'bold' }}>{value.toLocaleString()}원</span>,
-//         align: 'right',
-//         width: 120,
-//       },
-//     ];
+  const handleReset = () => {
+    form.resetFields();
+    setFilters({ region: undefined, unsettled: undefined, pharmacyName: undefined });
+    setCurrentPage(1);
+  };
 
-//     return (
-//       <>
-//         <Flex gap="middle" style={{ marginBottom: '12px' }}>
-//           <Select
-//             placeholder="거래유형 선택"
-//             allowClear
-//             style={{ width: 150 }}
-//             options={[...BALANCE_TX_TYPE_OPTIONS]}
-//             onChange={(value) => setBalanceFilter((prev) => ({ ...prev, type: value }))}
-//           />
-//           <DatePicker.RangePicker
-//             placeholder={['시작일', '종료일']}
-//             format="YYYY-MM-DD"
-//             onChange={(dates) => {
-//               setBalanceFilter((prev) => ({
-//                 ...prev,
-//                 startDate: dates?.[0] || undefined,
-//                 endDate: dates?.[1] || undefined,
-//               }));
-//             }}
-//           />
-//           <Button type="primary" onClick={() => fetchBalanceTransactions(record.pharmacyId)}>
-//             조회
-//           </Button>
-//         </Flex>
-//         <Table
-//           size="small"
-//           columns={balanceTxColumns}
-//           dataSource={transactions}
-//           rowKey="balanceTxId"
-//           pagination={false}
-//           scroll={{ y: 300 }}
-//         />
-//       </>
-//     );
-//   };
+  const tableColumns: TableProps<PharmacyList>['columns'] = [
+    {
+      title: '약국코드',
+      dataIndex: 'pharmacyId',
+      key: 'pharmacyId',
+      align: 'center',
+      width: '10%',
+    },
+    {
+      title: '약국명',
+      dataIndex: 'pharmacyName',
+      key: 'pharmacyName',
+      align: 'center',
+      width: '10%',
+    },
+    {
+      title: '사업자등록번호',
+      dataIndex: 'bizRegNo',
+      key: 'bizRegNo',
+      align: 'center',
+      width: '15%',
+    },
+    {
+      title: '지역',
+      dataIndex: 'region',
+      key: 'region',
+      render: (region: Region) => REGION_TEXT[region],
+      align: 'center',
+      width: '10%',
+    },
+    {
+      title: <div style={{ textAlign: 'center' }}>외상 잔액</div>,
+      dataIndex: 'balance',
+      key: 'balance',
+      render: (value) => (
+        <Flex align="center" justify="end">
+          {getBalanceStatusBadge(value)}
+        </Flex>
+      ),
+      align: 'right',
+      width: '15%',
+    },
+    {
+      title: '최근 정산일',
+      dataIndex: 'latestSettlementAt',
+      key: 'latestSettlementAt',
+      render: (value) => (value ? dayjs(value).format(DATE_FORMAT.KR_DATE) : '-'),
+      align: 'center',
+      width: '20%',
+    },
+    {
+      title: '거래 내역',
+      key: 'transactions',
+      render: (_, record) => (
+        <Button type="default" size="small" onClick={() => handleShowTransactions(record)}>
+          거래내역
+        </Button>
+      ),
+      align: 'center',
+      width: '10%',
+    },
+    {
+      title: '정산',
+      key: 'settlement',
+      render: (_, record) => (
+        <Popconfirm
+          title="정산 처리"
+          description={`${record.pharmacyName}의 외상잔액 ${record.balance.toLocaleString()}원을 정산하시겠습니까?`}
+          onConfirm={() => settlementMutation.mutate(record.pharmacyId)}
+          okText="정산"
+          cancelText="취소"
+          disabled={record.balance <= 0}
+        >
+          <Button
+            type="primary"
+            size="small"
+            disabled={record.balance <= 0}
+            loading={settlementMutation.isPending}
+          >
+            정산
+          </Button>
+        </Popconfirm>
+      ),
+      align: 'center',
+      width: '10%',
+    },
+  ];
 
-//   const tableColumns: TableProps<PharmacyList>['columns'] = [
-//     {
-//       title: '약국코드',
-//       dataIndex: 'pharmacyId',
-//       key: 'pharmacyId',
-//       width: 100,
-//       align: 'center',
-//     },
-//     {
-//       title: '약국명',
-//       dataIndex: 'pharmacyName',
-//       key: 'pharmacyName',
-//     },
-//     {
-//       title: '사업자등록번호',
-//       dataIndex: 'bizRegNo',
-//       key: 'bizRegNo',
-//       align: 'center',
-//     },
-//     {
-//       title: '대표자명',
-//       dataIndex: 'representativeName',
-//       key: 'representativeName',
-//       align: 'center',
-//     },
-//     {
-//       title: '지역',
-//       dataIndex: 'region',
-//       key: 'region',
-//       render: (region: Region) => REGION_TEXT[region],
-//       align: 'center',
-//     },
-//     {
-//       title: '외상잔액',
-//       dataIndex: 'outstandingBalance',
-//       key: 'outstandingBalance',
-//       render: (value) => <span style={{ fontWeight: 'bold' }}>{value.toLocaleString()}원</span>,
-//       align: 'right',
-//     },
-//     {
-//       title: '신용상태',
-//       dataIndex: 'outstandingBalance',
-//       key: 'creditStatus',
-//       render: (outstandingBalance) => getBalanceStatusTag(outstandingBalance),
-//       align: 'center',
-//     },
-//     {
-//       title: '최근정산일',
-//       dataIndex: 'latestSettlementAt',
-//       key: 'latestSettlementAt',
-//       render: (value) => (value ? dayjs(value).format(DATE_FORMAT.KR_DATE) : '-'),
-//       align: 'center',
-//     },
-//     {
-//       title: '정산',
-//       key: 'settlement',
-//       render: (_, record) => (
-//         <Popconfirm
-//           title="정산 처리"
-//           description={`${record.pharmacyName}의 외상잔액 ${record.outstandingBalance.toLocaleString()}원을 정산하시겠습니까?`}
-//           onConfirm={() => handleSettlement(record.pharmacyId, record.pharmacyName)}
-//           okText="정산"
-//           cancelText="취소"
-//           disabled={record.outstandingBalance <= 0}
-//         >
-//           <Button type="primary" size="small" disabled={record.outstandingBalance <= 0}>
-//             정산
-//           </Button>
-//         </Popconfirm>
-//       ),
-//       align: 'center',
-//     },
-//   ];
+  return (
+    <>
+      {contextHolder}
+      <Typography.Title level={3} style={{ marginBottom: 24 }}>
+        정산 관리
+      </Typography.Title>
 
-//   return (
-//     <>
-//       {contextHolder}
-//       <Typography.Title level={3} style={{ marginBottom: '24px' }}>
-//         정산 관리
-//       </Typography.Title>
+      <Form layout="vertical" form={form} onFinish={handleSearch}>
+        <Space wrap align="end">
+          <Form.Item label="미정산" name="unsettled">
+            <Switch
+              checked={filters.unsettled}
+              onChange={(checked) => setFilters((prev) => ({ ...prev, unsettled: checked }))}
+            />
+          </Form.Item>
+          <Form.Item label="지역" name="region">
+            <Cascader options={REGION_CASCADER_OPTIONS} placeholder="지역 선택" />
+          </Form.Item>
+          <Form.Item label="약국명" name="pharmacyName">
+            <Input placeholder="약국명 검색" allowClear />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit">
+              조회
+            </Button>
+          </Form.Item>
+          <Form.Item>
+            <Button type="default" onClick={handleReset}>
+              초기화
+            </Button>
+          </Form.Item>
+        </Space>
+      </Form>
 
-//       <Flex gap="middle" style={{ marginBottom: '16px' }}>
-//         <SearchBox
-//           searchField={search.field}
-//           searchOptions={[{ value: 'pharmacyName', label: '약국명' }]}
-//           searchKeyword={search.keyword || ''}
-//           onSearchKeywordChange={(value) => setSearch((prev) => ({ ...prev, keyword: value }))}
-//           onSearch={() => {
-//             setSearch((prev) => ({
-//               ...prev,
-//               appliedField: prev.field,
-//               appliedKeyword: prev.keyword,
-//             }));
-//             setCurrentPage(1);
-//           }}
-//         />
-//       </Flex>
+      <Table
+        columns={tableColumns}
+        dataSource={pharmacies}
+        loading={pharmaciesLoading}
+        rowKey={(record) => record.pharmacyId}
+        pagination={{
+          position: ['bottomCenter'],
+          pageSize: PAGE_SIZE,
+          total: total,
+          current: currentPage,
+          onChange: (page) => setCurrentPage(page),
+          showSizeChanger: false,
+        }}
+      />
 
-//       <Table
-//         columns={tableColumns}
-//         dataSource={pharmacies}
-//         loading={loading}
-//         rowKey={(record) => record.pharmacyId}
-//         pagination={{
-//           position: ['bottomCenter'],
-//           pageSize: PAGE_SIZE,
-//           total: total,
-//           current: currentPage,
-//           onChange: (page) => setCurrentPage(page),
-//           showSizeChanger: false,
-//         }}
-//         expandable={{
-//           expandedRowRender,
-//           onExpand: handleExpand,
-//           expandedRowKeys,
-//           expandRowByClick: true,
-//           expandIcon: () => null,
-//         }}
-//         style={{ marginTop: '24px' }}
-//       />
-//     </>
-//   );
-// }
+      <Drawer
+        title={selectedPharmacy ? `${selectedPharmacy.pharmacyName} 거래 내역` : '거래 내역'}
+        placement="right"
+        width={720}
+        open={sidebarOpen}
+        onClose={handleCloseSidebar}
+        extra={
+          <Button
+            type="primary"
+            shape="circle"
+            icon={<ReloadOutlined />}
+            onClick={() => {
+              // 거래내역 쿼리 새로고침 - 필터를 다시 설정해서 리페치 유도
+              setBalanceFilter((prev) => ({ ...prev }));
+            }}
+          />
+        }
+      >
+        {selectedPharmacy && (
+          <>
+            <Flex vertical gap="middle" style={{ marginBottom: 16 }}>
+              <Typography.Text strong>거래 유형</Typography.Text>
+              <Radio.Group
+                value={balanceFilter.type}
+                onChange={(e) => {
+                  setBalanceFilter((prev) => ({ ...prev, type: e.target.value }));
+                }}
+                optionType="button"
+                buttonStyle="solid"
+                style={{ width: '100%' }}
+              >
+                <Radio.Button value={undefined} style={{ width: '20%' }}>
+                  전체
+                </Radio.Button>
+                {BALANCE_TX_TYPE_OPTIONS.map((option) => (
+                  <Radio.Button key={option.value} value={option.value} style={{ width: '20%' }}>
+                    {option.label}
+                  </Radio.Button>
+                ))}
+              </Radio.Group>
+            </Flex>
+
+            <Spin spinning={balanceTxsLoading}>
+              <Table
+                size="small"
+                columns={[
+                  {
+                    title: '날짜',
+                    dataIndex: 'createdAt',
+                    key: 'createdAt',
+                    render: (value) => dayjs(value).format(DATE_FORMAT.KR_DEFAULT),
+                    align: 'center',
+                    width: '30%',
+                  },
+                  {
+                    title: '유형',
+                    dataIndex: 'type',
+                    key: 'type',
+                    render: (type: BalanceTxType) => (
+                      <Tag color={BALANCE_TX_TYPE_COLORS[type]}>{BALANCE_TX_TYPE_TEXT[type]}</Tag>
+                    ),
+                    align: 'center',
+                    width: '20%',
+                  },
+                  {
+                    title: <div style={{ textAlign: 'center' }}>금액</div>,
+                    dataIndex: 'amount',
+                    key: 'amount',
+                    render: (value, record) => {
+                      const isPositive = record.type === 'RETURN' || record.type === 'ORDER_CANCEL';
+                      return (
+                        <span style={{ color: isPositive ? '#52c41a' : '#f5222d' }}>
+                          {isPositive ? '+' : '-'}
+                          {Math.abs(value).toLocaleString()}원
+                        </span>
+                      );
+                    },
+                    align: 'right',
+                    width: '25%',
+                  },
+                  {
+                    title: '잔액',
+                    dataIndex: 'balanceAfter',
+                    key: 'balanceAfter',
+                    render: (value) => (
+                      <Typography.Text strong>{value.toLocaleString()}원</Typography.Text>
+                    ),
+                    align: 'right',
+                    width: '25%',
+                  },
+                ]}
+                dataSource={sidebarTransactions}
+                rowKey="balanceTxId"
+                pagination={{
+                  pageSize: 10,
+                  showSizeChanger: false,
+                }}
+              />
+            </Spin>
+          </>
+        )}
+      </Drawer>
+    </>
+  );
+}
