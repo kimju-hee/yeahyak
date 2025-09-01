@@ -54,7 +54,7 @@ def generate_summary(text):
         messages=[
             {
                 "role": "system",
-                "content": "당신은 감염병 보고서를 공지문으로 요약하는 전문 AI입니다. HTML 형식으로만 응답하며, 마크다운은 절대 사용하지 않습니다.",
+                "content": "당신은 감염병 보고서를 분석하여 핵심 내용을 요약하는 전문 AI입니다. 일반 텍스트로 요약해주세요.",
             },
             {"role": "user", "content": f"{SUMMARY_PROMPT}\n\n{text}"},
         ],
