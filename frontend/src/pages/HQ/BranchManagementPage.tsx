@@ -237,7 +237,7 @@ export default function BranchManagementPage() {
             />
           </Form.Item>
           <Form.Item label="약국명" name="pharmacyName">
-            <Input placeholder="약국명 검색" allowClear style={{ width: 200 }} />
+            <Input placeholder="약국명 검색" allowClear />
           </Form.Item>
           <Form.Item>
             <Button type="primary" htmlType="submit">
@@ -271,7 +271,6 @@ export default function BranchManagementPage() {
           expandedRowKeys,
           expandRowByClick: true,
         }}
-        style={{ marginTop: 24 }}
       />
     </>
   );

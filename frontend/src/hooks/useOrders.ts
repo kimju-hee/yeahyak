@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { message } from 'antd';
+import dayjs from 'dayjs';
 import { orderAPI } from '../api';
 import type {
   OrderCreateRequest,
@@ -36,6 +37,52 @@ export const useOrdersHq = (params?: OrderListHqParams) => {
     queryFn: () => orderAPI.getOrdersHq(params),
     staleTime: 1000 * 60 * 5, // 5분 캐싱
     refetchOnWindowFocus: false,
+  });
+};
+
+// 본사 발주 통계 조회
+export const useOrdersStatistics = () => {
+  const now = dayjs();
+  const startOfMonth = now.startOf('month').startOf('day');
+  const endOfMonth = now.endOf('month').endOf('day');
+
+  return useQuery({
+    queryKey: [
+      ...ORDER_QUERY_KEYS.lists(),
+      'statistics',
+      startOfMonth.format('YYYY-MM'),
+      endOfMonth.format('YYYY-MM'),
+    ],
+    queryFn: async () => {
+      const res = await orderAPI.getOrdersHq({
+        start: startOfMonth.format('YYYY-MM-DDTHH:mm:ss'),
+        end: endOfMonth.format('YYYY-MM-DDTHH:mm:ss'),
+        page: 0,
+        size: 9999,
+      });
+      return res;
+    },
+    staleTime: 1000 * 60 * 5, // 5분 캐싱
+    refetchOnWindowFocus: false,
+    select: (data) => {
+      const orders = data?.data || [];
+      const totalOrders = orders.length;
+      const calculatedStatistics = orders.reduce(
+        (acc: any, order: any) => {
+          if (order.status === 'PREPARING') {
+            acc.totalPreparing += 1;
+          } else if (order.status === 'SHIPPING') {
+            acc.totalShipping += 1;
+          }
+          if (order.status !== 'CANCELED') {
+            acc.totalAmount += order.totalPrice || 0;
+          }
+          return acc;
+        },
+        { totalOrders: 0, totalPreparing: 0, totalShipping: 0, totalAmount: 0 },
+      );
+      return { ...calculatedStatistics, totalOrders };
+    },
   });
 };
 

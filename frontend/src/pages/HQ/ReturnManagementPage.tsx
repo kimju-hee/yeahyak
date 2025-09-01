@@ -18,7 +18,7 @@ import {
   type TableProps,
 } from 'antd';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { returnAPI } from '../../api';
 import {
   DATE_FORMAT,
@@ -28,6 +28,7 @@ import {
   RETURN_STATUS_OPTIONS,
   RETURN_STATUS_TEXT,
 } from '../../constants';
+import { useReturnsHq, useReturnsStatistics, useUpdateReturn } from '../../hooks';
 import {
   RETURN_STATUS,
   type Region,
@@ -54,7 +55,6 @@ export default function ReturnManagementPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
 
-  const [returns, setReturns] = useState<ReturnList[]>([]);
   const [expandedRowData, setExpandedRowData] = useState<Record<number, ReturnDetail>>({});
   const [expandedRowLoading, setExpandedRowLoading] = useState<Record<number, boolean>>({});
   const [filters, setFilters] = useState({
@@ -63,93 +63,47 @@ export default function ReturnManagementPage() {
     start: undefined as dayjs.Dayjs | undefined,
     end: undefined as dayjs.Dayjs | undefined,
   });
-  const [statistics, setStatistics] = useState({
-    totalReturns: 0,
-    totalReceived: 0,
-    totalAmount: 0,
-  });
 
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [total, setTotal] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(false);
 
-  const fetchStatistics = async () => {
-    try {
-      const now = dayjs();
-      const startOfMonth = now.startOf('month');
-      const endOfMonth = now.endOf('month');
+  // TanStack Query로 반품 목록 조회
+  const queryParams = Object.fromEntries(
+    Object.entries({
+      status: filters.status,
+      region: filters.region,
+      start: filters.start?.startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+      end: filters.end?.endOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+      page: currentPage - 1,
+      size: PAGE_SIZE,
+    }).filter(([_, value]) => value !== undefined),
+  );
 
-      const res = await returnAPI.getReturnsHq({
-        start: startOfMonth.format('YYYY-MM-DD'),
-        end: endOfMonth.format('YYYY-MM-DD'),
-        page: 0,
-        size: 9999,
-      });
+  const { data: returnsResponse, isLoading: loading } = useReturnsHq(queryParams);
+  const returns = returnsResponse?.data || [];
+  const total = returnsResponse?.page?.totalElements || 0;
 
-      if (res.success) {
-        const totalReturns = res.data.length;
-        const calculatedStatistics = res.data.reduce(
-          (acc: any, ret: ReturnList) => {
-            if (ret.status === RETURN_STATUS.RECEIVED) {
-              acc.totalReceived += 1;
-            }
-            if (ret.status !== RETURN_STATUS.CANCELED) {
-              acc.totalAmount += ret.totalPrice || 0;
-            }
-            return acc;
-          },
-          { totalReturns: 0, totalReceived: 0, totalAmount: 0 },
-        );
-        setStatistics({ ...calculatedStatistics, totalReturns: totalReturns });
-      }
-    } catch (e: any) {
-      console.error('월간 반품 요청 통계 로딩 실패:', e);
-      messageApi.error(
-        e.response?.data?.message || '월간 반품 요청 통계 로딩 중 오류가 발생했습니다.',
-      );
-    }
-  };
+  // 반품 상태 업데이트 mutation
+  const updateReturnMutation = useUpdateReturn();
 
-  const fetchReturns = async () => {
-    setLoading(true);
-    try {
-      const res = await returnAPI.getReturnsHq({
-        status: filters.status,
-        region: filters.region,
-        start: filters.start?.format('YYYY-MM-DD'),
-        end: filters.end?.format('YYYY-MM-DD'),
-        page: currentPage - 1,
-        size: PAGE_SIZE,
-      });
-
-      if (res.success) {
-        const { data, page } = res;
-        setReturns(data);
-        setTotal(page.totalElements);
-      }
-    } catch (e: any) {
-      console.error('반품 요청 목록 로딩 실패:', e);
-      messageApi.error(e.response?.data?.message || '반품 요청 목록 로딩 중 오류가 발생했습니다.');
-      setReturns([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStatistics();
-  }, []);
-
-  useEffect(() => {
-    fetchReturns();
-  }, [currentPage, filters]);
+  // 반품 통계 조회
+  const { data: statistics = { totalReturns: 0, totalReceived: 0, totalAmount: 0 } } =
+    useReturnsStatistics();
 
   const handleSearch = () => {
     const formValues = form.getFieldsValue();
     const [startDate, endDate] = formValues.date || [undefined, undefined];
+    const newRegion = Array.isArray(formValues.region)
+      ? formValues.region[formValues.region.length - 1]
+      : formValues.region;
+
+    console.log('🔍 반품 검색 필터:', {
+      region: newRegion,
+      status: formValues.status,
+      dates: [startDate, endDate],
+    });
+
     setFilters({
-      region: formValues.region,
+      region: newRegion,
       status: formValues.status,
       start: startDate,
       end: endDate,
@@ -164,32 +118,25 @@ export default function ReturnManagementPage() {
   };
 
   const handleUpdate = async (returnId: number, action: string) => {
-    try {
-      let res: any;
-      switch (action) {
-        case 'APPROVE':
-          res = await returnAPI.updateReturn(returnId, { status: RETURN_STATUS.APPROVED });
-          break;
-        case 'REJECT':
-          res = await returnAPI.updateReturn(returnId, { status: RETURN_STATUS.CANCELED });
-          break;
-        case 'RECEIVE':
-          res = await returnAPI.updateReturn(returnId, { status: RETURN_STATUS.RECEIVED });
-          break;
-        case 'COMPLETE':
-          res = await returnAPI.updateReturn(returnId, { status: RETURN_STATUS.COMPLETED });
-          break;
-      }
-
-      if (res.success) {
-        messageApi.success('반품 상태가 변경되었습니다.');
-        fetchStatistics();
-        fetchReturns();
-      }
-    } catch (e: any) {
-      console.error('반품 상태 변경 실패:', e);
-      messageApi.error(e.response?.data?.message || '반품 상태 변경 중 오류가 발생했습니다.');
+    let status: ReturnStatus;
+    switch (action) {
+      case 'APPROVE':
+        status = RETURN_STATUS.APPROVED;
+        break;
+      case 'REJECT':
+        status = RETURN_STATUS.CANCELED;
+        break;
+      case 'RECEIVE':
+        status = RETURN_STATUS.RECEIVED;
+        break;
+      case 'COMPLETE':
+        status = RETURN_STATUS.COMPLETED;
+        break;
+      default:
+        return;
     }
+
+    updateReturnMutation.mutate({ returnId, data: { status } });
   };
 
   const renderStatusTagWithActions = (record: ReturnList) => {
@@ -250,20 +197,28 @@ export default function ReturnManagementPage() {
   };
 
   const tableColumns: TableProps<ReturnList>['columns'] = [
-    { title: '반품 번호', dataIndex: 'returnId', key: 'returnId', align: 'center' },
-    { title: '약국명', dataIndex: 'pharmacyName', key: 'pharmacyName', align: 'center' },
+    { title: '반품 번호', dataIndex: 'returnId', key: 'returnId', align: 'center', width: '10%' },
+    {
+      title: '약국명',
+      dataIndex: 'pharmacyName',
+      key: 'pharmacyName',
+      align: 'center',
+      width: '15%',
+    },
     {
       title: '반품 요약',
       dataIndex: 'summary',
       key: 'summary',
       align: 'center',
+      width: '20%',
     },
     {
-      title: '반품 금액',
+      title: <div style={{ textAlign: 'right' }}>반품 금액</div>,
       dataIndex: 'totalPrice',
       key: 'totalPrice',
       render: (value) => `${value.toLocaleString()}원`,
-      align: 'center',
+      align: 'right',
+      width: '15%',
     },
 
     {
@@ -272,6 +227,7 @@ export default function ReturnManagementPage() {
       key: 'createdAt',
       render: (value) => dayjs(value).format(DATE_FORMAT.DEFAULT),
       align: 'center',
+      width: '25%',
     },
 
     {
@@ -280,6 +236,7 @@ export default function ReturnManagementPage() {
       key: 'status',
       render: (_, record) => renderStatusTagWithActions(record),
       align: 'center',
+      width: '15%',
     },
   ];
 
@@ -314,7 +271,7 @@ export default function ReturnManagementPage() {
 
     if (!detail) {
       return (
-        <Typography.Text style={{ padding: '16px', textAlign: 'center' }}>
+        <Typography.Text style={{ padding: 16, textAlign: 'center' }}>
           상세 정보를 불러올 수 없습니다.
         </Typography.Text>
       );
@@ -326,23 +283,57 @@ export default function ReturnManagementPage() {
           bordered={true}
           dataSource={detail.items}
           columns={[
-            { title: '제품명', dataIndex: 'productName', key: 'productName' },
-            { title: '제조사', dataIndex: 'manufacturer', key: 'manufacturer' },
-            { title: '대분류', dataIndex: 'mainCategory', key: 'mainCategory' },
-            { title: '소분류', dataIndex: 'subCategory', key: 'subCategory' },
-            { title: '수량', dataIndex: 'quantity', key: 'quantity' },
-            { title: '단위', dataIndex: 'unit', key: 'unit' },
             {
-              title: '단가',
+              title: '제품명',
+              dataIndex: 'productName',
+              key: 'productName',
+              align: 'center',
+              width: '15%',
+            },
+            {
+              title: '제조사',
+              dataIndex: 'manufacturer',
+              key: 'manufacturer',
+              align: 'center',
+              width: '12%',
+            },
+            {
+              title: '대분류',
+              dataIndex: 'mainCategory',
+              key: 'mainCategory',
+              align: 'center',
+              width: '12%',
+            },
+            {
+              title: '소분류',
+              dataIndex: 'subCategory',
+              key: 'subCategory',
+              align: 'center',
+              width: '12%',
+            },
+            {
+              title: '수량',
+              dataIndex: 'quantity',
+              key: 'quantity',
+              align: 'center',
+              width: '10%',
+            },
+            { title: '단위', dataIndex: 'unit', key: 'unit', align: 'center', width: '12%' },
+            {
+              title: <div style={{ textAlign: 'center' }}>단가</div>,
               dataIndex: 'unitPrice',
               key: 'unitPrice',
               render: (value) => `${value.toLocaleString()}원`,
+              align: 'right',
+              width: '12%',
             },
             {
-              title: '소계',
+              title: <div style={{ textAlign: 'center' }}>소계</div>,
               dataIndex: 'subtotalPrice',
               key: 'subtotalPrice',
               render: (value) => `${value.toLocaleString()}원`,
+              align: 'right',
+              width: '15%',
             },
           ]}
           pagination={false}
@@ -352,9 +343,11 @@ export default function ReturnManagementPage() {
             <Table.Summary fixed>
               <Table.Summary.Row>
                 <Table.Summary.Cell index={0} colSpan={6} />
-                <Table.Summary.Cell index={1}>합계</Table.Summary.Cell>
-                <Table.Summary.Cell index={2}>
-                  {record.totalPrice.toLocaleString()}원
+                <Table.Summary.Cell index={1} align="center">
+                  합계
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={2} align="right">
+                  {detail.totalPrice.toLocaleString()}원
                 </Table.Summary.Cell>
               </Table.Summary.Row>
             </Table.Summary>
@@ -367,11 +360,11 @@ export default function ReturnManagementPage() {
   return (
     <>
       {contextHolder}
-      <Typography.Title level={3} style={{ marginBottom: '24px' }}>
+      <Typography.Title level={3} style={{ marginBottom: 24 }}>
         반품 요청 관리
       </Typography.Title>
 
-      <Row gutter={16} style={{ marginBottom: '24px' }}>
+      <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={8}>
           <Card>
             <Statistic title="당월 반품 요청" value={statistics.totalReturns} />
@@ -428,7 +421,6 @@ export default function ReturnManagementPage() {
           expandedRowRender,
           onExpand: handleExpand,
           expandRowByClick: true,
-          expandIcon: () => null,
         }}
       />
     </>

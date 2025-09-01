@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { message } from 'antd';
+import dayjs from 'dayjs';
 import { returnAPI } from '../api';
 import type {
   ReturnCreateRequest,
@@ -35,6 +36,50 @@ export const useReturnsHq = (params?: ReturnListHqParams) => {
     queryFn: () => returnAPI.getReturnsHq(params),
     staleTime: 1000 * 60 * 5, // 5분 캐싱
     refetchOnWindowFocus: false,
+  });
+};
+
+// 본사 반품 통계 조회
+export const useReturnsStatistics = () => {
+  const now = dayjs();
+  const startOfMonth = now.startOf('month').startOf('day');
+  const endOfMonth = now.endOf('month').endOf('day');
+
+  return useQuery({
+    queryKey: [
+      ...RETURN_QUERY_KEYS.lists(),
+      'statistics',
+      startOfMonth.format('YYYY-MM'),
+      endOfMonth.format('YYYY-MM'),
+    ],
+    queryFn: async () => {
+      const res = await returnAPI.getReturnsHq({
+        start: startOfMonth.format('YYYY-MM-DDTHH:mm:ss'),
+        end: endOfMonth.format('YYYY-MM-DDTHH:mm:ss'),
+        page: 0,
+        size: 9999,
+      });
+      return res;
+    },
+    staleTime: 1000 * 60 * 5, // 5분 캐싱
+    refetchOnWindowFocus: false,
+    select: (data) => {
+      const returns = data?.data || [];
+      const totalReturns = returns.length;
+      const calculatedStatistics = returns.reduce(
+        (acc: any, ret: any) => {
+          if (ret.status === 'RECEIVED') {
+            acc.totalReceived += 1;
+          }
+          if (ret.status !== 'CANCELED') {
+            acc.totalAmount += ret.totalPrice || 0;
+          }
+          return acc;
+        },
+        { totalReturns: 0, totalReceived: 0, totalAmount: 0 },
+      );
+      return { ...calculatedStatistics, totalReturns };
+    },
   });
 };
 
