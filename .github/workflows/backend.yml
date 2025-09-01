@@ -2,7 +2,7 @@ name: backend-build-push-deploy
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: ["dev"]
     paths:
       - "backend/**"
       - ".github/workflows/backend.yml"
@@ -143,3 +143,5 @@ jobs:
           BLOB_ENDPOINT: ${{ secrets.BLOB_ENDPOINT }}
           BLOB_CONTAINER: ${{ secrets.BLOB_CONTAINER }}
           BLOB_CONN_STR: ${{ secrets.BLOB_CONN_STR }}
+
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
