@@ -1,9 +1,9 @@
 import { ConfigProvider } from 'antd';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import './App.css';
+import ProtectedRoute from './components/ProtectedRoute';
 import BranchLayout from './layouts/BranchLayout';
 import HqLayout from './layouts/HqLayout';
-import LoginLayout from './layouts/LoginLayout';
 import PublicLayout from './layouts/PublicLayout';
 import BranchDashboardPage from './pages/Branch/BranchDashboardPage';
 import BranchProfileEditPage from './pages/Branch/BranchProfileEditPage';
@@ -81,13 +81,10 @@ export default function App() {
       }}
     >
       <Routes>
-        {/* 로그인 */}
-        <Route path="/" element={<LoginLayout />}>
-          <Route index element={<Navigate to="/login" replace />} />
-          <Route path="login" element={<LoginPage />} />
-        </Route>
         {/* 공통 */}
         <Route path="/" element={<PublicLayout />}>
+          <Route index element={<Navigate to="/login" replace />} />
+          <Route path="login" element={<LoginPage />} />
           <Route path="signup-branch" element={<BranchSignupPage />} />
           <Route path="signup-hq" element={<HqSignupPage />} />
           <Route path="logout" element={<LogoutPage />} />
@@ -97,37 +94,39 @@ export default function App() {
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Route>
         {/* 가맹점 */}
-        {/* <Route element={<ProtectedRoute allowedRoles={['PHARMACY']} />}> */}
-        <Route path="/branch" element={<BranchLayout />}>
-          <Route index element={<BranchDashboardPage />} />
-          <Route path="password-change" element={<PasswordChangePage />} />
-          <Route path="profile-edit" element={<BranchProfileEditPage />} />
-          <Route path="notices" element={<NoticeListPage />} />
-          <Route path="notices/:id" element={<NoticeDetailPage />} />
-          <Route path="orders" element={<OrderRequestPage />} />
-          <Route path="returns" element={<ReturnRequestPage />} />
-          <Route path="products" element={<ProductListPage />} />
-          <Route path="products/:id" element={<ProductDetailPage />} />
+        <Route element={<ProtectedRoute allowedRoles={['PHARMACY']} />}>
+          <Route path="/branch" element={<BranchLayout />}>
+            <Route index element={<BranchDashboardPage />} />
+            <Route path="password-change" element={<PasswordChangePage />} />
+            <Route path="profile-edit" element={<BranchProfileEditPage />} />
+            <Route path="notices" element={<NoticeListPage />} />
+            <Route path="notices/:id" element={<NoticeDetailPage />} />
+            <Route path="orders" element={<OrderRequestPage />} />
+            <Route path="returns" element={<ReturnRequestPage />} />
+            <Route path="products" element={<ProductListPage />} />
+            <Route path="products/:id" element={<ProductDetailPage />} />
+          </Route>
         </Route>
         {/* 본사 */}
-        {/* <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}> */}
-        <Route path="/hq" element={<HqLayout />}>
-          <Route index element={<HqDashboardPage />} />
-          <Route path="password-change" element={<PasswordChangePage />} />
-          <Route path="profile-edit" element={<HqProfileEditPage />} />
-          <Route path="notices" element={<NoticeListPage />} />
-          <Route path="notices/:id" element={<NoticeDetailPage />} />
-          <Route path="notices/new" element={<NoticeRegisterPage />} />
-          <Route path="notices/:id/edit" element={<NoticeEditPage />} />
-          <Route path="branches" element={<BranchManagementPage />} />
-          <Route path="credits" element={<CreditManagementPage />} />
-          <Route path="orders" element={<OrderManagementPage />} />
-          <Route path="returns" element={<ReturnManagementPage />} />
-          <Route path="products" element={<ProductListPage />} />
-          <Route path="products/:id" element={<ProductDetailPage />} />
-          <Route path="products/new" element={<ProductRegisterPage />} />
-          <Route path="products/:id/edit" element={<ProductEditPage />} />
-          <Route path="inventory" element={<InventoryPage />} />
+        <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+          <Route path="/hq" element={<HqLayout />}>
+            <Route index element={<HqDashboardPage />} />
+            <Route path="password-change" element={<PasswordChangePage />} />
+            <Route path="profile-edit" element={<HqProfileEditPage />} />
+            <Route path="notices" element={<NoticeListPage />} />
+            <Route path="notices/:id" element={<NoticeDetailPage />} />
+            <Route path="notices/new" element={<NoticeRegisterPage />} />
+            <Route path="notices/:id/edit" element={<NoticeEditPage />} />
+            <Route path="branches" element={<BranchManagementPage />} />
+            <Route path="credits" element={<CreditManagementPage />} />
+            <Route path="orders" element={<OrderManagementPage />} />
+            <Route path="returns" element={<ReturnManagementPage />} />
+            <Route path="products" element={<ProductListPage />} />
+            <Route path="products/:id" element={<ProductDetailPage />} />
+            <Route path="products/new" element={<ProductRegisterPage />} />
+            <Route path="products/:id/edit" element={<ProductEditPage />} />
+            <Route path="inventory" element={<InventoryPage />} />
+          </Route>
         </Route>
       </Routes>
     </ConfigProvider>

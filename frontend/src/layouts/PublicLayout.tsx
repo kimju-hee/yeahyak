@@ -1,26 +1,16 @@
 import { Layout } from 'antd';
-import { useMemo } from 'react';
 import { Outlet } from 'react-router-dom';
-import { background02, background03 } from '../assets';
+import { landingbg } from '../assets';
 import Footer from './Footer';
 
 export default function PublicLayout() {
-  // 배경 이미지 후보 배열
-  const backgroundImages = [background02, background03];
-
-  // 랜덤하게 배경 이미지 선택 (컴포넌트 마운트 시 한 번만)
-  const randomBackground = useMemo(() => {
-    const randomIndex = Math.floor(Math.random() * backgroundImages.length);
-    return backgroundImages[randomIndex];
-  }, []);
-
   return (
     <Layout
       style={{
         position: 'relative',
         minHeight: '100vh',
         minWidth: '100%',
-        backgroundImage: `url(${randomBackground})`,
+        backgroundImage: `url(${landingbg})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
@@ -32,7 +22,7 @@ export default function PublicLayout() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '70px 70px 140px 70px',
+          padding: '24px 24px 94px 24px',
         }}
       >
         <Outlet />
