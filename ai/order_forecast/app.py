@@ -181,6 +181,9 @@ def predict_order(file_storage):
     history = _load_history()
     try:
         upload_df = pd.read_csv(file_storage)
+        upload_pharmacy_ids = set(
+            upload_df["store_id"].unique()
+        )  # 업로드된 약국 ID 저장
     except Exception as e:
         return (
             jsonify(
@@ -300,17 +303,19 @@ def predict_order(file_storage):
     meta["predicted_order"] = y_pred
     results = []
     for _, r in meta.iterrows():
-        results.append(
-            {
-                "product_name": r.get("product_name"),
-                "insurance_code": r.get("product_code"),
-                "predicted_quantity": int(r.get("predicted_order", 0)),
-                "pharmacy_id": r.get("store_id"),
-                "unit": r.get("unit"),
-                "main_category": r.get("main_category"),
-                "sub_category": r.get("sub_category"),
-            }
-        )
+        pharmacy_id = r.get("store_id")
+        if pharmacy_id in upload_pharmacy_ids:  # 업로드된 약국만 결과에 포함
+            results.append(
+                {
+                    "product_name": r.get("product_name"),
+                    "insurance_code": r.get("product_code"),
+                    "predicted_quantity": int(r.get("predicted_order", 0)),
+                    "pharmacy_id": r.get("store_id"),
+                    "unit": r.get("unit"),
+                    "main_category": r.get("main_category"),
+                    "sub_category": r.get("sub_category"),
+                }
+            )
 
     return (
         jsonify(
