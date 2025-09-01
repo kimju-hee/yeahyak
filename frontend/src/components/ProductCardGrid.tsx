@@ -28,7 +28,7 @@ const ProductCard = memo(function ProductCard({
             preview={false}
             src={imageSrc}
             alt={product.productName || '제품 이미지'}
-            style={{ height: 160, objectFit: 'contain', width: '100%' }}
+            style={{ height: 180, objectFit: 'contain', width: '100%' }}
             fallback={PLACEHOLDER}
           />
         }

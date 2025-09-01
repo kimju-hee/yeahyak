@@ -18,6 +18,7 @@ import {
   MAIN_CATEGORY_OPTIONS,
   MAIN_CATEGORY_TEXT,
   PAGE_SIZE,
+  PRODUCT_PAGE_SIZE,
   SUB_CATEGORY_TEXT,
 } from '../../../constants';
 import { useProducts } from '../../../hooks/useProducts';
@@ -61,7 +62,7 @@ export default function ProductListPage() {
     keyword: appliedKeyword || undefined,
     threshold: undefined,
     page: currentPage - 1,
-    size: PAGE_SIZE,
+    size: PRODUCT_PAGE_SIZE,
   });
 
   const products = productsResponse?.data || [];
