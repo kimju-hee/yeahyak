@@ -215,6 +215,7 @@ export function Chatbot({ boundsRef }: ChatbotProps) {
           minWidth={360}
           minHeight={400}
           bounds={boundsRef?.current ?? undefined}
+          style={{ zIndex: 1000 }}
         >
           <Card
             title={chatType === CHAT_TYPE.FAQ ? '운영 도우미' : '의약품 AI 어시스턴트'}
